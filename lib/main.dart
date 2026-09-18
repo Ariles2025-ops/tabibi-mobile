@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'services/auth_service.dart';
 import 'services/api_service.dart';
 
 void main() => runApp(const TabibiApp());
@@ -11,58 +10,87 @@ class TabibiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tabibi',
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF0F7560),
-        useMaterial3: true,
-      ),
-      home: const AccueilPage(),
+      theme: ThemeData(colorSchemeSeed: const Color(0xFF0F7560), useMaterial3: true),
+      home: const RecherchePage(),
     );
   }
 }
 
-class AccueilPage extends StatefulWidget {
-  const AccueilPage({super.key});
+class RecherchePage extends StatefulWidget {
+  const RecherchePage({super.key});
   @override
-  State<AccueilPage> createState() => _AccueilPageState();
+  State<RecherchePage> createState() => _RecherchePageState();
 }
 
-class _AccueilPageState extends State<AccueilPage> {
-  final _auth = AuthService();
+class _RecherchePageState extends State<RecherchePage> {
   final _api = ApiService();
-  Map<String, dynamic>? _moi;
-  bool _chargement = false;
+  final _nom = TextEditingController();
+  String? _specialite;
+  List<Map<String, dynamic>> _resultats = [];
+  bool _charge = false;
 
-  Future<void> _seConnecter() async {
-    setState(() => _chargement = true);
+  Future<void> _rechercher() async {
+    setState(() => _charge = true);
     try {
-      if (await _auth.seConnecter()) {
-        final moi = await _api.moi(_auth.accessToken!);
-        setState(() => _moi = moi);
-      }
+      final r = await _api.rechercherMedecins(specialite: _specialite, q: _nom.text);
+      setState(() => _resultats = r);
     } finally {
-      if (mounted) setState(() => _chargement = false);
+      if (mounted) setState(() => _charge = false);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _rechercher();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Tabibi')),
-      body: Center(
-        child: _chargement
-            ? const CircularProgressIndicator()
-            : _moi == null
-                ? ElevatedButton(
-                    onPressed: _seConnecter,
-                    child: const Text('Se connecter'),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Connecte : ${_moi!['nom']}'),
-                      Text('Roles : ${(_moi!['roles'] as List).join(', ')}'),
-                    ],
-                  ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _nom,
+                  decoration: const InputDecoration(labelText: 'Nom du medecin'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              DropdownButton<String>(
+                value: _specialite,
+                hint: const Text('Specialite'),
+                items: const [
+                  DropdownMenuItem(value: 'generaliste', child: Text('Generaliste')),
+                  DropdownMenuItem(value: 'cardiologue', child: Text('Cardiologue')),
+                  DropdownMenuItem(value: 'dermatologue', child: Text('Dermatologue')),
+                  DropdownMenuItem(value: 'pediatre', child: Text('Pediatre')),
+                ],
+                onChanged: (v) => setState(() => _specialite = v),
+              ),
+              IconButton(onPressed: _rechercher, icon: const Icon(Icons.search)),
+            ]),
+            const SizedBox(height: 12),
+            if (_charge) const CircularProgressIndicator(),
+            Expanded(
+              child: ListView.separated(
+                itemCount: _resultats.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (_, i) {
+                  final m = _resultats[i];
+                  return ListTile(
+                    title: Text(m['nomComplet'] as String),
+                    subtitle: Text('${m['specialiteFr']} · ${m['ville']} (${m['wilayaFr']})'),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

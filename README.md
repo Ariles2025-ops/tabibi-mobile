@@ -21,3 +21,6 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 ## Prochaines etapes
 - Recherche de medecins, fiche, reservation.
 - Notifications push, stockage securise du jeton.
+
+## v0.2.0 — Annuaire (mobile)
+- Ecran d'accueil : recherche de praticiens (nom, specialite) via `GET /api/medecins`.
