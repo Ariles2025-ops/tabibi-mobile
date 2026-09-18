@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'pages/fiche_medecin_page.dart';
+import 'pages/mes_notifications_page.dart';
 import 'pages/mes_ordonnances_page.dart';
 import 'pages/mes_rendez_vous_page.dart';
 import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/session.dart';
+import 'utils/notifications.dart';
 
 void main() => runApp(const TabibiApp());
 
@@ -23,8 +25,9 @@ class TabibiApp extends StatelessWidget {
   }
 }
 
-/// Ecran d'accueil : recherche de praticiens, acces a la fiche, aux rendez-vous
-/// et aux ordonnances (les miennes, ou la verification publique d'un code).
+/// Ecran d'accueil : recherche de praticiens, acces a la fiche, aux rendez-vous,
+/// aux ordonnances (les miennes, ou la verification publique d'un code) et aux
+/// notifications (entree « Notifications (n) » avec le nombre de non lues).
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -43,6 +46,9 @@ class _RecherchePageState extends State<RecherchePage> {
   String? _specialite;
   List<Map<String, dynamic>> _resultats = [];
   bool _charge = false;
+
+  /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
+  int? _nonLues;
 
   Future<void> _rechercher() async {
     setState(() => _charge = true);
@@ -77,6 +83,32 @@ class _RecherchePageState extends State<RecherchePage> {
       // Identite indisponible : message generique.
     }
     _message(texte);
+    await _chargerNonLues();
+  }
+
+  /// Nombre de notifications non lues (jeton requis) ; inconnu hors connexion ou en cas d'echec.
+  Future<void> _chargerNonLues() async {
+    final token = _auth.accessToken;
+    int? nonLues;
+    if (token != null) {
+      try {
+        nonLues = await widget.api.nombreNonLues(token);
+      } on ApiException catch (e) {
+        // Jeton expire : l'icone de connexion repasse a « Se connecter ».
+        if (e.nonAutorise) _auth.seDeconnecter();
+      } on Exception {
+        // Compteur indisponible : l'entree reste « Notifications ».
+      }
+    }
+    if (mounted && nonLues != _nonLues) setState(() => _nonLues = nonLues);
+  }
+
+  /// Au retour d'un ecran : l'utilisateur a pu se connecter (ou etre deconnecte)
+  /// et lire des notifications.
+  Future<void> _apresRetour() async {
+    if (!mounted) return;
+    setState(() {});
+    await _chargerNonLues();
   }
 
   Future<void> _ouvrirFiche(int medecinId) async {
@@ -85,7 +117,7 @@ class _RecherchePageState extends State<RecherchePage> {
         builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
       ),
     );
-    if (mounted) setState(() {}); // l'utilisateur a pu se connecter depuis la fiche
+    await _apresRetour();
   }
 
   Future<void> _ouvrirMesRendezVous() async {
@@ -94,7 +126,7 @@ class _RecherchePageState extends State<RecherchePage> {
         builder: (_) => MesRendezVousPage(api: widget.api, auth: _auth),
       ),
     );
-    if (mounted) setState(() {});
+    await _apresRetour();
   }
 
   Future<void> _ouvrirMesOrdonnances() async {
@@ -103,7 +135,16 @@ class _RecherchePageState extends State<RecherchePage> {
         builder: (_) => MesOrdonnancesPage(api: widget.api, auth: _auth),
       ),
     );
-    if (mounted) setState(() {}); // l'utilisateur a pu se connecter (ou etre deconnecte)
+    await _apresRetour();
+  }
+
+  Future<void> _ouvrirNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MesNotificationsPage(api: widget.api, auth: _auth),
+      ),
+    );
+    await _apresRetour(); // des notifications ont pu etre lues
   }
 
   /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
@@ -124,6 +165,7 @@ class _RecherchePageState extends State<RecherchePage> {
   void initState() {
     super.initState();
     _rechercher();
+    _chargerNonLues();
   }
 
   @override
@@ -188,6 +230,8 @@ class _RecherchePageState extends State<RecherchePage> {
               IconButton(onPressed: _rechercher, icon: const Icon(Icons.search)),
             ]),
             const SizedBox(height: 12),
+            _entrees(),
+            const SizedBox(height: 12),
             if (_charge) const CircularProgressIndicator(),
             Expanded(
               child: ListView.separated(
@@ -206,6 +250,25 @@ class _RecherchePageState extends State<RecherchePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
+  /// de non lues, connu a l'ouverture et actualise au retour de chaque ecran.
+  Widget _entrees() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          ActionChip(
+            avatar: const Icon(Icons.notifications_outlined, size: 18),
+            label: Text(libelleNotifications(_nonLues)),
+            onPressed: _ouvrirNotifications,
+          ),
+        ],
       ),
     );
   }

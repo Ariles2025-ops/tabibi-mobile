@@ -61,3 +61,21 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   (invitation « Se connecter »).
 - Tests : `FakeApiService` etendu (ordonnances, verification) ; liste, detail (code + medicaments),
   verification publique et utilitaires (`test/ordonnances_test.dart`).
+
+## v0.5.0 — Notifications (mobile)
+- Ecran « Mes notifications » (`GET /api/notifications/mes`, utilisateur connecte) : sujet en gras tant
+  que la notification n'est pas lue, message et date (« jeu. 4 dec. 09:00 »), de la plus recente a la
+  plus ancienne ; tirer pour rafraichir ; un toucher (ou l'icone « Marquer comme lue ») marque
+  l'element lu (`POST /api/notifications/{id}/lue`) et l'icone « Tout marquer comme lu » de l'AppBar
+  passe tout a lu (`POST /api/notifications/toutes-lues`) ; etat vide « Aucune notification pour le
+  moment. », erreurs via `VueErreur`, bouton « Se connecter » sans jeton.
+- Accueil : entree « Notifications (n) » sous la recherche, avec le nombre de non lues
+  (`GET /api/notifications/non-lues/nombre`) charge a l'ouverture et actualise apres connexion et au
+  retour de chaque ecran ; « Notifications » sans compteur hors connexion.
+- Modele `lib/models/notification.dart` (`NotificationUtilisateur.fromJson`, tolerant aux champs
+  absents ; nomme ainsi pour ne pas masquer `Notification` de Flutter) et `lib/utils/notifications.dart`
+  (date, tri, compteur, libelle de l'entree). Les identifiants de ce module sont des UUID (texte).
+- `ApiService` : `mesNotifications`, `nombreNonLues`, `marquerLue`, `toutMarquerLu`.
+- Tests : modele et utilitaires (`test/notifications_test.dart`) ; `FakeApiService` etendu
+  (notifications, variante sans notification) ; liste + marquage lu, tout marquer lu, etat vide,
+  entree d'accueil avec et sans compteur.

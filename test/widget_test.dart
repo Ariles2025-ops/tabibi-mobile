@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/pages/detail_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
+import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
@@ -14,6 +15,14 @@ class FakeApiService extends ApiService {
 
   /// Code de verification de l'ordonnance factice (seul code reconnu par [verifierOrdonnance]).
   static const String codeValide = 'ABC123';
+
+  @override
+  Future<List<Map<String, dynamic>>> rechercherMedecins({
+    String? specialite,
+    String? wilaya,
+    String? q,
+  }) async =>
+      [await medecin(1)];
 
   @override
   Future<Map<String, dynamic>> medecin(int id) async => {
@@ -55,6 +64,36 @@ class FakeApiService extends ApiService {
       ? {'valide': true, 'emiseLe': '2026-12-03T10:15:00', 'statut': 'EMISE'}
       : {'valide': false};
 
+  /// Deux notifications : la plus recente (n-1) non lue, l'autre deja lue.
+  @override
+  Future<List<Map<String, dynamic>>> mesNotifications(String token) async => [
+        _notification('n-1', lue: false),
+        _notification('n-2', lue: true),
+      ];
+
+  @override
+  Future<int> nombreNonLues(String token) async => 1;
+
+  @override
+  Future<Map<String, dynamic>> marquerLue(String notificationId, String token) async =>
+      _notification(notificationId, lue: true);
+
+  @override
+  Future<int> toutMarquerLu(String token) async => 1;
+
+  static Map<String, dynamic> _notification(String id, {required bool lue}) => {
+        'id': id,
+        'destinataireId': 'patient-7',
+        'canal': 'INTERNE',
+        'sujet': id == 'n-1' ? 'Teleconsultation proposee' : 'Rendez-vous confirme',
+        'message': id == 'n-1'
+            ? 'Votre medecin vous propose une teleconsultation pour votre rendez-vous '
+                'du 3 dec. 2026 09:00.'
+            : 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.',
+        'lue': lue,
+        'creeLe': id == 'n-1' ? '2026-12-03T10:15:00' : '2026-12-01T18:00:00',
+      };
+
   static Map<String, dynamic> _ordonnance(int id) => {
         'id': id,
         'medecinId': 1,
@@ -76,6 +115,17 @@ class FakeApiService extends ApiService {
         'codeVerification': codeValide,
         'statut': 'EMISE',
       };
+}
+
+/// Variante sans aucune notification (etat vide).
+class FakeApiServiceSansNotification extends FakeApiService {
+  const FakeApiServiceSansNotification();
+
+  @override
+  Future<List<Map<String, dynamic>>> mesNotifications(String token) async => [];
+
+  @override
+  Future<int> nombreNonLues(String token) async => 0;
 }
 
 /// Session de test deja munie d'un jeton (aucun appel a Keycloak).
@@ -174,5 +224,88 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Code inconnu'), findsOneWidget);
     expect(find.textContaining('Ordonnance authentique'), findsNothing);
+  });
+
+  testWidgets("l'accueil affiche l'entree Notifications avec le nombre de non lues",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Notifications (1)'), findsOneWidget);
+  });
+
+  testWidgets("l'accueil sans jeton affiche l'entree Notifications sans compteur",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.textContaining('Notifications ('), findsNothing);
+  });
+
+  testWidgets('mes notifications sans jeton propose de se connecter', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesNotificationsPage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Teleconsultation proposee'), findsNothing);
+  });
+
+  testWidgets('mes notifications liste sujet, message et date, puis marque une notification lue',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesNotificationsPage(api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mes notifications'), findsOneWidget);
+    expect(find.text('Teleconsultation proposee'), findsOneWidget);
+    expect(find.text('Rendez-vous confirme'), findsOneWidget);
+    expect(find.text('Votre rendez-vous du 3 dec. 2026 09:00 est confirme.'), findsOneWidget);
+    expect(find.text('jeu. 3 dec. 10:15'), findsOneWidget);
+    expect(find.text('mar. 1 dec. 18:00'), findsOneWidget);
+    // Sujet en gras pour la non lue seulement.
+    expect(
+      tester.widget<Text>(find.text('Teleconsultation proposee')).style?.fontWeight,
+      FontWeight.bold,
+    );
+    expect(tester.widget<Text>(find.text('Rendez-vous confirme')).style?.fontWeight, isNull);
+    // Une seule action « Marquer comme lue » (la non lue).
+    expect(find.byTooltip('Marquer comme lue'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Marquer comme lue'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Marquer comme lue'), findsNothing);
+    expect(tester.widget<Text>(find.text('Teleconsultation proposee')).style?.fontWeight, isNull);
+  });
+
+  testWidgets("mes notifications permet de tout marquer lu depuis l'AppBar", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesNotificationsPage(api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Marquer comme lue'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Tout marquer comme lu'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Marquer comme lue'), findsNothing);
+    expect(find.text('1 notification(s) marquee(s) lue(s)'), findsOneWidget);
+  });
+
+  testWidgets('mes notifications affiche un etat vide sans notification', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesNotificationsPage(
+        api: const FakeApiServiceSansNotification(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aucune notification pour le moment.'), findsOneWidget);
+    expect(find.byTooltip('Marquer comme lue'), findsNothing);
   });
 }

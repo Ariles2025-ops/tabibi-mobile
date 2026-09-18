@@ -119,6 +119,43 @@ class ApiService {
     return _objet(res, chemin);
   }
 
+  /// Notifications de l'utilisateur connecte, les plus recentes d'abord :
+  /// {id, destinataireId, canal, sujet, message, lue, creeLe (ISO 8601)}.
+  Future<List<Map<String, dynamic>>> mesNotifications(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/notifications/mes'),
+      headers: _bearer(token),
+    );
+    return _liste(res, '/api/notifications/mes');
+  }
+
+  /// Nombre de notifications non lues de l'utilisateur connecte (corps { "nombre": n }).
+  Future<int> nombreNonLues(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/notifications/non-lues/nombre'),
+      headers: _bearer(token),
+    );
+    return _nombre(_objet(res, '/api/notifications/non-lues/nombre'));
+  }
+
+  /// Marque une notification lue et renvoie la notification mise a jour
+  /// (403 si elle est adressee a un autre utilisateur, 404 si elle est inconnue).
+  Future<Map<String, dynamic>> marquerLue(String notificationId, String token) async {
+    final chemin = '/api/notifications/${Uri.encodeComponent(notificationId)}/lue';
+    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    return _objet(res, chemin);
+  }
+
+  /// Marque lues toutes les notifications de l'utilisateur connecte ;
+  /// renvoie le nombre de notifications passees a lues (corps { "nombre": n }).
+  Future<int> toutMarquerLu(String token) async {
+    final res = await http.post(
+      Uri.parse('$_base/api/notifications/toutes-lues'),
+      headers: _bearer(token),
+    );
+    return _nombre(_objet(res, '/api/notifications/toutes-lues'));
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(
@@ -131,6 +168,12 @@ class ApiService {
   // --- Outils internes ---
 
   Map<String, String> _bearer(String token) => {'Authorization': 'Bearer $token'};
+
+  /// Valeur du champ `nombre` d'un corps { "nombre": n } ; 0 s'il est absent.
+  int _nombre(Map<String, dynamic> corps) {
+    final Object? nombre = corps['nombre'];
+    return nombre is num ? nombre.toInt() : 0;
+  }
 
   /// Corps decode en UTF-8 (les accents sont preserves meme sans charset dans l'en-tete).
   Object? _json(http.Response res) => jsonDecode(utf8.decode(res.bodyBytes));
