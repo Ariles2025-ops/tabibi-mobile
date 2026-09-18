@@ -4,6 +4,8 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/dates.dart';
+import '../utils/libelles.dart';
+import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 
 /// Rendez-vous du patient connecte, avec annulation.
@@ -134,10 +136,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   String _statut(Map<String, dynamic> rdv) => '${rdv['statut'] ?? ''}';
 
   /// « CONFIRME » -> « Confirme », « EN_ATTENTE » -> « En attente ».
-  String _libelleStatut(Map<String, dynamic> rdv) {
-    final s = _statut(rdv).replaceAll('_', ' ').toLowerCase();
-    return s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-  }
+  String _libelleStatut(Map<String, dynamic> rdv) => libelleStatut(rdv['statut']);
 
   bool _annulable(Map<String, dynamic> rdv) => !_statut(rdv).toUpperCase().startsWith('ANNUL');
 
@@ -183,22 +182,9 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   }
 
   Widget _vueConnexion() {
-    final erreur = _erreur;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              erreur ?? 'Connectez-vous pour consulter vos rendez-vous.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            FilledButton(onPressed: _seConnecter, child: const Text('Se connecter')),
-          ],
-        ),
-      ),
+    return VueConnexion(
+      message: _erreur ?? 'Connectez-vous pour consulter vos rendez-vous.',
+      onSeConnecter: _seConnecter,
     );
   }
 }

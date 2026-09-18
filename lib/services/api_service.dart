@@ -93,6 +93,32 @@ class ApiService {
     _verifier(res, '/api/rendezvous/$rdvId/annuler');
   }
 
+  /// Ordonnances du patient connecte : {id, medecinId, patientId, rendezVousId,
+  /// lignes: [{medicament, posologie, duree}], emiseLe (ISO 8601), codeVerification, statut}.
+  Future<List<Map<String, dynamic>>> mesOrdonnances(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/ordonnances/mes'),
+      headers: _bearer(token),
+    );
+    return _liste(res, '/api/ordonnances/mes');
+  }
+
+  /// Une ordonnance par identifiant (jeton requis), memes champs que [mesOrdonnances].
+  Future<Map<String, dynamic>> ordonnance(int id, String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/ordonnances/$id'),
+      headers: _bearer(token),
+    );
+    return _objet(res, '/api/ordonnances/$id');
+  }
+
+  /// Verification publique (sans jeton) d'un code d'ordonnance : {valide, emiseLe, statut}.
+  Future<Map<String, dynamic>> verifierOrdonnance(String code) async {
+    final chemin = '/api/ordonnances/verifier/${Uri.encodeComponent(code)}';
+    final res = await http.get(Uri.parse('$_base$chemin'));
+    return _objet(res, chemin);
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(

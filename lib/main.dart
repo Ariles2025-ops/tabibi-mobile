@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'pages/fiche_medecin_page.dart';
+import 'pages/mes_ordonnances_page.dart';
 import 'pages/mes_rendez_vous_page.dart';
+import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/session.dart';
@@ -21,7 +23,8 @@ class TabibiApp extends StatelessWidget {
   }
 }
 
-/// Ecran d'accueil : recherche de praticiens, acces a la fiche et aux rendez-vous.
+/// Ecran d'accueil : recherche de praticiens, acces a la fiche, aux rendez-vous
+/// et aux ordonnances (les miennes, ou la verification publique d'un code).
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -94,6 +97,24 @@ class _RecherchePageState extends State<RecherchePage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _ouvrirMesOrdonnances() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MesOrdonnancesPage(api: widget.api, auth: _auth),
+      ),
+    );
+    if (mounted) setState(() {}); // l'utilisateur a pu se connecter (ou etre deconnecte)
+  }
+
+  /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
+  void _ouvrirVerification() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VerifierOrdonnancePage(api: widget.api),
+      ),
+    );
+  }
+
   void _message(String texte) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
@@ -118,6 +139,16 @@ class _RecherchePageState extends State<RecherchePage> {
       appBar: AppBar(
         title: const Text('Tabibi'),
         actions: [
+          IconButton(
+            tooltip: 'Verifier une ordonnance',
+            onPressed: _ouvrirVerification,
+            icon: const Icon(Icons.verified_outlined),
+          ),
+          IconButton(
+            tooltip: 'Mes ordonnances',
+            onPressed: _ouvrirMesOrdonnances,
+            icon: const Icon(Icons.description_outlined),
+          ),
           IconButton(
             tooltip: 'Mes rendez-vous',
             onPressed: _ouvrirMesRendezVous,

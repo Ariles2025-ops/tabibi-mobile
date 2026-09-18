@@ -43,3 +43,21 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   corps decode en UTF-8.
 - Tests : `ApiService` injectable dans les pages (`FakeApiService` dans `test/widget_test.dart`),
   test de la fiche medecin et du formatage des dates.
+
+## v0.4.0 — Ordonnances (mobile)
+- Ecran « Mes ordonnances » (`GET /api/ordonnances/mes`, jeton PATIENT) : date d'emission, code de
+  verification et statut, de la plus recente a la plus ancienne ; bouton « Se connecter » sans jeton.
+- Detail d'une ordonnance (`GET /api/ordonnances/{id}`) : praticien (nom resolu via
+  `GET /api/medecins/{id}`, repli « Medecin n° ... »), date et statut, code de verification bien
+  visible (`SelectableText` + bouton copier) et une carte par ligne (medicament, posologie, duree).
+- Ecran public « Verifier une ordonnance » (`GET /api/ordonnances/verifier/{code}`, sans compte,
+  par exemple en pharmacie) : saisie du code puis « Ordonnance authentique, emise le ... » (et statut)
+  ou « Code inconnu » (`valide: false` ou 404).
+- AppBar de la recherche : icone coche (verification publique) et icone document (mes ordonnances),
+  a cote du calendrier et de la connexion.
+- `ApiService` : `mesOrdonnances`, `ordonnance`, `verifierOrdonnance`.
+- Partage : `lib/utils/libelles.dart` (`libelleStatut`, aussi utilise par les rendez-vous),
+  `lib/utils/ordonnances.dart` (date d'emission, lignes, tri) et `lib/widgets/vue_connexion.dart`
+  (invitation « Se connecter »).
+- Tests : `FakeApiService` etendu (ordonnances, verification) ; liste, detail (code + medicaments),
+  verification publique et utilitaires (`test/ordonnances_test.dart`).
