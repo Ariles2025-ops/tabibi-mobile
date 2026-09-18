@@ -5,6 +5,7 @@ import 'package:tabibi_mobile/pages/detail_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
 import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
+import 'package:tabibi_mobile/pages/mes_teleconsultations_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
@@ -80,6 +81,43 @@ class FakeApiService extends ApiService {
 
   @override
   Future<int> toutMarquerLu(String token) async => 1;
+
+  /// Lien de salle remis une fois le consentement donne.
+  static const String lienSalle = 'https://meet.jit.si/tabibi-salle-test';
+
+  /// Deux teleconsultations : la plus recente (tc-1) planifiee sans consentement,
+  /// l'autre (tc-2) terminee avec consentement (lien remis mais session close).
+  @override
+  Future<List<Map<String, dynamic>>> mesTeleconsultations(String token) async => [
+        _teleconsultation('tc-1', 'PLANIFIEE', consentie: false),
+        _teleconsultation('tc-2', 'TERMINEE', consentie: true),
+      ];
+
+  @override
+  Future<Map<String, dynamic>> teleconsultation(String id, String token) async =>
+      _teleconsultation(id, 'PLANIFIEE', consentie: false);
+
+  @override
+  Future<Map<String, dynamic>> consentir(String teleconsultationId, String token) async =>
+      _teleconsultation(teleconsultationId, 'PLANIFIEE', consentie: true);
+
+  static Map<String, dynamic> _teleconsultation(
+    String id,
+    String statut, {
+    required bool consentie,
+  }) =>
+      {
+        'id': id,
+        'rendezVousId': 'rdv-3',
+        'patientId': 'patient-7',
+        'medecinId': 'medecin-1',
+        'statut': statut,
+        'consentementPatientLe': consentie ? '2026-12-03T08:30:00' : null,
+        'lienSalle': consentie ? lienSalle : null,
+        'creeLe': id == 'tc-1' ? '2026-12-03T08:00:00' : '2026-11-20T09:00:00',
+        'demarreeLe': statut == 'TERMINEE' ? '2026-11-20T09:05:00' : null,
+        'termineeLe': statut == 'TERMINEE' ? '2026-11-20T09:40:00' : null,
+      };
 
   static Map<String, dynamic> _notification(String id, {required bool lue}) => {
         'id': id,
@@ -307,5 +345,62 @@ void main() {
 
     expect(find.text('Aucune notification pour le moment.'), findsOneWidget);
     expect(find.byTooltip('Marquer comme lue'), findsNothing);
+  });
+
+  testWidgets("l'accueil propose l'entree Teleconsultations", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Teleconsultations'), findsOneWidget);
+  });
+
+  testWidgets('mes teleconsultations sans jeton propose de se connecter', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesTeleconsultationsPage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Je donne mon consentement'), findsNothing);
+  });
+
+  testWidgets(
+      'mes teleconsultations demande le consentement, puis propose de rejoindre la salle',
+      (tester) async {
+    Uri? ouvert;
+    await tester.pumpWidget(MaterialApp(
+      home: MesTeleconsultationsPage(
+        api: const FakeApiService(),
+        auth: sessionConnectee(),
+        ouvrirLien: (lien) async {
+          ouvert = lien;
+          return true;
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mes teleconsultations'), findsOneWidget);
+    // Session planifiee sans consentement : carte de consentement, pas de lien.
+    expect(find.text('Proposee le jeu. 3 dec. 08:00'), findsOneWidget);
+    expect(find.text('Planifiee'), findsOneWidget);
+    expect(find.text(texteConsentement), findsOneWidget);
+    expect(find.text('Je donne mon consentement'), findsOneWidget);
+    expect(find.text('Rejoindre la teleconsultation'), findsNothing);
+    // Session terminee (consentement donne, lien remis) : texte d'etat seulement.
+    expect(find.text('Terminee le ven. 20 nov. 09:40'), findsOneWidget);
+    expect(find.text('Terminee'), findsOneWidget);
+    expect(find.text('Cette teleconsultation est terminee.'), findsOneWidget);
+
+    await tester.tap(find.text('Je donne mon consentement'));
+    await tester.pumpAndSettle();
+    expect(find.text('Je donne mon consentement'), findsNothing);
+    expect(find.text('Consentement enregistre'), findsOneWidget);
+    expect(find.text('Rejoindre la teleconsultation'), findsOneWidget);
+
+    await tester.tap(find.text('Rejoindre la teleconsultation'));
+    await tester.pumpAndSettle();
+    expect(ouvert, Uri.parse(FakeApiService.lienSalle));
   });
 }

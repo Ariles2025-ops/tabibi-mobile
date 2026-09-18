@@ -32,3 +32,28 @@
 - Tests : `test/notifications_test.dart` (fromJson complet et valeurs nulles, copie lue, date, tri, compteur,
   libelle) ; `test/widget_test.dart` (liste et marquage lu, tout marquer lu, etat vide, sans jeton,
   entree d'accueil avec et sans compteur).
+
+## v0.6.0 — Teleconsultation
+- Ecran « Mes teleconsultations » (`GET /api/teleconsultations/mes`, jeton PATIENT) : une carte par session,
+  date selon l'avancement (« Proposee le ... » a la planification, « Demarree le ... », « Terminee le ... »)
+  et statut (Planifiee, En cours, Terminee, Annulee) ; invitation « Se connecter » sans jeton, erreurs
+  `VueErreur`, jeton expire (401) -> deconnexion ; etat vide « Aucune teleconsultation pour le moment. ».
+- Consentement explicite : tant que `consentementPatientLe` est nul et que la session est planifiee ou en
+  cours, carte d'information (video via un service tiers Jitsi Meet, aucun enregistrement par Tabibi) et
+  bouton « Je donne mon consentement » (`POST /api/teleconsultations/{id}/consentir`) ; la vue renvoyee
+  (avec `lienSalle`) remplace l'element ; erreurs 409 (terminee / annulee) affichees telles quelles.
+- « Rejoindre la teleconsultation » quand `lienSalle` est present et la session planifiee ou en cours
+  (`peutRejoindre`) : ouverture dans le navigateur externe via `url_launcher`
+  (`LaunchMode.externalApplication`), liens http(s) seulement ; sinon texte d'etat (terminee, annulee,
+  lien a venir). Ouverture injectable (`ouvrirLien`) pour les tests.
+- Accueil : entree « Teleconsultations » a cote de « Notifications (n) ».
+- Modele `Teleconsultation` (`lib/models/teleconsultation.dart`, `fromJson` tolerant, `aConsenti`),
+  utilitaires `lib/utils/teleconsultations.dart` (`libelleStatutTeleconsultation`, `estActive`,
+  `peutRejoindre`, `dateTeleconsultation`) ; `ApiService.mesTeleconsultations`, `teleconsultation`,
+  `consentir` (identifiants UUID en texte).
+- Dependance `url_launcher: ^6.3.0` ; declaration `<queries>` (intent VIEW https) a ajouter au manifeste
+  Android genere par `flutter create .` (voir README).
+- Tests : `test/teleconsultations_test.dart` (fromJson complet et valeurs nulles, libelles, `peutRejoindre`
+  et `estActive`, date selon l'avancement) ; `test/widget_test.dart` (carte de consentement quand le
+  consentement est nul, bouton « Rejoindre » apres consentement et lien ouvert, texte d'etat d'une session
+  terminee, sans jeton, entree d'accueil).

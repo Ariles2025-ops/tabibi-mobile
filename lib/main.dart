@@ -4,6 +4,7 @@ import 'pages/fiche_medecin_page.dart';
 import 'pages/mes_notifications_page.dart';
 import 'pages/mes_ordonnances_page.dart';
 import 'pages/mes_rendez_vous_page.dart';
+import 'pages/mes_teleconsultations_page.dart';
 import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
@@ -26,8 +27,9 @@ class TabibiApp extends StatelessWidget {
 }
 
 /// Ecran d'accueil : recherche de praticiens, acces a la fiche, aux rendez-vous,
-/// aux ordonnances (les miennes, ou la verification publique d'un code) et aux
-/// notifications (entree « Notifications (n) » avec le nombre de non lues).
+/// aux ordonnances (les miennes, ou la verification publique d'un code), aux
+/// notifications (entree « Notifications (n) » avec le nombre de non lues) et aux
+/// teleconsultations.
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -147,6 +149,15 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour(); // des notifications ont pu etre lues
   }
 
+  Future<void> _ouvrirTeleconsultations() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MesTeleconsultationsPage(api: widget.api, auth: _auth),
+      ),
+    );
+    await _apresRetour();
+  }
+
   /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
   void _ouvrirVerification() {
     Navigator.of(context).push(
@@ -255,7 +266,8 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
-  /// de non lues, connu a l'ouverture et actualise au retour de chaque ecran.
+  /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran) et
+  /// « Teleconsultations ».
   Widget _entrees() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -267,6 +279,11 @@ class _RecherchePageState extends State<RecherchePage> {
             avatar: const Icon(Icons.notifications_outlined, size: 18),
             label: Text(libelleNotifications(_nonLues)),
             onPressed: _ouvrirNotifications,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.videocam_outlined, size: 18),
+            label: const Text('Teleconsultations'),
+            onPressed: _ouvrirTeleconsultations,
           ),
         ],
       ),

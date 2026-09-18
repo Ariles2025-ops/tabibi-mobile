@@ -12,6 +12,7 @@ dependencies:
   http: ^1.2.2
   flutter_appauth: ^8.0.0        # OAuth2/OIDC (Keycloak) natif iOS + Android
   flutter_secure_storage: ^9.2.2 # stockage sur du jeton
+  url_launcher: ^6.3.0           # ouverture du lien de salle (teleconsultation) dans le navigateur
 
 dev_dependencies:
   flutter_test:

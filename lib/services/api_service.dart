@@ -156,6 +156,33 @@ class ApiService {
     return _nombre(_objet(res, '/api/notifications/toutes-lues'));
   }
 
+  /// Teleconsultations du patient connecte, les plus recentes d'abord : {id, rendezVousId,
+  /// patientId, medecinId, statut, consentementPatientLe, lienSalle (null tant que le patient
+  /// n'a pas consenti), creeLe, demarreeLe, termineeLe} (dates ISO 8601).
+  Future<List<Map<String, dynamic>>> mesTeleconsultations(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/teleconsultations/mes'),
+      headers: _bearer(token),
+    );
+    return _liste(res, '/api/teleconsultations/mes');
+  }
+
+  /// Une teleconsultation par identifiant, memes champs que [mesTeleconsultations]
+  /// (403 si elle concerne un autre patient, 404 si elle est inconnue).
+  Future<Map<String, dynamic>> teleconsultation(String id, String token) async {
+    final chemin = '/api/teleconsultations/${Uri.encodeComponent(id)}';
+    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    return _objet(res, chemin);
+  }
+
+  /// Consentement explicite du patient : la vue renvoyee porte desormais le lien de salle
+  /// (409 si la teleconsultation est terminee ou annulee).
+  Future<Map<String, dynamic>> consentir(String teleconsultationId, String token) async {
+    final chemin = '/api/teleconsultations/${Uri.encodeComponent(teleconsultationId)}/consentir';
+    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    return _objet(res, chemin);
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(

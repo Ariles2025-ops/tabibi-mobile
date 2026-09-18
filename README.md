@@ -79,3 +79,28 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 - Tests : modele et utilitaires (`test/notifications_test.dart`) ; `FakeApiService` etendu
   (notifications, variante sans notification) ; liste + marquage lu, tout marquer lu, etat vide,
   entree d'accueil avec et sans compteur.
+
+## v0.6.0 — Teleconsultation (mobile)
+- Ecran « Mes teleconsultations » (`GET /api/teleconsultations/mes`, jeton PATIENT) : une carte par
+  session avec sa date (« Proposee le ... », « Demarree le ... » ou « Terminee le ... ») et son statut
+  (Planifiee, En cours, Terminee, Annulee) ; bouton « Se connecter » sans jeton, erreurs via `VueErreur`.
+- Consentement explicite : tant que `consentementPatientLe` est nul (session planifiee ou en cours),
+  une carte rappelle que la seance se deroule en video via un service tiers (Jitsi Meet) sans
+  enregistrement par Tabibi, avec le bouton « Je donne mon consentement »
+  (`POST /api/teleconsultations/{id}/consentir`) ; la vue renvoyee, qui porte le lien de salle,
+  remplace l'element.
+- « Rejoindre la teleconsultation » des que le lien est remis et que la session est planifiee ou en
+  cours : ouverture dans le navigateur externe (`url_launcher`, `LaunchMode.externalApplication`,
+  liens http(s) seulement) ; sinon texte d'etat (terminee, annulee).
+- Accueil : entree « Teleconsultations » a cote de « Notifications (n) ».
+- Modele `lib/models/teleconsultation.dart` (`Teleconsultation.fromJson`, `aConsenti`) et
+  `lib/utils/teleconsultations.dart` (`libelleStatutTeleconsultation`, `estActive`, `peutRejoindre`,
+  `dateTeleconsultation`) ; `ApiService` : `mesTeleconsultations`, `teleconsultation`, `consentir`
+  (identifiants UUID en texte).
+- Dependance `url_launcher: ^6.3.0` (`flutter pub get`). Sur Android 11+, ajouter dans
+  `android/app/src/main/AndroidManifest.xml` (projet genere par `flutter create .`) la declaration
+  `<queries><intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent></queries>`
+  recommandee par `url_launcher` pour l'ouverture des liens https.
+- Tests : modele et utilitaires (`test/teleconsultations_test.dart`) ; page avec service factice
+  (carte de consentement quand le consentement est nul, bouton « Rejoindre » apres consentement et
+  lien ouvert via `ouvrirLien` injecte, texte d'etat d'une session terminee), entree d'accueil.
