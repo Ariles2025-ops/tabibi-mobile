@@ -19,8 +19,27 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 (non versionnes ici pour rester leger). L'essentiel — code, auth, API, test — est present.
 
 ## Prochaines etapes
-- Recherche de medecins, fiche, reservation.
-- Notifications push, stockage securise du jeton.
+- Notifications push, stockage securise du jeton, rafraichissement du jeton.
 
 ## v0.2.0 — Annuaire (mobile)
 - Ecran d'accueil : recherche de praticiens (nom, specialite) via `GET /api/medecins`.
+
+## v0.3.0 — Reservation (mobile)
+- Fiche medecin (`GET /api/medecins/{id}`) avec ses creneaux disponibles
+  (`GET /api/medecins/{id}/creneaux`), dates en heure locale au format « jeu. 4 dec. 09:00 »
+  (`lib/utils/dates.dart`, sans `intl`).
+- Bouton « Reserver » par creneau (`POST /api/creneaux/{id}/reserver`, jeton PATIENT) :
+  connexion Keycloak a la volee si necessaire ; « Rendez-vous confirme » et retrait du creneau
+  en cas de succes, « Ce creneau vient d'etre pris » en cas de 409.
+- Ecran « Mes rendez-vous » (`GET /api/rendezvous/mes`) : date, praticien, statut, et bouton
+  « Annuler » avec confirmation (`POST /api/rendezvous/{id}/annuler`) ; bouton « Se connecter »
+  si aucun jeton.
+- Navigation : un praticien de la liste ouvre sa fiche ; dans l'AppBar, l'icone calendrier ouvre
+  « Mes rendez-vous » et l'icone personne connecte l'utilisateur (ou confirme « Connecte »).
+- Session partagee (`lib/services/session.dart`) : une seule instance d'`AuthService`, le jeton
+  est conserve d'un ecran a l'autre.
+- `ApiService` : `medecin`, `creneaux`, `reserverCreneau`, `mesRendezVous`, `annuler` ;
+  erreurs HTTP (401, 403, 404, 409...) remontees en `ApiException(statusCode, message)`,
+  corps decode en UTF-8.
+- Tests : `ApiService` injectable dans les pages (`FakeApiService` dans `test/widget_test.dart`),
+  test de la fiche medecin et du formatage des dates.
