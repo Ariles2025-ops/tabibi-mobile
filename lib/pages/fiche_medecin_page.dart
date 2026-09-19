@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../models/conversation.dart';
 import '../models/synthese_avis.dart';
@@ -12,21 +13,8 @@ import '../utils/identifiants.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 
-/// Message affiche quand le patient n'a aucun rendez-vous avec le praticien (403).
-const String messageConversationRefusee =
-    'Vous devez avoir un rendez-vous avec ce médecin pour lui écrire.';
-
 /// Nombre de derniers avis affiches sur la fiche.
 const int nombreAvisAffiches = 5;
-
-/// Ce que promet la liste d'attente : une notification des qu'un creneau se libere.
-const String texteListeAttente = "Vous serez notifié dès qu'un créneau se libère.";
-
-/// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
-const String messageDejaInscrit = 'Vous êtes déjà inscrit sur cette liste.';
-
-/// Etat affiche a la place du bouton une fois le patient inscrit.
-const String texteInscrit = "Vous êtes inscrit sur la liste d'attente de ce médecin.";
 
 /// Fiche d'un praticien : informations, moyenne des avis, ouverture d'une conversation,
 /// creneaux reservables, inscription sur la liste d'attente et derniers avis anonymes.
@@ -93,7 +81,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         _avis = avis;
       });
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -116,7 +104,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message('Connexion necessaire pour reserver');
+        _message(t(context, 'fiche.connexionReserver'));
         return;
       }
     }
@@ -127,21 +115,21 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       await widget.api.reserverCreneau(creneauId, token);
       if (!mounted) return;
       setState(() => _retirerCreneau(creneauId));
-      _message('Rendez-vous confirme');
+      _message(t(context, 'fiche.rdvConfirme'));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.conflit) {
         // Pris entre-temps par un autre patient : il n'est plus reservable.
         setState(() => _retirerCreneau(creneauId));
-        _message("Ce creneau vient d'etre pris");
+        _message(t(context, 'api.creneauPris'));
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expiree : reconnectez-vous puis reessayez');
+        _message(t(context, 'commun.sessionExpiree'));
       } else {
-        _message(e.message);
+        _message(messageApi(context, e));
       }
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _enCours = null);
     }
@@ -154,13 +142,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Ouvre (ou retrouve) la conversation avec ce praticien (POST /api/conversations),
   /// connexion Keycloak a la volee si necessaire, puis affiche le fil ; 403 si le patient
-  /// n'a aucun rendez-vous avec lui ([messageConversationRefusee]).
+  /// n'a aucun rendez-vous avec lui (« fiche.conversationRefusee »).
   Future<void> _ouvrirConversation() async {
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message('Connexion nécessaire pour écrire au médecin');
+        _message(t(context, 'fiche.connexionEcrire'));
         return;
       }
     }
@@ -173,16 +161,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         await widget.api.ouvrirConversation(widget.medecinId, token),
       );
     } on ApiException catch (e) {
+      if (!mounted) return;
       if (e.interdit) {
-        _message(messageConversationRefusee);
+        _message(t(context, 'fiche.conversationRefusee'));
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expiree : reconnectez-vous puis reessayez');
+        _message(t(context, 'commun.sessionExpiree'));
       } else {
-        _message(e.message);
+        _message(messageApi(context, e));
       }
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _conversationEnCours = false);
     }
@@ -204,13 +193,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Inscrit le patient sur la liste d'attente du praticien
   /// (POST /api/medecins/{id}/liste-attente), connexion Keycloak a la volee si necessaire ;
-  /// 409 (deja inscrit) -> [messageDejaInscrit], l'etat passe a inscrit dans les deux cas.
+  /// 409 (deja inscrit) -> « fiche.dejaInscrit », l'etat passe a inscrit dans les deux cas.
   Future<void> _inscrire() async {
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message("Connexion nécessaire pour s'inscrire sur la liste d'attente");
+        _message(t(context, 'fiche.connexionInscrire'));
         return;
       }
     }
@@ -221,19 +210,23 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     try {
       await widget.api.inscrireListeAttente(widget.medecinId, token);
       inscrit = true;
-      _message('Inscription enregistrée. $texteListeAttente');
+      if (!mounted) return;
+      _message(t(context, 'fiche.inscriptionEnregistree', params: {
+        'texte': t(context, 'fiche.texteListeAttente'),
+      }));
     } on ApiException catch (e) {
+      if (!mounted) return;
       if (e.conflit) {
         inscrit = true;
-        _message(messageDejaInscrit);
+        _message(t(context, 'fiche.dejaInscrit'));
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expirée : reconnectez-vous puis réessayez');
+        _message(t(context, 'commun.sessionExpiree'));
       } else {
-        _message(e.message);
+        _message(messageApi(context, e));
       }
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) {
         setState(() {
@@ -252,7 +245,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Fiche medecin')),
+      appBar: AppBar(title: Text(t(context, 'fiche.titre'))),
       body: _corps(context),
     );
   }
@@ -262,7 +255,10 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     final erreur = _erreur;
     final medecin = _medecin;
     if (erreur != null || medecin == null) {
-      return VueErreur(message: erreur ?? 'Medecin introuvable', onReessayer: _charger);
+      return VueErreur(
+        message: erreur ?? t(context, 'fiche.introuvable'),
+        onReessayer: _charger,
+      );
     }
     final texte = Theme.of(context).textTheme;
     return ListView(
@@ -270,20 +266,24 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       children: [
         Text(medecin['nomComplet'] as String, style: texte.titleLarge),
         const SizedBox(height: 4),
-        Text('${medecin['specialiteFr']} · ${medecin['ville']} (${medecin['wilayaFr']})'),
+        Text(t(context, 'accueil.sousTitreMedecin', params: {
+          'specialite': medecin['specialiteFr'],
+          'ville': medecin['ville'],
+          'wilaya': medecin['wilayaFr'],
+        })),
         const SizedBox(height: 8),
         _ligneMoyenne(context),
         const SizedBox(height: 16),
-        _boutonConversation(),
+        _boutonConversation(context),
         const SizedBox(height: 24),
-        Text('Creneaux disponibles', style: texte.titleMedium),
+        Text(t(context, 'fiche.creneaux'), style: texte.titleMedium),
         const SizedBox(height: 8),
-        if (_creneaux.isEmpty) const Text('Aucun creneau disponible pour le moment.'),
-        for (final c in _creneaux) _creneauTile(c),
+        if (_creneaux.isEmpty) Text(t(context, 'fiche.aucunCreneau')),
+        for (final c in _creneaux) _creneauTile(context, c),
         const SizedBox(height: 24),
         _listeAttente(context),
         const SizedBox(height: 24),
-        Text('Avis des patients', style: texte.titleMedium),
+        Text(t(context, 'fiche.avisPatients'), style: texte.titleMedium),
         const SizedBox(height: 8),
         ..._derniersAvis(context),
       ],
@@ -299,7 +299,10 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       children: [
         Icon(Icons.star, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 4),
-        Text(formaterMoyenne(avis), style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          formaterMoyenne(langueDe(context), avis),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       ],
     );
   }
@@ -307,13 +310,14 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// Derniers avis anonymes (note, commentaire, date), ou un texte d'etat.
   List<Widget> _derniersAvis(BuildContext context) {
     final avis = _avis;
-    if (avis == null) return const [Text('Avis indisponibles pour le moment.')];
-    if (!avis.aDesAvis || avis.avis.isEmpty) return const [Text('Aucun avis pour le moment.')];
+    if (avis == null) return [Text(t(context, 'fiche.avisIndisponibles'))];
+    if (!avis.aDesAvis || avis.avis.isEmpty) return [Text(t(context, 'fiche.aucunAvis'))];
     return [for (final a in avis.avis.take(nombreAvisAffiches)) _carteAvis(context, a)];
   }
 
   /// Un avis anonyme : « 4 / 5 », commentaire s'il existe, date de depot.
   Widget _carteAvis(BuildContext context, Avis a) {
+    final langue = langueDe(context);
     final texte = Theme.of(context).textTheme;
     final commentaire = a.commentaire;
     return Card(
@@ -327,7 +331,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
               children: [
                 const Icon(Icons.star_outline, size: 18),
                 const SizedBox(width: 4),
-                Text(formaterNote(a.note), style: texte.titleSmall),
+                Text(formaterNote(langue, a.note), style: texte.titleSmall),
               ],
             ),
             if (commentaire != null) ...[
@@ -335,7 +339,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
               Text(commentaire),
             ],
             const SizedBox(height: 4),
-            Text(dateAvis(a), style: texte.bodySmall),
+            Text(dateAvis(langue, a), style: texte.bodySmall),
           ],
         ),
       ),
@@ -344,21 +348,21 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Liste d'attente, surtout utile quand aucun creneau n'est disponible : rappel de ce
   /// qu'elle promet, puis bouton « M'inscrire sur la liste d'attente » ou, une fois inscrit,
-  /// texte d'etat ([texteInscrit]).
+  /// texte d'etat.
   Widget _listeAttente(BuildContext context) {
     final texte = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Liste d'attente", style: texte.titleMedium),
+        Text(t(context, 'fiche.listeAttente'), style: texte.titleMedium),
         const SizedBox(height: 4),
-        Text(texteListeAttente, style: texte.bodySmall),
+        Text(t(context, 'fiche.texteListeAttente'), style: texte.bodySmall),
         const SizedBox(height: 8),
         if (_inscrit)
-          const Text(texteInscrit)
+          Text(t(context, 'fiche.inscrit'))
         else
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton.icon(
               onPressed: _inscriptionEnCours ? null : _inscrire,
               icon: _inscriptionEnCours
@@ -368,17 +372,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.hourglass_top_outlined),
-              label: const Text("M'inscrire sur la liste d'attente"),
+              label: Text(t(context, 'fiche.inscrire')),
             ),
           ),
       ],
     );
   }
 
-  /// « Ouvrir une conversation » (messagerie avec ce praticien), aligne a gauche.
-  Widget _boutonConversation() {
+  /// « Ouvrir une conversation » (messagerie avec ce praticien), aligne du cote du debut.
+  Widget _boutonConversation(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: OutlinedButton.icon(
         onPressed: _conversationEnCours ? null : _ouvrirConversation,
         icon: _conversationEnCours
@@ -388,18 +392,18 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.chat_bubble_outline),
-        label: const Text('Ouvrir une conversation'),
+        label: Text(t(context, 'fiche.ouvrirConversation')),
       ),
     );
   }
 
-  Widget _creneauTile(Map<String, dynamic> creneau) {
+  Widget _creneauTile(BuildContext context, Map<String, dynamic> creneau) {
     final enCours = _enCours == identifiant(creneau['id']);
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.schedule),
-      title: Text(formaterDateIso(creneau['debut'] as String)),
-      subtitle: Text('${creneau['dureeMinutes']} min'),
+      title: Text(formaterDateIso(langueDe(context), creneau['debut'] as String)),
+      subtitle: Text(t(context, 'fiche.duree', params: {'n': creneau['dureeMinutes']})),
       trailing: FilledButton(
         onPressed: _enCours == null ? () => _reserver(creneau) : null,
         child: enCours
@@ -408,7 +412,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Reserver'),
+            : Text(t(context, 'fiche.reserver')),
       ),
     );
   }

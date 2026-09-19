@@ -2,7 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/models/teleconsultation.dart';
 import 'package:tabibi_mobile/utils/teleconsultations.dart';
 
+import 'outils.dart';
+
 void main() {
+  setUp(preparerTests);
+
   test("fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final t = Teleconsultation.fromJson({
       'id': 'c3c3c3c3-0000-4000-8000-000000000001',
@@ -53,13 +57,14 @@ void main() {
   });
 
   test('libelleStatutTeleconsultation traduit les quatre statuts et tolere le reste', () {
-    expect(libelleStatutTeleconsultation('PLANIFIEE'), 'Planifiee');
-    expect(libelleStatutTeleconsultation('EN_COURS'), 'En cours');
-    expect(libelleStatutTeleconsultation('TERMINEE'), 'Terminee');
-    expect(libelleStatutTeleconsultation('ANNULEE'), 'Annulee');
-    expect(libelleStatutTeleconsultation('en_cours'), 'En cours');
-    expect(libelleStatutTeleconsultation('AUTRE_STATUT'), 'Autre statut');
-    expect(libelleStatutTeleconsultation(null), '');
+    expect(libelleStatutTeleconsultation('fr', 'PLANIFIEE'), 'Planifiée');
+    expect(libelleStatutTeleconsultation('fr', 'EN_COURS'), 'En cours');
+    expect(libelleStatutTeleconsultation('fr', 'TERMINEE'), 'Terminée');
+    expect(libelleStatutTeleconsultation('fr', 'ANNULEE'), 'Annulée');
+    expect(libelleStatutTeleconsultation('fr', 'en_cours'), 'En cours');
+    expect(libelleStatutTeleconsultation('fr', 'AUTRE_STATUT'), 'Autre statut');
+    expect(libelleStatutTeleconsultation('fr', null), '');
+    expect(libelleStatutTeleconsultation('ar', 'PLANIFIEE'), 'مبرمجة');
   });
 
   test('peutRejoindre exige un lien de salle et une session planifiee ou en cours', () {
@@ -84,24 +89,24 @@ void main() {
 
   test("dateTeleconsultation suit l'avancement de la session", () {
     expect(
-      dateTeleconsultation(Teleconsultation.fromJson({'creeLe': '2026-12-03T08:00:00'})),
-      'Proposee le jeu. 3 dec. 08:00',
+      dateTeleconsultation('fr', Teleconsultation.fromJson({'creeLe': '2026-12-03T08:00:00'})),
+      'Proposée le jeu. 3 déc. 08:00',
     );
     expect(
-      dateTeleconsultation(Teleconsultation.fromJson({
+      dateTeleconsultation('fr', Teleconsultation.fromJson({
         'creeLe': '2026-12-03T08:00:00',
         'demarreeLe': '2026-12-03T09:00:00',
       })),
-      'Demarree le jeu. 3 dec. 09:00',
+      'Démarrée le jeu. 3 déc. 09:00',
     );
     expect(
-      dateTeleconsultation(Teleconsultation.fromJson({
+      dateTeleconsultation('fr', Teleconsultation.fromJson({
         'creeLe': '2026-11-20T09:00:00',
         'demarreeLe': '2026-11-20T09:05:00',
         'termineeLe': '2026-11-20T09:40:00',
       })),
-      'Terminee le ven. 20 nov. 09:40',
+      'Terminée le ven. 20 nov. 09:40',
     );
-    expect(dateTeleconsultation(Teleconsultation.fromJson({})), 'Date inconnue');
+    expect(dateTeleconsultation('fr', Teleconsultation.fromJson({})), 'Date inconnue');
   });
 }

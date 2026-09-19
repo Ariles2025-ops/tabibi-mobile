@@ -3,7 +3,11 @@ import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/libelles.dart';
 import 'package:tabibi_mobile/utils/ordonnances.dart';
 
+import 'outils.dart';
+
 void main() {
+  setUp(preparerTests);
+
   test('nomFichierPdf nomme le fichier par le code de verification, sinon par l identifiant', () {
     expect(nomFichierPdf({'id': 'd4d4d4d4-0000', 'codeVerification': 'ABC123'}),
         'ordonnance-ABC123.pdf');
@@ -26,16 +30,19 @@ void main() {
   });
 
   test('libelleStatut met en forme un statut brut et tolere une valeur absente', () {
-    expect(libelleStatut('EMISE'), 'Emise');
-    expect(libelleStatut('EN_ATTENTE'), 'En attente');
-    expect(libelleStatut(null), '');
-    expect(libelleStatut(''), '');
+    expect(libelleStatut('fr', 'EMISE'), 'Émise');
+    expect(libelleStatut('fr', 'EN_ATTENTE'), 'En attente');
+    expect(libelleStatut('fr', null), '');
+    expect(libelleStatut('fr', ''), '');
+    // Statut absent des dictionnaires : mise en forme generique.
+    expect(libelleStatut('fr', 'AUTRE_STATUT'), 'Autre statut');
+    expect(libelleStatut('ar', 'EMISE'), 'صادرة');
   });
 
   test('dateEmission formate emiseLe et signale une date absente', () {
-    expect(dateEmission({'emiseLe': '2026-12-03T10:15:00'}), 'jeu. 3 dec. 10:15');
-    expect(dateEmission({}), 'date inconnue');
-    expect(dateEmission({'emiseLe': null}), 'date inconnue');
+    expect(dateEmission('fr', {'emiseLe': '2026-12-03T10:15:00'}), 'jeu. 3 déc. 10:15');
+    expect(dateEmission('fr', {}), 'date inconnue');
+    expect(dateEmission('fr', {'emiseLe': null}), 'date inconnue');
   });
 
   test('lignesOrdonnance renvoie les lignes et ignore un champ absent ou mal forme', () {

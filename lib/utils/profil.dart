@@ -1,21 +1,20 @@
-// Lecture et validation du profil (voir `Profil`) : telephone algerien, langues de
-// l'interface, dates affichees.
+// Lecture et validation du profil (voir `Profil`) : telephone algerien, langues acceptees
+// par l'API, dates affichees.
 
+import '../i18n/traductions.dart' as i18n;
 import '../models/profil.dart';
 import 'dates.dart';
 
-/// Libelles des langues de l'interface, par code accepte par l'API et dans l'ordre du menu :
-/// francais, arabe, kabyle (taqbaylit), anglais.
+/// Nom de chaque langue acceptee par l'API, dans sa propre langue et dans l'ordre du menu :
+/// francais, arabe, kabyle (taqbaylit), anglais. Un nom de langue ne se traduit pas : il
+/// s'ecrit toujours de la meme facon, quelle que soit la langue de l'interface (voir
+/// `nomsLangues` pour les seules langues de l'interface).
 const Map<String, String> libellesLangues = {
   'fr': 'Français',
   'ar': 'العربية',
   'kab': 'Taqbaylit',
   'en': 'English',
 };
-
-/// Message affiche quand le telephone saisi n'est pas un numero algerien valide.
-const String messageTelephoneInvalide =
-    'Le téléphone doit compter 9 à 10 chiffres et commencer par 0 (ex. 0550123456).';
 
 /// Numero algerien, mobile (« 0550123456 ») ou fixe (« 021123456 ») : chiffres seulement,
 /// 9 a 10 chiffres commencant par 0 (meme regle que l'API).
@@ -40,13 +39,16 @@ bool telephoneValide(String? telephone) {
 }
 
 /// « 14 mai 1990 » ; « Non renseignée » sans date.
-String libelleDateNaissance(DateTime? dateNaissance) =>
-    dateNaissance == null ? 'Non renseignée' : formaterJour(dateNaissance);
+String libelleDateNaissance(String langue, DateTime? dateNaissance) =>
+    dateNaissance == null
+        ? i18n.traduire(langue, 'profil.nonRenseignee')
+        : formaterJour(langue, dateNaissance);
 
-/// « Mis à jour le jeu. 4 dec. 09:00 » ; « Profil non enregistré » tant que le serveur n'a
+/// « Mis à jour le jeu. 4 déc. 09:00 » ; « Profil non enregistré » tant que le serveur n'a
 /// jamais date le profil.
-String libelleMiseAJour(Profil profil) {
+String libelleMiseAJour(String langue, Profil profil) {
   final misAJourLe = profil.misAJourLe;
-  if (misAJourLe == null) return 'Profil non enregistré';
-  return 'Mis à jour le ${formaterDateHeure(misAJourLe)}';
+  if (misAJourLe == null) return i18n.traduire(langue, 'profil.nonEnregistre');
+  return i18n.traduire(langue, 'profil.misAJourLe',
+      params: {'date': formaterDateHeure(langue, misAJourLe)});
 }

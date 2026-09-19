@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/besoin_medicament.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -8,10 +9,6 @@ import '../utils/dawini.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'reponses_besoin_page.dart';
-
-/// Messages de validation du formulaire.
-const String messageMedicamentRequis = 'Indiquez le médicament recherché.';
-const String messageWilayaRequise = 'Indiquez le code de votre wilaya.';
 
 /// Dawini : demander un medicament aux pharmacies. Formulaire (medicament et code de wilaya
 /// obligatoires, commune et precision facultatives) puis liste de mes demandes avec leur
@@ -60,7 +57,7 @@ class _DawiniPageState extends State<DawiniPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -82,9 +79,9 @@ class _DawiniPageState extends State<DawiniPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -95,12 +92,12 @@ class _DawiniPageState extends State<DawiniPage> {
   Future<void> _publier() async {
     final medicament = _medicament.text.trim();
     if (medicament.isEmpty) {
-      _message(messageMedicamentRequis);
+      _message(t(context, 'dawini.medicamentRequis'));
       return;
     }
     final wilayaCode = _wilaya.text.trim();
     if (wilayaCode.isEmpty) {
-      _message(messageWilayaRequise);
+      _message(t(context, 'dawini.wilayaRequise'));
       return;
     }
     if (_envoi) return;
@@ -122,9 +119,9 @@ class _DawiniPageState extends State<DawiniPage> {
       publie = true;
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      if (mounted) _message(messageApi(context, e));
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
     }
@@ -132,7 +129,7 @@ class _DawiniPageState extends State<DawiniPage> {
     _medicament.clear();
     _commune.clear();
     _precision.clear();
-    _message('Demande publiée.');
+    _message(t(context, 'dawini.publiee'));
     await _charger(discret: true);
   }
 
@@ -160,11 +157,11 @@ class _DawiniPageState extends State<DawiniPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dawini'),
+        title: Text(t(context, 'dawini.titre')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t(context, 'commun.actualiser'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -177,7 +174,7 @@ class _DawiniPageState extends State<DawiniPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour demander un médicament aux pharmacies.',
+        message: _erreur ?? t(context, 'dawini.connectezVous'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -187,7 +184,7 @@ class _DawiniPageState extends State<DawiniPage> {
       children: [
         _formulaire(context),
         const SizedBox(height: 24),
-        Text('Mes demandes', style: texte.titleMedium),
+        Text(t(context, 'dawini.mesDemandes'), style: texte.titleMedium),
         const SizedBox(height: 8),
         ..._listeDemandes(context),
       ],
@@ -203,19 +200,16 @@ class _DawiniPageState extends State<DawiniPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Demander un médicament', style: texte.titleMedium),
+            Text(t(context, 'dawini.demander'), style: texte.titleMedium),
             const SizedBox(height: 4),
-            Text(
-              'Les pharmacies de votre wilaya répondent avec leur disponibilité et leur prix.',
-              style: texte.bodySmall,
-            ),
+            Text(t(context, 'dawini.explication'), style: texte.bodySmall),
             const SizedBox(height: 12),
             TextField(
               controller: _medicament,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Médicament recherché *',
-                prefixIcon: Icon(Icons.medication_outlined),
+              decoration: InputDecoration(
+                labelText: t(context, 'dawini.medicament'),
+                prefixIcon: const Icon(Icons.medication_outlined),
               ),
             ),
             const SizedBox(height: 8),
@@ -223,29 +217,29 @@ class _DawiniPageState extends State<DawiniPage> {
               controller: _wilaya,
               keyboardType: TextInputType.number,
               maxLength: 2,
-              decoration: const InputDecoration(
-                labelText: 'Wilaya (code) *',
-                hintText: '16 pour Alger',
+              decoration: InputDecoration(
+                labelText: t(context, 'dawini.wilaya'),
+                hintText: t(context, 'dawini.wilayaIndice'),
                 counterText: '',
-                prefixIcon: Icon(Icons.map_outlined),
+                prefixIcon: const Icon(Icons.map_outlined),
               ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _commune,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Commune',
-                prefixIcon: Icon(Icons.place_outlined),
+              decoration: InputDecoration(
+                labelText: t(context, 'dawini.commune'),
+                prefixIcon: const Icon(Icons.place_outlined),
               ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _precision,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Précision (dosage, forme, urgence...)',
-                prefixIcon: Icon(Icons.notes_outlined),
+              decoration: InputDecoration(
+                labelText: t(context, 'dawini.precision'),
+                prefixIcon: const Icon(Icons.notes_outlined),
               ),
             ),
             const SizedBox(height: 16),
@@ -257,7 +251,7 @@ class _DawiniPageState extends State<DawiniPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Publier la demande'),
+                  : Text(t(context, 'dawini.publier')),
             ),
           ],
         ),
@@ -276,11 +270,12 @@ class _DawiniPageState extends State<DawiniPage> {
     }
     final erreur = _erreur;
     if (erreur != null) return [VueErreur(message: erreur, onReessayer: _charger)];
-    if (_besoins.isEmpty) return const [Text('Aucune demande pour le moment.')];
+    if (_besoins.isEmpty) return [Text(t(context, 'dawini.aucuneDemande'))];
     return [for (final b in _besoins) _tuile(context, b)];
   }
 
   Widget _tuile(BuildContext context, BesoinMedicament b) {
+    final langue = langueDe(context);
     final texte = Theme.of(context).textTheme;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -290,9 +285,12 @@ class _DawiniPageState extends State<DawiniPage> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${lieuBesoin(b)} · ${libelleStatutBesoin(b.statut)}'),
+            Text(t(context, 'dawini.lieuStatut', params: {
+              'lieu': lieuBesoin(langue, b),
+              'statut': libelleStatutBesoin(langue, b.statut),
+            })),
             const SizedBox(height: 2),
-            Text(dateBesoin(b), style: texte.bodySmall),
+            Text(dateBesoin(langue, b), style: texte.bodySmall),
           ],
         ),
         isThreeLine: true,
@@ -301,7 +299,7 @@ class _DawiniPageState extends State<DawiniPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(libelleReponses(b.nombreReponses), style: texte.labelLarge),
+            Text(libelleReponses(langue, b.nombreReponses), style: texte.labelLarge),
             const Icon(Icons.chevron_right),
           ],
         ),

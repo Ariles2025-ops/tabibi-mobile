@@ -2,7 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/models/notification.dart';
 import 'package:tabibi_mobile/utils/notifications.dart';
 
+import 'outils.dart';
+
 void main() {
+  setUp(preparerTests);
+
   test("fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final n = NotificationUtilisateur.fromJson({
       'id': 'b7f1e2c4-0000-4000-8000-000000000001',
@@ -64,10 +68,10 @@ void main() {
 
   test('dateNotification formate creeLe et signale une date absente', () {
     expect(
-      dateNotification(NotificationUtilisateur.fromJson({'creeLe': '2026-12-03T10:15:00'})),
-      'jeu. 3 dec. 10:15',
+      dateNotification('fr', NotificationUtilisateur.fromJson({'creeLe': '2026-12-03T10:15:00'})),
+      'jeu. 3 déc. 10:15',
     );
-    expect(dateNotification(NotificationUtilisateur.fromJson({})), 'date inconnue');
+    expect(dateNotification('fr', NotificationUtilisateur.fromJson({})), 'date inconnue');
   });
 
   test('trierParCreation place la plus recente en tete et les dates absentes en fin', () {
@@ -93,8 +97,9 @@ void main() {
 
   test("libelleNotifications ajoute le nombre de non lues seulement s'il est connu et positif",
       () {
-    expect(libelleNotifications(null), 'Notifications');
-    expect(libelleNotifications(0), 'Notifications');
-    expect(libelleNotifications(3), 'Notifications (3)');
+    expect(libelleNotifications('fr', null), 'Notifications');
+    expect(libelleNotifications('fr', 0), 'Notifications');
+    expect(libelleNotifications('fr', 3), 'Notifications (3)');
+    expect(libelleNotifications('ar', 3), 'الإشعارات (3)');
   });
 }

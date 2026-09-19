@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -43,7 +44,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -63,9 +64,9 @@ class _MesAvisPageState extends State<MesAvisPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -86,7 +87,8 @@ class _MesAvisPageState extends State<MesAvisPage> {
     }
   }
 
-  String _nomMedecin(Avis a) => _nomsMedecins[a.medecinId] ?? libelleMedecin(a.medecinId);
+  String _nomMedecin(BuildContext context, Avis a) =>
+      _nomsMedecins[a.medecinId] ?? libelleMedecin(langueDe(context), a.medecinId);
 
   void _message(String texte) {
     if (!mounted) return;
@@ -97,11 +99,11 @@ class _MesAvisPageState extends State<MesAvisPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes avis'),
+        title: Text(t(context, 'mesAvis.titre')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t(context, 'commun.actualiser'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -114,7 +116,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos avis.',
+        message: _erreur ?? t(context, 'mesAvis.connectezVous'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -122,13 +124,10 @@ class _MesAvisPageState extends State<MesAvisPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_avis.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Aucun avis pour le moment. Vous pourrez en donner un après un rendez-vous honoré.',
-            textAlign: TextAlign.center,
-          ),
+          padding: const EdgeInsets.all(24),
+          child: Text(t(context, 'mesAvis.aucun'), textAlign: TextAlign.center),
         ),
       );
     }
@@ -140,6 +139,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
 
   /// Une carte par avis : praticien, « 4 / 5 · Publié », commentaire puis date de depot.
   Widget _carte(BuildContext context, Avis a) {
+    final langue = langueDe(context);
     final texte = Theme.of(context).textTheme;
     final commentaire = a.commentaire;
     return Card(
@@ -152,15 +152,21 @@ class _MesAvisPageState extends State<MesAvisPage> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star_outline),
-              title: Text(_nomMedecin(a)),
-              subtitle: Text('${formaterNote(a.note)} · ${libelleStatutAvis(a.statut)}'),
+              title: Text(_nomMedecin(context, a)),
+              subtitle: Text(t(context, 'mesAvis.noteStatut', params: {
+                'note': formaterNote(langue, a.note),
+                'statut': libelleStatutAvis(langue, a.statut),
+              })),
             ),
             if (commentaire != null) ...[
               const SizedBox(height: 4),
               Text(commentaire),
             ],
             const SizedBox(height: 8),
-            Text('Déposé le ${dateAvis(a)}', style: texte.bodySmall),
+            Text(
+              t(context, 'mesAvis.deposeLe', params: {'date': dateAvis(langue, a)}),
+              style: texte.bodySmall,
+            ),
           ],
         ),
       ),

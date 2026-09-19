@@ -1,21 +1,16 @@
 // Lecture des teleconsultations (voir `Teleconsultation`) : libelle de statut, date affichee
 // et regles d'acces a la salle video.
 
+import '../i18n/traductions.dart' as i18n;
 import '../models/teleconsultation.dart';
 import 'dates.dart';
 import 'libelles.dart';
 
-/// « PLANIFIEE » -> « Planifiee », « EN_COURS » -> « En cours »,
-/// « TERMINEE » -> « Terminee », « ANNULEE » -> « Annulee » ;
+/// « PLANIFIEE » -> « Planifiée », « EN_COURS » -> « En cours »,
+/// « TERMINEE » -> « Terminée », « ANNULEE » -> « Annulée » ;
 /// toute autre valeur suit la mise en forme generique ([libelleStatut]).
-String libelleStatutTeleconsultation(Object? statut) {
-  return switch (statut?.toString().trim().toUpperCase()) {
-    'PLANIFIEE' => 'Planifiee',
-    'EN_COURS' => 'En cours',
-    'TERMINEE' => 'Terminee',
-    'ANNULEE' => 'Annulee',
-    _ => libelleStatut(statut),
-  };
+String libelleStatutTeleconsultation(String langue, Object? statut) {
+  return statut == null ? '' : libelleStatut(langue, statut);
 }
 
 /// Vrai si la session peut encore avoir lieu : planifiee ou en cours.
@@ -25,15 +20,24 @@ bool estActive(Teleconsultation t) => t.statut == 'PLANIFIEE' || t.statut == 'EN
 /// et session planifiee ou en cours.
 bool peutRejoindre(Teleconsultation t) => t.lienSalle != null && estActive(t);
 
-/// Date a afficher selon l'avancement : « Terminee le ... », « Demarree le ... » ou
-/// « Proposee le ... » (date de planification, format « jeu. 4 dec. 09:00 ») ;
+/// Date a afficher selon l'avancement : « Terminée le ... », « Démarrée le ... » ou
+/// « Proposée le ... » (date de planification, format « jeu. 4 déc. 09:00 ») ;
 /// « Date inconnue » si aucune date n'est lisible.
-String dateTeleconsultation(Teleconsultation t) {
+String dateTeleconsultation(String langue, Teleconsultation t) {
   final termineeLe = t.termineeLe;
-  if (termineeLe != null) return 'Terminee le ${formaterDateHeure(termineeLe)}';
+  if (termineeLe != null) {
+    return i18n.traduire(langue, 'tele.termineeLe',
+        params: {'date': formaterDateHeure(langue, termineeLe)});
+  }
   final demarreeLe = t.demarreeLe;
-  if (demarreeLe != null) return 'Demarree le ${formaterDateHeure(demarreeLe)}';
+  if (demarreeLe != null) {
+    return i18n.traduire(langue, 'tele.demarreeLe',
+        params: {'date': formaterDateHeure(langue, demarreeLe)});
+  }
   final creeLe = t.creeLe;
-  if (creeLe != null) return 'Proposee le ${formaterDateHeure(creeLe)}';
-  return 'Date inconnue';
+  if (creeLe != null) {
+    return i18n.traduire(langue, 'tele.proposeeLe',
+        params: {'date': formaterDateHeure(langue, creeLe)});
+  }
+  return i18n.traduire(langue, 'commun.dateInconnueMaj');
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../utils/dates.dart';
 import '../utils/libelles.dart';
@@ -27,7 +28,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
   Future<void> _verifier() async {
     final code = _code.text.trim();
     if (code.isEmpty) {
-      _message('Saisissez le code de verification');
+      _message(t(context, 'verif.saisirCode'));
       return;
     }
     FocusScope.of(context).unfocus();
@@ -45,10 +46,10 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
         // Code absent cote serveur : meme affichage qu'un code invalide.
         setState(() => _resultat = const <String, dynamic>{'valide': false});
       } else {
-        setState(() => _erreur = e.message);
+        setState(() => _erreur = messageApi(context, e));
       }
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -68,7 +69,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verifier une ordonnance')),
+      appBar: AppBar(title: Text(t(context, 'verif.titre'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -76,10 +77,10 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
             controller: _code,
             autofocus: true,
             textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              labelText: 'Code de verification',
-              hintText: "Code figurant sur l'ordonnance",
-              prefixIcon: Icon(Icons.tag),
+            decoration: InputDecoration(
+              labelText: t(context, 'ordonnance.codeVerification'),
+              hintText: t(context, 'verif.codeSurOrdonnance'),
+              prefixIcon: const Icon(Icons.tag),
             ),
             onSubmitted: (_) => _verifier(),
           ),
@@ -87,7 +88,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           FilledButton.icon(
             onPressed: _charge ? null : _verifier,
             icon: const Icon(Icons.verified_outlined),
-            label: const Text('Verifier'),
+            label: Text(t(context, 'verif.verifier')),
           ),
           const SizedBox(height: 24),
           _zoneResultat(context),
@@ -107,7 +108,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
     final resultat = _resultat;
     if (resultat == null) {
       return Text(
-        "Saisissez le code figurant sur l'ordonnance pour verifier son authenticite.",
+        t(context, 'verif.explication'),
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium,
       );
@@ -118,23 +119,28 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
         color: couleurs.errorContainer,
         child: ListTile(
           leading: Icon(Icons.error_outline, color: couleurs.onErrorContainer),
-          title: const Text('Code inconnu'),
-          subtitle: const Text('Aucune ordonnance ne correspond a ce code.'),
+          title: Text(t(context, 'verif.codeInconnu')),
+          subtitle: Text(t(context, 'verif.aucuneCorrespondance')),
         ),
       );
     }
+    final langue = langueDe(context);
     final Object? emiseLe = resultat['emiseLe'];
-    final statut = libelleStatut(resultat['statut']);
+    final statut = libelleStatut(langue, resultat['statut']);
     return Card(
       color: couleurs.primaryContainer,
       child: ListTile(
         leading: Icon(Icons.verified, color: couleurs.primary),
         title: Text(
           emiseLe is String && emiseLe.isNotEmpty
-              ? 'Ordonnance authentique, emise le ${formaterDateIso(emiseLe)}'
-              : 'Ordonnance authentique',
+              ? t(context, 'verif.authentiqueLe', params: {
+                  'date': formaterDateIso(langue, emiseLe),
+                })
+              : t(context, 'verif.authentique'),
         ),
-        subtitle: statut.isEmpty ? null : Text('Statut : $statut'),
+        subtitle: statut.isEmpty
+            ? null
+            : Text(t(context, 'commun.statut', params: {'statut': statut})),
       ),
     );
   }

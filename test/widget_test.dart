@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
+import 'package:tabibi_mobile/i18n/traductions.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/models/besoin_medicament.dart';
 import 'package:tabibi_mobile/models/conversation.dart';
@@ -20,7 +22,6 @@ import 'package:tabibi_mobile/pages/reponses_besoin_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
-import 'package:tabibi_mobile/utils/profil.dart';
 
 import 'outils.dart';
 
@@ -704,10 +705,12 @@ Future<void> laisserPasserLeMessage(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(preparerTests);
+
   testWidgets('affiche le champ de recherche et les acces aux ordonnances au demarrage',
       (tester) async {
     await tester.pumpWidget(const TabibiApp());
-    expect(find.text('Nom du medecin'), findsOneWidget);
+    expect(find.text('Nom du médecin'), findsOneWidget);
     expect(find.byIcon(Icons.description_outlined), findsOneWidget);
     expect(find.byIcon(Icons.verified_outlined), findsOneWidget);
   });
@@ -719,13 +722,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fiche medecin'), findsOneWidget);
+    expect(find.text('Fiche médecin'), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('Cardiologue · Alger (Alger)'), findsOneWidget);
     // Seul le creneau disponible est propose a la reservation.
-    expect(find.text('jeu. 3 dec. 09:00'), findsOneWidget);
-    expect(find.text('jeu. 3 dec. 09:30'), findsNothing);
-    expect(find.text('Reserver'), findsOneWidget);
+    expect(find.text('jeu. 3 déc. 09:00'), findsOneWidget);
+    expect(find.text('jeu. 3 déc. 09:30'), findsNothing);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets('mes ordonnances sans jeton propose de se connecter', (tester) async {
@@ -746,10 +749,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mes ordonnances'), findsOneWidget);
-    expect(find.text('Emise le jeu. 3 dec. 10:15'), findsOneWidget);
-    expect(find.text('Code ABC123 · Emise'), findsOneWidget);
+    expect(find.text('Émise le jeu. 3 déc. 10:15'), findsOneWidget);
+    expect(find.text('Code ABC123 · Émise'), findsOneWidget);
 
-    await tester.tap(find.text('Code ABC123 · Emise'));
+    await tester.tap(find.text('Code ABC123 · Émise'));
     await tester.pumpAndSettle();
     expect(find.text('Ordonnance'), findsOneWidget);
     expect(find.text('Paracetamol 1 g'), findsOneWidget);
@@ -768,14 +771,14 @@ void main() {
 
     expect(find.text('Ordonnance'), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
-    expect(find.text('Emise le jeu. 3 dec. 10:15 · Emise'), findsOneWidget);
+    expect(find.text('Émise le jeu. 3 déc. 10:15 · Émise'), findsOneWidget);
     // Code de verification bien visible (SelectableText).
     expect(find.text('ABC123'), findsOneWidget);
     expect(find.byType(SelectableText), findsOneWidget);
     // Une carte par ligne : medicament, posologie, duree.
     expect(find.text('Paracetamol 1 g'), findsOneWidget);
     expect(find.text('Posologie : 1 comprime matin et soir'), findsOneWidget);
-    expect(find.text('Duree : 5 jours'), findsOneWidget);
+    expect(find.text('Durée : 5 jours'), findsOneWidget);
     expect(find.text('Amoxicilline 500 mg'), findsOneWidget);
   });
 
@@ -802,7 +805,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(nomFichier, 'ordonnance-ABC123.pdf');
     expect(String.fromCharCodes(octets!.take(4)), '%PDF');
-    expect(find.text(messagePdfImpossible), findsNothing);
+    expect(find.text(libelle('ordonnance.pdfImpossible')), findsNothing);
     // Le bouton redevient actif une fois le document ouvert (OutlinedButton.icon : sous-type).
     final bouton = tester.widget<OutlinedButton>(
       find.ancestor(of: find.text('Ouvrir le PDF'), matching: find.bySubtype<OutlinedButton>()),
@@ -829,7 +832,7 @@ void main() {
     await tester.tap(find.text('Ouvrir le PDF'));
     await tester.pumpAndSettle();
     expect(appels, 1);
-    expect(find.text(messagePdfImpossible), findsOneWidget);
+    expect(find.text(libelle('ordonnance.pdfImpossible')), findsOneWidget);
 
     // PDF indisponible cote serveur (404) : message de l'API, rien n'est ecrit ni ouvert.
     await tester.pumpWidget(MaterialApp(
@@ -858,13 +861,13 @@ void main() {
     ));
 
     await tester.enterText(find.byType(TextField), 'ABC123');
-    await tester.tap(find.text('Verifier'));
+    await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
-    expect(find.text('Ordonnance authentique, emise le jeu. 3 dec. 10:15'), findsOneWidget);
-    expect(find.text('Statut : Emise'), findsOneWidget);
+    expect(find.text('Ordonnance authentique, émise le jeu. 3 déc. 10:15'), findsOneWidget);
+    expect(find.text('Statut : Émise'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'ZZZ999');
-    await tester.tap(find.text('Verifier'));
+    await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
     expect(find.text('Code inconnu'), findsOneWidget);
     expect(find.textContaining('Ordonnance authentique'), findsNothing);
@@ -910,8 +913,8 @@ void main() {
     expect(find.text('Teleconsultation proposee'), findsOneWidget);
     expect(find.text('Rendez-vous confirme'), findsOneWidget);
     expect(find.text('Votre rendez-vous du 3 dec. 2026 09:00 est confirme.'), findsOneWidget);
-    expect(find.text('jeu. 3 dec. 10:15'), findsOneWidget);
-    expect(find.text('mar. 1 dec. 18:00'), findsOneWidget);
+    expect(find.text('jeu. 3 déc. 10:15'), findsOneWidget);
+    expect(find.text('mar. 1 déc. 18:00'), findsOneWidget);
     // Sujet en gras pour la non lue seulement.
     expect(
       tester.widget<Text>(find.text('Teleconsultation proposee')).style?.fontWeight,
@@ -937,7 +940,7 @@ void main() {
     await tester.tap(find.byTooltip('Tout marquer comme lu'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Marquer comme lue'), findsNothing);
-    expect(find.text('1 notification(s) marquee(s) lue(s)'), findsOneWidget);
+    expect(find.text('1 notification marquée lue'), findsOneWidget);
   });
 
   testWidgets('mes notifications affiche un etat vide sans notification', (tester) async {
@@ -958,7 +961,7 @@ void main() {
       home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Teleconsultations'), findsOneWidget);
+    expect(find.text('Téléconsultations'), findsOneWidget);
   });
 
   testWidgets('mes teleconsultations sans jeton propose de se connecter', (tester) async {
@@ -987,25 +990,25 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Mes teleconsultations'), findsOneWidget);
+    expect(find.text('Mes téléconsultations'), findsOneWidget);
     // Session planifiee sans consentement : carte de consentement, pas de lien.
-    expect(find.text('Proposee le jeu. 3 dec. 08:00'), findsOneWidget);
-    expect(find.text('Planifiee'), findsOneWidget);
-    expect(find.text(texteConsentement), findsOneWidget);
+    expect(find.text('Proposée le jeu. 3 déc. 08:00'), findsOneWidget);
+    expect(find.text('Planifiée'), findsOneWidget);
+    expect(find.text(libelle('tele.consentement')), findsOneWidget);
     expect(find.text('Je donne mon consentement'), findsOneWidget);
-    expect(find.text('Rejoindre la teleconsultation'), findsNothing);
+    expect(find.text('Rejoindre la téléconsultation'), findsNothing);
     // Session terminee (consentement donne, lien remis) : texte d'etat seulement.
-    expect(find.text('Terminee le ven. 20 nov. 09:40'), findsOneWidget);
-    expect(find.text('Terminee'), findsOneWidget);
-    expect(find.text('Cette teleconsultation est terminee.'), findsOneWidget);
+    expect(find.text('Terminée le ven. 20 nov. 09:40'), findsOneWidget);
+    expect(find.text('Terminée'), findsOneWidget);
+    expect(find.text('Cette téléconsultation est terminée.'), findsOneWidget);
 
     await tester.tap(find.text('Je donne mon consentement'));
     await tester.pumpAndSettle();
     expect(find.text('Je donne mon consentement'), findsNothing);
-    expect(find.text('Consentement enregistre'), findsOneWidget);
-    expect(find.text('Rejoindre la teleconsultation'), findsOneWidget);
+    expect(find.text('Consentement enregistré'), findsOneWidget);
+    expect(find.text('Rejoindre la téléconsultation'), findsOneWidget);
 
-    await tester.tap(find.text('Rejoindre la teleconsultation'));
+    await tester.tap(find.text('Rejoindre la téléconsultation'));
     await tester.pumpAndSettle();
     expect(ouvert, Uri.parse(FakeApiService.lienSalle));
   });
@@ -1042,7 +1045,7 @@ void main() {
       tester.widget<Text>(find.text('Dr Amina Benali')).style?.fontWeight,
       FontWeight.bold,
     );
-    expect(find.text('Dernier message le mar. 1 dec. 09:05'), findsOneWidget);
+    expect(find.text('Dernier message le mar. 1 déc. 09:05'), findsOneWidget);
     expect(find.text('2 non lus'), findsOneWidget);
 
     await tester.tap(find.text('Dr Amina Benali'));
@@ -1090,13 +1093,13 @@ void main() {
 
     // Sans nom de praticien, le titre est generique.
     expect(find.text('Conversation'), findsOneWidget);
-    expect(find.text('mar. 1 dec. 09:00'), findsOneWidget);
-    expect(find.text('mar. 1 dec. 09:05'), findsOneWidget);
-    Alignment alignementDe(String contenu) => tester
+    expect(find.text('mar. 1 déc. 09:00'), findsOneWidget);
+    expect(find.text('mar. 1 déc. 09:05'), findsOneWidget);
+    AlignmentDirectional alignementDe(String contenu) => tester
         .widget<Align>(find.ancestor(of: find.text(contenu), matching: find.byType(Align)).first)
-        .alignment as Alignment;
-    expect(alignementDe('Bonjour, comment allez-vous ?'), Alignment.centerLeft);
-    expect(alignementDe('Bonjour docteur, mieux merci.'), Alignment.centerRight);
+        .alignment as AlignmentDirectional;
+    expect(alignementDe('Bonjour, comment allez-vous ?'), AlignmentDirectional.centerStart);
+    expect(alignementDe('Bonjour docteur, mieux merci.'), AlignmentDirectional.centerEnd);
 
     // Bouton « Envoyer » desactive tant que la saisie est vide (ou blanche).
     FilledButton envoyer() =>
@@ -1114,7 +1117,7 @@ void main() {
     // Message envoye (contenu epure), fil recharge et champ vide.
     expect(api.envoyes.single['contenu'], 'Merci docteur, a bientot.');
     expect(find.text('Merci docteur, a bientot.'), findsOneWidget);
-    expect(alignementDe('Merci docteur, a bientot.'), Alignment.centerRight);
+    expect(alignementDe('Merci docteur, a bientot.'), AlignmentDirectional.centerEnd);
     expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, isEmpty);
     expect(envoyer().onPressed, isNull);
   });
@@ -1149,7 +1152,7 @@ void main() {
 
     await tester.tap(find.text('Ouvrir une conversation'));
     await tester.pumpAndSettle();
-    expect(find.text(messageConversationRefusee), findsOneWidget);
+    expect(find.text(libelle('fiche.conversationRefusee')), findsOneWidget);
     expect(find.text('Envoyer'), findsNothing);
   });
 
@@ -1177,7 +1180,7 @@ void main() {
     expect(find.text('4 / 5'), findsOneWidget);
     expect(find.text('jeu. 5 nov. 16:30'), findsOneWidget);
     // Les creneaux restent proposes au-dessus des avis.
-    expect(find.text('Reserver'), findsOneWidget);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets('la fiche medecin sans avis publie le signale', (tester) async {
@@ -1242,8 +1245,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Trois rendez-vous du meme praticien : le libelle de repli, jamais l'UUID entier.
-    expect(find.text('Médecin 00000000 · Confirme'), findsOneWidget);
-    expect(find.text('Médecin 00000000 · Honore'), findsNWidgets(2));
+    expect(find.text('Médecin 00000000 · Confirmé'), findsOneWidget);
+    expect(find.text('Médecin 00000000 · Honoré'), findsNWidgets(2));
     expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
     // Les actions restent disponibles (identifiants en texte).
     expect(find.text('Donner mon avis'), findsOneWidget);
@@ -1276,7 +1279,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Envoyer mon avis'));
     await tester.pumpAndSettle();
-    expect(find.text(messageAvisDejaDonne), findsOneWidget);
+    expect(find.text(libelle('avis.dejaDonne')), findsOneWidget);
     expect(find.text('Mon avis'), findsOneWidget);
   });
 
@@ -1290,7 +1293,7 @@ void main() {
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('4 / 5 · Publié'), findsOneWidget);
     expect(find.text('Explications claires, merci.'), findsOneWidget);
-    expect(find.text('Déposé le mar. 11 aout 18:00'), findsOneWidget);
+    expect(find.text('Déposé le mar. 11 août 18:00'), findsOneWidget);
   });
 
   testWidgets("l'accueil propose l'entree Dawini (pharmacies)", (tester) async {
@@ -1332,14 +1335,14 @@ void main() {
     final medicament = find.widgetWithText(TextField, 'Médicament recherché *');
     await tester.tap(find.text('Publier la demande'));
     await tester.pumpAndSettle();
-    expect(find.text(messageMedicamentRequis), findsOneWidget);
+    expect(find.text(libelle('dawini.medicamentRequis')), findsOneWidget);
     expect(api.publies, isEmpty);
     await laisserPasserLeMessage(tester);
 
     await tester.enterText(medicament, 'Insuline');
     await tester.tap(find.text('Publier la demande'));
     await tester.pumpAndSettle();
-    expect(find.text(messageWilayaRequise), findsOneWidget);
+    expect(find.text(libelle('dawini.wilayaRequise')), findsOneWidget);
     expect(api.publies, isEmpty);
     await laisserPasserLeMessage(tester);
 
@@ -1424,7 +1427,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Oui, clôturer'));
     await tester.pumpAndSettle();
-    expect(find.text(messageDemandeDejaCloturee), findsOneWidget);
+    expect(find.text(libelle('reponses.dejaCloturee')), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
     expect(find.text('Wilaya 16 · Clôturée'), findsOneWidget);
   });
@@ -1451,18 +1454,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text("Liste d'attente"), findsOneWidget);
-    expect(find.text(texteListeAttente), findsOneWidget);
+    expect(find.text(libelle('fiche.texteListeAttente')), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsOneWidget);
-    expect(find.text(texteInscrit), findsNothing);
+    expect(find.text(libelle('fiche.inscrit')), findsNothing);
 
     await tester.tap(find.text("M'inscrire sur la liste d'attente"));
     await tester.pumpAndSettle();
     expect(api.inscriptions, [FakeApiService.medecinDemo]);
-    expect(find.text('Inscription enregistrée. $texteListeAttente'), findsOneWidget);
+    expect(
+      find.text(libelle('fiche.inscriptionEnregistree',
+          params: {'texte': libelle('fiche.texteListeAttente')})),
+      findsOneWidget,
+    );
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
-    expect(find.text(texteInscrit), findsOneWidget);
+    expect(find.text(libelle('fiche.inscrit')), findsOneWidget);
     // Les creneaux restent proposes.
-    expect(find.text('Reserver'), findsOneWidget);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets('la fiche medecin explique le conflit (409) si le patient est deja inscrit',
@@ -1479,9 +1486,9 @@ void main() {
 
     await tester.tap(find.text("M'inscrire sur la liste d'attente"));
     await tester.pumpAndSettle();
-    expect(find.text(messageDejaInscrit), findsOneWidget);
+    expect(find.text(libelle('fiche.dejaInscrit')), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
-    expect(find.text(texteInscrit), findsOneWidget);
+    expect(find.text(libelle('fiche.inscrit')), findsOneWidget);
   });
 
   testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {
@@ -1521,7 +1528,7 @@ void main() {
     await tester.tap(find.text('Oui, me retirer'));
     await tester.pumpAndSettle();
     expect(api.retraits, [FakeApiService.inscriptionDemo]);
-    expect(find.text(messageRetrait), findsOneWidget);
+    expect(find.text(libelle('attente.retrait')), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsNothing);
     expect(find.text('Me retirer'), findsNothing);
     expect(find.textContaining("Aucune inscription sur une liste d'attente."), findsOneWidget);
@@ -1598,7 +1605,7 @@ void main() {
     });
     expect(find.text('Profil enregistré.'), findsOneWidget);
     // Le formulaire suit la vue renvoyee par le serveur (nouvelle date de mise a jour).
-    expect(find.text('Mis à jour le mar. 1 dec. 10:00'), findsOneWidget);
+    expect(find.text('Mis à jour le mar. 1 déc. 10:00'), findsOneWidget);
     expect(find.text('Non renseignée'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
   });
@@ -1618,13 +1625,13 @@ void main() {
     expect(find.text('Karim Haddad'), findsNothing);
     expect(find.text('Non renseignée'), findsOneWidget);
     expect(find.text('Français'), findsOneWidget);
-    expect(find.text('Reessayer'), findsNothing);
+    expect(find.text('Réessayer'), findsNothing);
     expect(find.textContaining('Renseignez votre profil'), findsOneWidget);
 
     // Nom obligatoire.
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
-    expect(find.text(messageNomRequis), findsOneWidget);
+    expect(find.text(libelle('profil.nomRequis')), findsOneWidget);
     expect(api.enregistres, isEmpty);
     await laisserPasserLeMessage(tester);
 
@@ -1633,7 +1640,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Téléphone'), '12345');
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
-    expect(find.text(messageTelephoneInvalide), findsOneWidget);
+    expect(find.text(libelle('profil.telephoneInvalide')), findsOneWidget);
     expect(api.enregistres, isEmpty);
     await laisserPasserLeMessage(tester);
 
@@ -1655,7 +1662,7 @@ void main() {
     expect(envoye['langue'], 'fr');
     expect(envoye['dateNaissance'], matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
     expect(find.text('Profil enregistré.'), findsOneWidget);
-    expect(find.text('Mis à jour le mar. 1 dec. 10:00'), findsOneWidget);
+    expect(find.text('Mis à jour le mar. 1 déc. 10:00'), findsOneWidget);
   });
 
   testWidgets("mon profil affiche tel quel le refus (400) de l'API", (tester) async {
@@ -1671,5 +1678,52 @@ void main() {
     expect(find.text('Le nom complet doit compter de 2 a 120 caracteres.'), findsOneWidget);
     expect(find.text('Profil enregistré.'), findsNothing);
     expect(find.text('Mon profil'), findsOneWidget);
+  });
+
+  testWidgets("le selecteur de langue bascule l'interface en arabe, ecrite de droite a gauche",
+      (tester) async {
+    surfaceHaute(tester);
+    final controleur = ControleurLangue();
+    await tester.pumpWidget(TabibiApp(
+      controleur: controleur,
+      api: const FakeApiService(),
+      auth: AuthService(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Par defaut, l'interface est en francais et s'ecrit de gauche a droite.
+    expect(find.text('Nom du médecin'), findsOneWidget);
+    expect(
+      Directionality.of(tester.element(find.text('Nom du médecin'))),
+      TextDirection.ltr,
+    );
+
+    await tester.tap(find.text('Langue'));
+    await tester.pumpAndSettle();
+    expect(find.text(nomsLangues['fr']!), findsOneWidget);
+    expect(find.text(nomsLangues['en']!), findsOneWidget);
+
+    await tester.tap(find.text(nomsLangues['ar']!));
+    await tester.pumpAndSettle();
+
+    // Langue retenue comme choix explicite de l'utilisateur.
+    expect(controleur.langue, 'ar');
+    expect(controleur.choisieManuellement, isTrue);
+    // Titre de l'ecran en arabe et direction d'ecriture inversee.
+    final titre = find.text(libelleArabe('langue.titre'));
+    expect(titre, findsWidgets);
+    expect(Directionality.of(tester.element(titre.first)), TextDirection.rtl);
+    await laisserPasserLeMessage(tester);
+
+    // Retour a l'accueil : les libelles y sont aussi en arabe.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text(libelleArabe('accueil.nomMedecin')), findsOneWidget);
+    expect(find.text(libelleArabe('accueil.mesAvis')), findsOneWidget);
+    expect(find.text('Nom du médecin'), findsNothing);
+    expect(
+      Directionality.of(tester.element(find.text(libelleArabe('accueil.nomMedecin')))),
+      TextDirection.rtl,
+    );
   });
 }

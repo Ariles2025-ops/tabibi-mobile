@@ -2,7 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/models/profil.dart';
 import 'package:tabibi_mobile/utils/profil.dart';
 
+import 'outils.dart';
+
 void main() {
+  setUp(preparerTests);
+
   test("Profil.fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final p = Profil.fromJson({
       'utilisateurId': 'a1a1a1a1-0000-4000-8000-000000000007',
@@ -121,12 +125,12 @@ void main() {
   });
 
   test('libelleDateNaissance et libelleMiseAJour decrivent le profil', () {
-    expect(libelleDateNaissance(DateTime(1990, 5, 14)), '14 mai 1990');
-    expect(libelleDateNaissance(null), 'Non renseignée');
+    expect(libelleDateNaissance('fr', DateTime(1990, 5, 14)), '14 mai 1990');
+    expect(libelleDateNaissance('fr', null), 'Non renseignée');
     expect(
-      libelleMiseAJour(Profil.fromJson({'misAJourLe': '2026-11-20T09:00:00'})),
+      libelleMiseAJour('fr', Profil.fromJson({'misAJourLe': '2026-11-20T09:00:00'})),
       'Mis à jour le ven. 20 nov. 09:00',
     );
-    expect(libelleMiseAJour(const Profil(nomComplet: 'Karim')), 'Profil non enregistré');
+    expect(libelleMiseAJour('fr', const Profil(nomComplet: 'Karim')), 'Profil non enregistré');
   });
 }

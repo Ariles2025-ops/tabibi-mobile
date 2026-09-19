@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'i18n/langue.dart';
+import 'i18n/traductions.dart';
 import 'pages/dawini_page.dart';
 import 'pages/fiche_medecin_page.dart';
+import 'pages/langue_page.dart';
 import 'pages/mes_avis_page.dart';
 import 'pages/mes_conversations_page.dart';
 import 'pages/mes_listes_attente_page.dart';
@@ -14,20 +18,51 @@ import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/session.dart';
+import 'utils/dates.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
 
-void main() => runApp(const TabibiApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await preparerDates(); // donnees de date de toutes les locales (intl)
+  await langues.initialiser(locale: localeDuTelephone());
+  runApp(const TabibiApp());
+}
 
+/// Application : la langue courante ([ControleurLangue]) est portee par [LangueScope] et
+/// donnee a [MaterialApp] (`locale`, `supportedLocales`, `localizationsDelegates`), afin que
+/// les widgets Material (selecteur de date, champs de saisie...) et la direction d'ecriture
+/// (RTL en arabe) suivent le meme choix. Changer de langue rebatit toute l'application.
 class TabibiApp extends StatelessWidget {
-  const TabibiApp({super.key});
+  const TabibiApp({super.key, this.controleur, this.api = const ApiService(), this.auth});
+
+  /// Controleur de langue a utiliser ; par defaut le controleur partage [langues].
+  final ControleurLangue? controleur;
+
+  /// API et session de l'ecran d'accueil (injectables dans les tests).
+  final ApiService api;
+  final AuthService? auth;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tabibi',
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF0F7560), useMaterial3: true),
-      home: const RecherchePage(),
+    final controleurLangue = controleur ?? langues;
+    return LangueScope(
+      controleur: controleurLangue,
+      child: ListenableBuilder(
+        listenable: controleurLangue,
+        builder: (context, _) => MaterialApp(
+          onGenerateTitle: (context) => t(context, 'accueil.titre'),
+          locale: controleurLangue.locale,
+          supportedLocales: controleurLangue.localesPrisesEnCharge,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          theme: ThemeData(colorSchemeSeed: const Color(0xFF0F7560), useMaterial3: true),
+          home: RecherchePage(api: api, auth: auth),
+        ),
+      ),
     );
   }
 }
@@ -36,7 +71,8 @@ class TabibiApp extends StatelessWidget {
 /// aux ordonnances (les miennes, ou la verification publique d'un code), aux
 /// notifications (entree « Notifications (n) » avec le nombre de non lues), aux
 /// teleconsultations, a la messagerie avec mes medecins, a mes avis, a Dawini
-/// (demander un medicament aux pharmacies), a mes listes d'attente et a mon profil.
+/// (demander un medicament aux pharmacies), a mes listes d'attente, a mon profil
+/// et au choix de la langue de l'interface.
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -65,29 +101,30 @@ class _RecherchePageState extends State<RecherchePage> {
       final r = await widget.api.rechercherMedecins(specialite: _specialite, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
   }
 
-  /// Connexion Keycloak si necessaire, puis confirmation « Connecte ».
+  /// Connexion Keycloak si necessaire, puis confirmation « Connecté ».
   Future<void> _seConnecter() async {
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       setState(() {}); // met a jour l'icone de l'AppBar
       if (!ok) {
-        _message('Connexion annulee');
+        _message(t(context, 'commun.connexionAnnulee'));
         return;
       }
     }
     final token = _auth.accessToken;
     if (token == null) return;
-    var texte = 'Connecte';
+    var texte = t(context, 'commun.connecte');
     try {
       final moi = await widget.api.moi(token);
-      texte = 'Connecte : ${moi['nom']}';
+      if (!mounted) return;
+      texte = t(context, 'commun.connecteNom', params: {'nom': moi['nom']});
     } on Exception {
       // Identite indisponible : message generique.
     }
@@ -211,6 +248,14 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  /// Choix de la langue de l'interface (francais, arabe, anglais) : aucun jeton necessaire.
+  Future<void> _ouvrirLangue() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const LanguePage()),
+    );
+    if (mounted) setState(() {});
+  }
+
   /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
   void _ouvrirVerification() {
     Navigator.of(context).push(
@@ -243,25 +288,25 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tabibi'),
+        title: Text(t(context, 'accueil.titre')),
         actions: [
           IconButton(
-            tooltip: 'Verifier une ordonnance',
+            tooltip: t(context, 'accueil.verifierOrdonnance'),
             onPressed: _ouvrirVerification,
             icon: const Icon(Icons.verified_outlined),
           ),
           IconButton(
-            tooltip: 'Mes ordonnances',
+            tooltip: t(context, 'accueil.mesOrdonnances'),
             onPressed: _ouvrirMesOrdonnances,
             icon: const Icon(Icons.description_outlined),
           ),
           IconButton(
-            tooltip: 'Mes rendez-vous',
+            tooltip: t(context, 'accueil.mesRendezVous'),
             onPressed: _ouvrirMesRendezVous,
             icon: const Icon(Icons.calendar_month),
           ),
           IconButton(
-            tooltip: connecte ? 'Connecte' : 'Se connecter',
+            tooltip: t(context, connecte ? 'commun.connecte' : 'commun.seConnecter'),
             onPressed: _seConnecter,
             icon: Icon(connecte ? Icons.person : Icons.person_outline),
           ),
@@ -275,26 +320,27 @@ class _RecherchePageState extends State<RecherchePage> {
               Expanded(
                 child: TextField(
                   controller: _nom,
-                  decoration: const InputDecoration(labelText: 'Nom du medecin'),
+                  decoration: InputDecoration(labelText: t(context, 'accueil.nomMedecin')),
                   onSubmitted: (_) => _rechercher(),
                 ),
               ),
               const SizedBox(width: 8),
               DropdownButton<String>(
                 value: _specialite,
-                hint: const Text('Specialite'),
-                items: const [
-                  DropdownMenuItem(value: 'generaliste', child: Text('Generaliste')),
-                  DropdownMenuItem(value: 'cardiologue', child: Text('Cardiologue')),
-                  DropdownMenuItem(value: 'dermatologue', child: Text('Dermatologue')),
-                  DropdownMenuItem(value: 'pediatre', child: Text('Pediatre')),
+                hint: Text(t(context, 'accueil.specialite')),
+                items: [
+                  for (final slug in specialites)
+                    DropdownMenuItem(
+                      value: slug,
+                      child: Text(t(context, 'specialite.$slug')),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _specialite = v),
               ),
               IconButton(onPressed: _rechercher, icon: const Icon(Icons.search)),
             ]),
             const SizedBox(height: 12),
-            _entrees(),
+            _entrees(context),
             const SizedBox(height: 12),
             if (_charge) const CircularProgressIndicator(),
             Expanded(
@@ -305,7 +351,11 @@ class _RecherchePageState extends State<RecherchePage> {
                   final m = _resultats[i];
                   return ListTile(
                     title: Text(m['nomComplet'] as String),
-                    subtitle: Text('${m['specialiteFr']} · ${m['ville']} (${m['wilayaFr']})'),
+                    subtitle: Text(t(context, 'accueil.sousTitreMedecin', params: {
+                      'specialite': m['specialiteFr'],
+                      'ville': m['ville'],
+                      'wilaya': m['wilayaFr'],
+                    })),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _ouvrirFiche(identifiant(m['id'])),
                   );
@@ -320,49 +370,54 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
   /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
-  /// « Teleconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
-  /// « Liste d'attente » et « Mon profil ».
-  Widget _entrees() {
+  /// « Téléconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
+  /// « Liste d'attente », « Mon profil » et « Langue ».
+  Widget _entrees(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: Wrap(
         spacing: 8,
         runSpacing: 4,
         children: [
           ActionChip(
             avatar: const Icon(Icons.notifications_outlined, size: 18),
-            label: Text(libelleNotifications(_nonLues)),
+            label: Text(libelleNotifications(langueDe(context), _nonLues)),
             onPressed: _ouvrirNotifications,
           ),
           ActionChip(
             avatar: const Icon(Icons.videocam_outlined, size: 18),
-            label: const Text('Teleconsultations'),
+            label: Text(t(context, 'accueil.teleconsultations')),
             onPressed: _ouvrirTeleconsultations,
           ),
           ActionChip(
             avatar: const Icon(Icons.chat_bubble_outline, size: 18),
-            label: const Text('Messagerie'),
+            label: Text(t(context, 'accueil.messagerie')),
             onPressed: _ouvrirMessagerie,
           ),
           ActionChip(
             avatar: const Icon(Icons.star_outline, size: 18),
-            label: const Text('Mes avis'),
+            label: Text(t(context, 'accueil.mesAvis')),
             onPressed: _ouvrirMesAvis,
           ),
           ActionChip(
             avatar: const Icon(Icons.local_pharmacy_outlined, size: 18),
-            label: const Text('Dawini (pharmacies)'),
+            label: Text(t(context, 'accueil.dawini')),
             onPressed: _ouvrirDawini,
           ),
           ActionChip(
             avatar: const Icon(Icons.hourglass_top_outlined, size: 18),
-            label: const Text("Liste d'attente"),
+            label: Text(t(context, 'accueil.listeAttente')),
             onPressed: _ouvrirListesAttente,
           ),
           ActionChip(
             avatar: const Icon(Icons.badge_outlined, size: 18),
-            label: const Text('Mon profil'),
+            label: Text(t(context, 'accueil.monProfil')),
             onPressed: _ouvrirMonProfil,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.language_outlined, size: 18),
+            label: Text(t(context, 'accueil.langue')),
+            onPressed: _ouvrirLangue,
           ),
         ],
       ),

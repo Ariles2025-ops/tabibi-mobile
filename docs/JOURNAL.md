@@ -285,3 +285,61 @@
   `FakeApiServiceSansPdf` (404) ; `test/widget_test.dart` (bouton, appel avec
   `ordonnance-ABC123.pdf` et octets `%PDF`, bouton reactive ; ouverture refusee -> message ; 404
   -> message de l'API sans ecriture) ; `test/ordonnances_test.dart` (`nomFichierPdf`, `estPdf`).
+
+## v0.15.0 — Interface en francais, arabe et anglais (RTL)
+- Dictionnaires `lib/i18n/traductions.dart` : `Map<String, Map<String, String>>` pour `fr`,
+  `ar` et `en`, memes cles dans les trois langues (250 cles, un test le verifie), parametres
+  `{nom}` remplaces par `traduire(langue, cle, params: ...)` et formes plurielles
+  `<cle>.zero|un|deux|peu|beaucoup` (`traduirePluriel`, `formePlurielle`) : le duel et le
+  pluriel restreint de l'arabe sont distingues (« رد واحد », « ردان », « 3 ردود »). Aucune
+  generation de code, aucun `flutter gen-l10n`, aucun fichier ARB.
+- `lib/i18n/langue.dart` : `ControleurLangue` (`ChangeNotifier`) partage par l'application
+  (`langues`, comme `session`), expose `langue`, `locale`, `direction` (RTL en arabe) et
+  `localesPrisesEnCharge` ; `initialiser` prend la langue memorisee
+  (`shared_preferences: ^2.3.0`, cle `tabibi.langue`) sinon la locale du telephone
+  (`langueDeLocale` : ar -> ar, en -> en, sinon fr) ; `choisir` (choix explicite, memorise) et
+  `suivreLeProfil` (langue du profil serveur, ignoree des qu'un choix a ete fait, et ignoree
+  pour « kab », acceptee par l'API mais pas encore traduite). `LangueScope`
+  (`InheritedNotifier`) porte le controleur, `t(context, cle, {params})` et
+  `tp(context, cleBase, n)` lisent la portee la plus proche (repli sur `langues` dans les
+  tests d'un ecran isole), `messageApi(context, erreur)` traduit les erreurs de l'API.
+- `MaterialApp` (`lib/main.dart`) : `locale`, `supportedLocales` (fr, ar, en) et
+  `localizationsDelegates` (`flutter_localizations: sdk: flutter`, delegues Material, Widgets
+  et Cupertino) ; la direction d'ecriture vient de la locale (le `Localizations` de Flutter
+  pose lui-meme la `Directionality`), donc les widgets Material suivent. `ListenableBuilder`
+  sur le controleur : changer de langue rebatit l'application. `TabibiApp` accepte desormais
+  un controleur, une API et une session (tests).
+- Ecran « Langue » (`lib/pages/langue_page.dart`) et entree « Langue » sur l'accueil :
+  Français / العربية / English, choix applique et memorise, confirmation dans la langue
+  choisie.
+- Migration de tous les libelles : les 15 ecrans, `lib/widgets/` et `lib/utils/` passent par
+  les dictionnaires ; les utilitaires prennent la langue en premier parametre
+  (`dateAvis(langue, avis)`, `libelleStatut(langue, statut)`, `libelleMedecin(langue, id)`...)
+  et les constantes de libelles des pages (`messageDejaInscrit`, `texteConsentement`,
+  `messageTelephoneInvalide`...) disparaissent au profit de cles. Les statuts bruts de l'API
+  (CONFIRME, EMISE, OUVERT, PLANIFIEE...) sont traduits par les cles `statut.<BRUT>`, un
+  statut inconnu gardant la mise en forme generique.
+- Dates : `intl: ^0.19.0`, `preparerDates()` (`initializeDateFormatting`) appele au demarrage
+  et dans les tests ; `formaterDateHeure`, `formaterDateIso` et `formaterJour` utilisent
+  `DateFormat` avec le motif et la locale de la langue (`dates.dateHeure`, `dates.jour`,
+  `dates.locale` : `fr`, `en`, `ar_DZ` pour l'arabe algerien), avec repli si la locale n'est
+  pas chargee (`localeDates`). Les libelles francais portent donc leurs accents
+  (« jeu. 3 déc. 10:15 »).
+- Droite a gauche : alignements directionnels (`AlignmentDirectional.centerStart` / `centerEnd`)
+  pour les bulles de la messagerie (`alignementMessage`), l'accueil, la fiche et le detail
+  d'une ordonnance.
+- Erreurs de l'API : `ApiException(statut, message, {cle, params})` ; le message du serveur
+  (`{"erreur": ...}`) reste affiche tel quel, les libelles par defaut (401, 403, 404, 409,
+  echec generique, PDF invalide) portent une cle traduite a l'affichage.
+- `pubspec.yaml` : `flutter_localizations` (SDK), `intl: ^0.19.0`,
+  `shared_preferences: ^2.3.0`, `version: 0.15.0+1`.
+- `tool/verifier_libelles.py` : relit les chaines litterales des ecrans (hors commentaires) et
+  echoue si l'une porte un caractere accentue francais, c'est-a-dire un libelle non traduit.
+- Tests : `test/i18n_test.dart` (memes cles dans les trois dictionnaires, aucune valeur vide,
+  termes de sante arabes, parametres, replis, pluriels, langue initiale selon la locale,
+  direction, choix de l'utilisateur contre langue du profil, `t` suivant la portee) ;
+  `test/widget_test.dart` bascule l'application en arabe depuis l'ecran « Langue » et verifie
+  les libelles arabes, la memorisation du choix et
+  `Directionality.of(context) == TextDirection.rtl` ; `test/outils.dart` expose
+  `preparerTests` (dates chargees, interface forcee en francais) et `libelle` / `libelleArabe`,
+  utilises par tous les fichiers de test.

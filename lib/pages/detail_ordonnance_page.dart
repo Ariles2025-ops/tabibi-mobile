@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../i18n/langue.dart';
+import '../i18n/traductions.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
@@ -17,10 +19,6 @@ import '../widgets/vue_erreur.dart';
 /// Enregistrement d'un document sous [nomFichier] puis ouverture hors de l'application ;
 /// vrai si une application l'a pris en charge.
 typedef EnregistrerEtOuvrir = Future<bool> Function(String nomFichier, Uint8List octets);
-
-/// Message affiche quand le PDF n'a pu etre ecrit ou qu'aucune application ne l'ouvre.
-const String messagePdfImpossible =
-    "Impossible d'ouvrir le PDF : aucune application ne prend en charge ce document.";
 
 /// Implementation reelle d'[EnregistrerEtOuvrir] : le fichier est ecrit dans le dossier
 /// temporaire de l'application (`getTemporaryDirectory`) puis confie a l'application du
@@ -83,7 +81,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -106,9 +104,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -117,26 +115,27 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   /// Nom du praticien (endpoint public, identifiant UUID en texte) ; un echec n'empeche pas
   /// l'affichage : « Médecin » et l'identifiant abrege sont montres a la place.
   Future<String> _resoudreNomMedecin(Map<String, dynamic> ordonnance) async {
+    final langue = langueDe(context);
     final id = identifiant(ordonnance['medecinId']);
-    if (id.isEmpty) return libelleMedecin(id);
+    if (id.isEmpty) return libelleMedecin(langue, id);
     try {
       final Object? nom = (await widget.api.medecin(id))['nomComplet'];
       if (nom is String && nom.isNotEmpty) return nom;
     } on Exception {
       // Fiche indisponible : libelle de repli ci-dessous.
     }
-    return libelleMedecin(id);
+    return libelleMedecin(langue, id);
   }
 
   Future<void> _copier(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
-    _message('Code copie');
+    if (mounted) _message(t(context, 'ordonnance.codeCopie'));
   }
 
   /// Telecharge la version imprimable (GET /api/ordonnances/{id}/pdf), l'ecrit sous
   /// « ordonnance-<code>.pdf » et l'ouvre avec l'application du telephone ; un echec
-  /// d'ecriture ou d'ouverture est signale ([messagePdfImpossible]), une erreur de l'API
-  /// affichee telle quelle.
+  /// d'ecriture ou d'ouverture est signale (« ordonnance.pdfImpossible »), une erreur de
+  /// l'API affichee telle quelle.
   Future<void> _ouvrirPdf() async {
     final ordonnance = _ordonnance;
     final token = _auth.accessToken;
@@ -151,12 +150,12 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
       } on Exception {
         ouvert = false; // ecriture impossible ou plateforme sans lecteur
       }
-      if (!ouvert) _message(messagePdfImpossible);
+      if (!ouvert && mounted) _message(t(context, 'ordonnance.pdfImpossible'));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      if (mounted) _message(messageApi(context, e));
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _pdfEnCours = false); // rebatit aussi si la session a expire
     }
@@ -170,7 +169,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ordonnance')),
+      appBar: AppBar(title: Text(t(context, 'ordonnance.titre'))),
       body: _corps(context),
     );
   }
@@ -178,7 +177,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter cette ordonnance.',
+        message: _erreur ?? t(context, 'ordonnance.connectezVous'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -186,7 +185,10 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     final erreur = _erreur;
     final ordonnance = _ordonnance;
     if (erreur != null || ordonnance == null) {
-      return VueErreur(message: erreur ?? 'Ordonnance introuvable', onReessayer: _charger);
+      return VueErreur(
+        message: erreur ?? t(context, 'ordonnance.introuvable'),
+        onReessayer: _charger,
+      );
     }
     final texte = Theme.of(context).textTheme;
     final lignes = lignesOrdonnance(ordonnance);
@@ -197,25 +199,28 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.person_outline),
           title: Text(_nomMedecin),
-          subtitle: Text(_sousTitre(ordonnance)),
+          subtitle: Text(_sousTitre(context, ordonnance)),
         ),
         const SizedBox(height: 8),
         _carteCode(context, '${ordonnance['codeVerification'] ?? ''}'),
         const SizedBox(height: 12),
-        _boutonPdf(),
+        _boutonPdf(context),
         const SizedBox(height: 24),
-        Text('Medicaments', style: texte.titleMedium),
+        Text(t(context, 'ordonnance.medicaments'), style: texte.titleMedium),
         const SizedBox(height: 8),
-        if (lignes.isEmpty) const Text('Aucun medicament sur cette ordonnance.'),
+        if (lignes.isEmpty) Text(t(context, 'ordonnance.aucunMedicament')),
         for (final ligne in lignes) _carteLigne(context, ligne),
       ],
     );
   }
 
-  /// « Emise le jeu. 4 dec. 09:00 · Emise » (statut omis s'il est absent).
-  String _sousTitre(Map<String, dynamic> ordonnance) {
-    final date = 'Emise le ${dateEmission(ordonnance)}';
-    final statut = libelleStatut(ordonnance['statut']);
+  /// « Émise le jeu. 4 déc. 09:00 · Émise » (statut omis s'il est absent).
+  String _sousTitre(BuildContext context, Map<String, dynamic> ordonnance) {
+    final langue = langueDe(context);
+    final date = traduire(langue, 'ordonnances.emiseLe', params: {
+      'date': dateEmission(langue, ordonnance),
+    });
+    final statut = libelleStatut(langue, ordonnance['statut']);
     return statut.isEmpty ? date : '$date · $statut';
   }
 
@@ -230,7 +235,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Code de verification', style: texte.labelLarge),
+            Text(t(context, 'ordonnance.codeVerification'), style: texte.labelLarge),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -245,17 +250,14 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Copier le code',
+                  tooltip: t(context, 'ordonnance.copierCode'),
                   onPressed: code.isEmpty ? null : () => _copier(code),
                   icon: const Icon(Icons.copy),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              'A presenter en pharmacie ; verifiable sans compte via « Verifier une ordonnance ».',
-              style: texte.bodySmall,
-            ),
+            Text(t(context, 'ordonnance.aPresenter'), style: texte.bodySmall),
           ],
         ),
       ),
@@ -264,9 +266,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
 
   /// « Ouvrir le PDF » : version imprimable (avec QR code) ouverte hors de l'application ;
   /// indicateur pendant le telechargement.
-  Widget _boutonPdf() {
+  Widget _boutonPdf(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: OutlinedButton.icon(
         onPressed: _pdfEnCours ? null : _ouvrirPdf,
         icon: _pdfEnCours
@@ -276,7 +278,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.picture_as_pdf_outlined),
-        label: const Text('Ouvrir le PDF'),
+        label: Text(t(context, 'ordonnance.ouvrirPdf')),
       ),
     );
   }
@@ -301,9 +303,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
               ],
             ),
             const SizedBox(height: 8),
-            Text('Posologie : ${ligne['posologie'] ?? '-'}'),
+            Text(t(context, 'ordonnance.posologie', params: {'valeur': ligne['posologie'] ?? '-'})),
             const SizedBox(height: 4),
-            Text('Duree : ${ligne['duree'] ?? '-'}'),
+            Text(t(context, 'ordonnance.duree', params: {'valeur': ligne['duree'] ?? '-'})),
           ],
         ),
       ),

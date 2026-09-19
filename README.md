@@ -51,6 +51,30 @@ doit etre declare dans les projets natifs (`appAuthRedirectScheme` sur Android, 
 sur iOS), voir la documentation de `flutter_appauth`. Les tests (`flutter test`) s'executent sans
 `--dart-define` et verifient les valeurs par defaut (`test/configuration_test.dart`).
 
+## Langues
+L'interface existe en **francais**, en **arabe** (de droite a gauche) et en **anglais**.
+Aucune generation de code (pas de `flutter gen-l10n`) : les libelles vivent dans des cartes
+Dart, `lib/i18n/traductions.dart` (`Map<String, Map<String, String>>`, memes cles pour les
+trois langues, un test le verifie) ; un ecran affiche `t(context, 'cle')`, jamais un texte en
+dur (`tool/verifier_libelles.py` le controle).
+
+- Langue de depart : celle que l'utilisateur a choisie (memorisee avec `shared_preferences`),
+  sinon celle du telephone (`ar` -> arabe, `en` -> anglais, tout le reste -> francais), sinon
+  celle du profil enregistre sur le serveur (`GET /api/moi/profil`), qui ne s'applique que
+  tant qu'aucun choix explicite n'a ete fait.
+- Changer de langue : entree « Langue » sur l'accueil (Français / العربية / English). Le choix
+  s'applique aussitot a toute l'application et est memorise sur le telephone.
+- Droite a gauche : `MaterialApp` recoit `locale`, `supportedLocales` (fr, ar, en) et les
+  `localizationsDelegates` de `flutter_localizations` ; la direction d'ecriture (RTL en arabe)
+  et les widgets Material (selecteur de date, champs de saisie) suivent donc la langue. Les
+  mises en page utilisent des alignements directionnels (`AlignmentDirectional`), par exemple
+  les bulles de la messagerie, alignees du cote de la fin de ligne pour mes messages.
+- Dates : `intl` (`DateFormat`), avec `initializeDateFormatting` au demarrage et la locale de
+  la langue courante (`fr`, `en`, `ar_DZ` pour l'arabe algerien : « جانفي », « فيفري »...).
+- Ajouter une langue : ajouter son code a `languesInterface`, son nom a `nomsLangues` et un
+  dictionnaire complet dans `traductions.dart` (le test `test/i18n_test.dart` refuse une cle
+  manquante) ; l'API, elle, accepte aussi `kab` (kabyle), pas encore traduit dans l'interface.
+
 ## Note plateforme
 Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 (non versionnes ici pour rester leger). L'essentiel — code, auth, API, test — est present.
@@ -71,8 +95,8 @@ Une execution en cours est annulee par un nouvel envoi sur la meme branche.
 ## Publication
 Identifiant d'application sur les deux stores : `dz.tabibi.app` (aussi schema de l'URI de
 redirection OAuth). Avant toute publication :
-- `pubspec.yaml` : `version: 0.14.0+1` donne `versionName` / `CFBundleShortVersionString`
-  (`0.14.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
+- `pubspec.yaml` : `version: 0.15.0+1` donne `versionName` / `CFBundleShortVersionString`
+  (`0.15.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
   chaque envoi sur un store (et la version a chaque livraison fonctionnelle).
 - Construire avec les valeurs de production (`--dart-define`, voir « Configuration ») : API et
   Keycloak en HTTPS, jamais les adresses de developpement.
@@ -481,3 +505,29 @@ Simulateur iOS en developpement : `flutter run --dart-define=TABIBI_API_URL=http
   (404) ; detail : bouton, appel avec `ordonnance-ABC123.pdf` et octets `%PDF`, echec
   d'ouverture puis erreur de l'API sans appel ; `test/ordonnances_test.dart` (`nomFichierPdf`,
   `estPdf`).
+
+## v0.15.0 — Interface en francais, arabe et anglais (mobile)
+- Toute l'interface (ecrans, widgets, messages, dates) est traduite en francais, en arabe et
+  en anglais ; voir « Langues » pour le fonctionnement, le choix de la langue et l'ajout d'une
+  langue.
+- Entree « Langue » sur l'accueil : ecran dedie (`lib/pages/langue_page.dart`) proposant
+  Français / العربية / English ; le choix est applique aussitot et memorise sur le telephone
+  (`shared_preferences`). Sans choix, l'application suit la langue du telephone, puis celle du
+  profil (`GET /api/moi/profil`, « kab » etant accepte par l'API mais pas encore traduit).
+- Arabe de droite a gauche : `MaterialApp` recoit `locale`, `supportedLocales` et les
+  `localizationsDelegates` de `flutter_localizations` (`flutter_localizations: sdk: flutter`),
+  la direction venant de la locale ; alignements directionnels (`AlignmentDirectional`) pour
+  les bulles de la messagerie et les boutons alignes.
+- Dates : `intl: ^0.19.0` (`DateFormat`, `initializeDateFormatting`) avec la locale de la
+  langue courante ; `lib/utils/dates.dart` n'a plus de table de mois francais.
+- Erreurs de l'API : un message du serveur est affiche tel quel, un libelle par defaut (401,
+  403, 404, 409...) est desormais porte par une cle de traduction (`ApiException.cle`) et
+  affiche dans la langue courante (`messageApi(context, erreur)`).
+- Controle : `python3 tool/verifier_libelles.py` echoue si un ecran contient encore un libelle
+  francais ecrit en dur.
+- Tests : `test/i18n_test.dart` (memes cles dans les trois dictionnaires, aucune valeur vide,
+  parametres, pluriels — duel arabe compris, langue initiale, direction, choix de
+  l'utilisateur contre langue du profil) ; `test/widget_test.dart` bascule l'application en
+  arabe depuis l'ecran « Langue » et verifie les libelles arabes et
+  `Directionality.of(context) == TextDirection.rtl` ; les autres tests forcent le francais
+  (`preparerTests` dans `test/outils.dart`).

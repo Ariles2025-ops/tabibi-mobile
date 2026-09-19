@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -50,7 +51,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -74,9 +75,9 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -116,10 +117,10 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (id.isEmpty) return;
     final depose = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => DeposerAvisPage(
+        builder: (ctx) => DeposerAvisPage(
           rendezVousId: id,
-          nomMedecin: _nomMedecin(rdv),
-          dateRendezVous: _dateRdv(rdv),
+          nomMedecin: _nomMedecin(ctx, rdv),
+          dateRendezVous: _dateRdv(ctx, rdv),
           api: widget.api,
           auth: _auth,
         ),
@@ -137,31 +138,31 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Annuler ce rendez-vous ?'),
-        content: Text('${_nomMedecin(rdv)}\n${_dateRdv(rdv)}'),
+        title: Text(t(ctx, 'rdv.annulerQuestion')),
+        content: Text('${_nomMedecin(ctx, rdv)}\n${_dateRdv(ctx, rdv)}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Non'),
+            child: Text(t(ctx, 'commun.non')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Oui, annuler'),
+            child: Text(t(ctx, 'rdv.ouiAnnuler')),
           ),
         ],
       ),
     );
-    if (confirme != true) return;
+    if (confirme != true || !mounted) return;
     final token = _auth.accessToken;
     if (token == null) return;
     try {
       await widget.api.annuler(identifiant(rdv['id']), token);
-      _message('Rendez-vous annule');
+      if (mounted) _message(t(context, 'rdv.annule'));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      if (mounted) _message(messageApi(context, e));
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     }
     if (!mounted) return;
     if (_auth.estConnecte) {
@@ -176,18 +177,16 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
-  String _dateRdv(Map<String, dynamic> rdv) => formaterDateIso(rdv['debut'] as String);
+  String _dateRdv(BuildContext context, Map<String, dynamic> rdv) =>
+      formaterDateIso(langueDe(context), rdv['debut'] as String);
 
   /// Nom du praticien ; « Médecin » suivi de l'identifiant abrege s'il n'a pu etre resolu.
-  String _nomMedecin(Map<String, dynamic> rdv) {
+  String _nomMedecin(BuildContext context, Map<String, dynamic> rdv) {
     final id = identifiant(rdv['medecinId']);
-    return _nomsMedecins[id] ?? libelleMedecin(id);
+    return _nomsMedecins[id] ?? libelleMedecin(langueDe(context), id);
   }
 
   String _statut(Map<String, dynamic> rdv) => '${rdv['statut'] ?? ''}';
-
-  /// « CONFIRME » -> « Confirme », « EN_ATTENTE » -> « En attente ».
-  String _libelleStatut(Map<String, dynamic> rdv) => libelleStatut(rdv['statut']);
 
   /// Annulable tant qu'il n'est ni annule ni honore (un rendez-vous honore est passe).
   bool _annulable(Map<String, dynamic> rdv) =>
@@ -195,13 +194,19 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
 
   /// Action d'un rendez-vous : « Donner mon avis » (ou « Avis donné ») s'il est honore,
   /// « Annuler » s'il est encore annulable, rien sinon.
-  Widget? _action(Map<String, dynamic> rdv) {
+  Widget? _action(BuildContext context, Map<String, dynamic> rdv) {
     if (estHonore(rdv['statut'])) {
-      if (_aDonneSonAvis(rdv)) return const Text('Avis donné');
-      return TextButton(onPressed: () => _donnerAvis(rdv), child: const Text('Donner mon avis'));
+      if (_aDonneSonAvis(rdv)) return Text(t(context, 'rdv.avisDonne'));
+      return TextButton(
+        onPressed: () => _donnerAvis(rdv),
+        child: Text(t(context, 'rdv.donnerAvis')),
+      );
     }
     if (_annulable(rdv)) {
-      return TextButton(onPressed: () => _annuler(rdv), child: const Text('Annuler'));
+      return TextButton(
+        onPressed: () => _annuler(rdv),
+        child: Text(t(context, 'rdv.annuler')),
+      );
     }
     return null;
   }
@@ -210,26 +215,27 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes rendez-vous'),
+        title: Text(t(context, 'rdv.titre')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t(context, 'commun.actualiser'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
         ],
       ),
-      body: _corps(),
+      body: _corps(context),
     );
   }
 
-  Widget _corps() {
-    if (!_auth.estConnecte) return _vueConnexion();
+  Widget _corps(BuildContext context) {
+    if (!_auth.estConnecte) return _vueConnexion(context);
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_rdvs.isEmpty) return const Center(child: Text('Aucun rendez-vous.'));
+    if (_rdvs.isEmpty) return Center(child: Text(t(context, 'rdv.aucun')));
+    final langue = langueDe(context);
     return ListView.separated(
       itemCount: _rdvs.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -237,17 +243,20 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
         final rdv = _rdvs[i];
         return ListTile(
           leading: const Icon(Icons.event),
-          title: Text(_dateRdv(rdv)),
-          subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
-          trailing: _action(rdv),
+          title: Text(_dateRdv(context, rdv)),
+          subtitle: Text(t(context, 'rdv.medecinStatut', params: {
+            'medecin': _nomMedecin(context, rdv),
+            'statut': libelleStatut(langue, rdv['statut']),
+          })),
+          trailing: _action(context, rdv),
         );
       },
     );
   }
 
-  Widget _vueConnexion() {
+  Widget _vueConnexion(BuildContext context) {
     return VueConnexion(
-      message: _erreur ?? 'Connectez-vous pour consulter vos rendez-vous.',
+      message: _erreur ?? t(context, 'rdv.connectezVous'),
       onSeConnecter: _seConnecter,
     );
   }

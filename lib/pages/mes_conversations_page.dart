@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -46,7 +47,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -69,9 +70,9 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -94,7 +95,8 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     }
   }
 
-  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? libelleMedecin(c.medecinId);
+  String _nomMedecin(BuildContext context, Conversation c) =>
+      _nomsMedecins[c.medecinId] ?? libelleMedecin(langueDe(context), c.medecinId);
 
   /// Ouvre le fil ; au retour, les non lus ont pu changer (la lecture les marque lus).
   Future<void> _ouvrir(Conversation c) async {
@@ -125,11 +127,11 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messagerie'),
+        title: Text(t(context, 'messagerie.titre')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t(context, 'commun.actualiser'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -142,7 +144,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos conversations.',
+        message: _erreur ?? t(context, 'messagerie.connectezVous'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -150,13 +152,10 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_conversations.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Aucune conversation pour le moment. Ouvrez-en une depuis la fiche de votre médecin.',
-            textAlign: TextAlign.center,
-          ),
+          padding: const EdgeInsets.all(24),
+          child: Text(t(context, 'messagerie.aucune'), textAlign: TextAlign.center),
         ),
       );
     }
@@ -173,16 +172,17 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
 
   /// Praticien (en gras s'il reste des non lus), date du dernier message et pastille.
   Widget _tuile(BuildContext context, Conversation c) {
+    final langue = langueDe(context);
     final nonLus = c.nonLus > 0;
     return ListTile(
       leading: Icon(nonLus ? Icons.mark_chat_unread_outlined : Icons.chat_bubble_outline),
       title: Text(
-        _nomMedecin(c),
+        _nomMedecin(context, c),
         style: nonLus ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
-      subtitle: Text(libelleActivite(c)),
+      subtitle: Text(libelleActivite(langue, c)),
       trailing: nonLus
-          ? _pastille(context, libelleNonLus(c.nonLus))
+          ? _pastille(context, libelleNonLus(langue, c.nonLus))
           : const Icon(Icons.chevron_right),
       onTap: () => _ouvrir(c),
     );

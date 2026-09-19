@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Message d'erreur centre avec un bouton « Reessayer ».
+import '../i18n/langue.dart';
+
+/// Message d'erreur centre avec un bouton « Réessayer ».
 class VueErreur extends StatelessWidget {
   const VueErreur({super.key, required this.message, required this.onReessayer});
 
@@ -17,7 +19,10 @@ class VueErreur extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: onReessayer, child: const Text('Reessayer')),
+            OutlinedButton(
+              onPressed: onReessayer,
+              child: Text(t(context, 'commun.reessayer')),
+            ),
           ],
         ),
       ),

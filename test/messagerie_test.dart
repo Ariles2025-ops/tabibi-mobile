@@ -10,6 +10,8 @@ import 'package:tabibi_mobile/utils/messagerie.dart';
 import 'outils.dart';
 
 void main() {
+  setUp(preparerTests);
+
   test("Conversation.fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final c = Conversation.fromJson({
       'id': 'c1c1c1c1-0000-4000-8000-000000000001',
@@ -90,41 +92,42 @@ void main() {
     final sien = Message.fromJson({'id': 'm-2', 'auteurId': 'medecin-1', 'contenu': 'Bonjour'});
     expect(estDeMoi(mien, 'patient-7'), isTrue);
     expect(estDeMoi(sien, 'patient-7'), isFalse);
-    expect(alignementMessage(mien, 'patient-7'), Alignment.centerRight);
-    expect(alignementMessage(sien, 'patient-7'), Alignment.centerLeft);
+    expect(alignementMessage(mien, 'patient-7'), AlignmentDirectional.centerEnd);
+    expect(alignementMessage(sien, 'patient-7'), AlignmentDirectional.centerStart);
     // Identifiant inconnu : rien n'est attribue au patient.
     expect(estDeMoi(mien, null), isFalse);
     expect(estDeMoi(mien, ''), isFalse);
-    expect(alignementMessage(mien, null), Alignment.centerLeft);
+    expect(alignementMessage(mien, null), AlignmentDirectional.centerStart);
   });
 
   test('dateMessage formate envoyeLe et signale une date absente', () {
     expect(
-      dateMessage(Message.fromJson({'envoyeLe': '2026-12-03T10:15:00'})),
-      'jeu. 3 dec. 10:15',
+      dateMessage('fr', Message.fromJson({'envoyeLe': '2026-12-03T10:15:00'})),
+      'jeu. 3 déc. 10:15',
     );
-    expect(dateMessage(Message.fromJson({})), 'date inconnue');
+    expect(dateMessage('fr', Message.fromJson({})), 'date inconnue');
   });
 
   test("libelleActivite prefere le dernier message, sinon l'ouverture", () {
     expect(
-      libelleActivite(Conversation.fromJson({
+      libelleActivite('fr', Conversation.fromJson({
         'creeLe': '2026-11-20T09:00:00',
         'dernierMessageLe': '2026-12-01T09:05:00',
       })),
-      'Dernier message le mar. 1 dec. 09:05',
+      'Dernier message le mar. 1 déc. 09:05',
     );
     expect(
-      libelleActivite(Conversation.fromJson({'creeLe': '2026-11-20T09:00:00'})),
+      libelleActivite('fr', Conversation.fromJson({'creeLe': '2026-11-20T09:00:00'})),
       'Ouverte le ven. 20 nov. 09:00',
     );
-    expect(libelleActivite(Conversation.fromJson({})), 'Aucun message');
+    expect(libelleActivite('fr', Conversation.fromJson({})), 'Aucun message');
   });
 
   test('libelleNonLus accorde le nombre et se tait sans non lu', () {
-    expect(libelleNonLus(0), '');
-    expect(libelleNonLus(1), '1 non lu');
-    expect(libelleNonLus(3), '3 non lus');
+    expect(libelleNonLus('fr', 0), '');
+    expect(libelleNonLus('fr', 1), '1 non lu');
+    expect(libelleNonLus('fr', 3), '3 non lus');
+    expect(libelleNonLus('ar', 2), 'رسالتان غير مقروءتين');
   });
 
   test("trierParActivite place l'activite la plus recente en tete et les dates absentes en fin",

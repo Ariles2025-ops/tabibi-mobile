@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
@@ -41,7 +42,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -60,9 +61,9 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -89,31 +90,32 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes ordonnances'),
+        title: Text(t(context, 'ordonnances.titre')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t(context, 'commun.actualiser'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
         ],
       ),
-      body: _corps(),
+      body: _corps(context),
     );
   }
 
-  Widget _corps() {
+  Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos ordonnances.',
+        message: _erreur ?? t(context, 'ordonnances.connectezVous'),
         onSeConnecter: _seConnecter,
       );
     }
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_ordonnances.isEmpty) return const Center(child: Text('Aucune ordonnance.'));
+    if (_ordonnances.isEmpty) return Center(child: Text(t(context, 'ordonnances.aucune')));
+    final langue = langueDe(context);
     return ListView.separated(
       itemCount: _ordonnances.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -121,8 +123,13 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
         final o = _ordonnances[i];
         return ListTile(
           leading: const Icon(Icons.description_outlined),
-          title: Text('Emise le ${dateEmission(o)}'),
-          subtitle: Text('Code ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'),
+          title: Text(t(context, 'ordonnances.emiseLe', params: {
+            'date': dateEmission(langue, o),
+          })),
+          subtitle: Text(t(context, 'ordonnances.codeStatut', params: {
+            'code': o['codeVerification'] ?? '-',
+            'statut': libelleStatut(langue, o['statut']),
+          })),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _ouvrirDetail(o),
         );

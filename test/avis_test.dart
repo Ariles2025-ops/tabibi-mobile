@@ -3,7 +3,11 @@ import 'package:tabibi_mobile/models/avis.dart';
 import 'package:tabibi_mobile/models/synthese_avis.dart';
 import 'package:tabibi_mobile/utils/avis.dart';
 
+import 'outils.dart';
+
 void main() {
+  setUp(preparerTests);
+
   test("Avis.fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final a = Avis.fromJson({
       'id': 'a1a1a1a1-0000-4000-8000-000000000001',
@@ -85,26 +89,35 @@ void main() {
   });
 
   test('formaterMoyenne utilise la virgule francaise et signale l absence d avis', () {
-    expect(formaterMoyenne(const SyntheseAvis(moyenne: 4.5, nombre: 12)), '4,5 / 5 (12 avis)');
-    expect(formaterMoyenne(const SyntheseAvis(moyenne: 4.0, nombre: 1)), '4,0 / 5 (1 avis)');
-    expect(formaterMoyenne(const SyntheseAvis(moyenne: 3.666, nombre: 3)), '3,7 / 5 (3 avis)');
-    expect(formaterMoyenne(const SyntheseAvis()), 'Aucun avis');
-    expect(formaterMoyenne(const SyntheseAvis(moyenne: null, nombre: 2)), 'Aucun avis');
-    expect(formaterMoyenne(const SyntheseAvis(moyenne: 4.5, nombre: 0)), 'Aucun avis');
-    expect(formaterDecimal(4.26), '4,3');
-    expect(formaterDecimal(5.0), '5,0');
+    expect(formaterMoyenne('fr', const SyntheseAvis(moyenne: 4.5, nombre: 12)),
+        '4,5 / 5 (12 avis)');
+    expect(formaterMoyenne('fr', const SyntheseAvis(moyenne: 4.0, nombre: 1)), '4,0 / 5 (1 avis)');
+    expect(formaterMoyenne('fr', const SyntheseAvis(moyenne: 3.666, nombre: 3)),
+        '3,7 / 5 (3 avis)');
+    expect(formaterMoyenne('fr', const SyntheseAvis()), 'Aucun avis');
+    expect(formaterMoyenne('fr', const SyntheseAvis(moyenne: null, nombre: 2)), 'Aucun avis');
+    expect(formaterMoyenne('fr', const SyntheseAvis(moyenne: 4.5, nombre: 0)), 'Aucun avis');
+    expect(formaterDecimal('fr', 4.26), '4,3');
+    expect(formaterDecimal('fr', 5.0), '5,0');
+    // En anglais, le separateur decimal est le point.
+    expect(formaterDecimal('en', 4.26), '4.3');
   });
 
   test('formaterNote, libelleStatutAvis et dateAvis mettent en forme un avis', () {
-    expect(formaterNote(4), '4 / 5');
-    expect(libelleStatutAvis('PUBLIE'), 'Publié');
-    expect(libelleStatutAvis('SIGNALE'), 'Signalé');
-    expect(libelleStatutAvis('MASQUE'), 'Masqué');
-    expect(libelleStatutAvis('masque'), 'Masqué');
-    expect(libelleStatutAvis('AUTRE_STATUT'), 'Autre statut');
-    expect(libelleStatutAvis(null), '');
-    expect(dateAvis(Avis.fromJson({'deposeLe': '2026-11-20T10:15:00'})), 'ven. 20 nov. 10:15');
-    expect(dateAvis(Avis.fromJson({})), 'date inconnue');
+    expect(formaterNote('fr', 4), '4 / 5');
+    expect(libelleStatutAvis('fr', 'PUBLIE'), 'Publié');
+    expect(libelleStatutAvis('fr', 'SIGNALE'), 'Signalé');
+    expect(libelleStatutAvis('fr', 'MASQUE'), 'Masqué');
+    expect(libelleStatutAvis('fr', 'masque'), 'Masqué');
+    expect(libelleStatutAvis('fr', 'AUTRE_STATUT'), 'Autre statut');
+    expect(libelleStatutAvis('fr', null), '');
+    // Le meme statut, lu cette fois dans le dictionnaire arabe.
+    expect(libelleStatutAvis('ar', 'PUBLIE'), 'منشور');
+    expect(
+      dateAvis('fr', Avis.fromJson({'deposeLe': '2026-11-20T10:15:00'})),
+      'ven. 20 nov. 10:15',
+    );
+    expect(dateAvis('fr', Avis.fromJson({})), 'date inconnue');
   });
 
   test('noteValide et estHonore encadrent le depot d un avis', () {

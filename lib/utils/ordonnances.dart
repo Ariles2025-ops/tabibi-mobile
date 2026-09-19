@@ -2,6 +2,7 @@
 // {id, medecinId, patientId, rendezVousId, lignes: [{medicament, posologie, duree}],
 //  emiseLe (ISO 8601), codeVerification, statut}.
 
+import '../i18n/traductions.dart' as i18n;
 import 'dates.dart';
 import 'identifiants.dart';
 
@@ -18,10 +19,12 @@ String nomFichierPdf(Map<String, dynamic> ordonnance) {
   return code.isEmpty ? 'ordonnance.pdf' : 'ordonnance-$code.pdf';
 }
 
-/// Date d'emission formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
-String dateEmission(Map<String, dynamic> ordonnance) {
+/// Date d'emission formatee (« jeu. 4 déc. 09:00 ») ; « date inconnue » si absente.
+String dateEmission(String langue, Map<String, dynamic> ordonnance) {
   final Object? iso = ordonnance['emiseLe'];
-  return iso is String && iso.isNotEmpty ? formaterDateIso(iso) : 'date inconnue';
+  return iso is! String || iso.isEmpty
+      ? i18n.traduire(langue, 'commun.dateInconnue')
+      : formaterDateIso(langue, iso);
 }
 
 /// Lignes de l'ordonnance : {medicament, posologie, duree} ; liste vide si absentes.

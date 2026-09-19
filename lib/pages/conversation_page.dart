@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
@@ -12,8 +13,9 @@ import '../widgets/vue_erreur.dart';
 /// Longueur maximale d'un message acceptee par l'API.
 const int longueurMaxMessage = 2000;
 
-/// Fil d'une conversation avec un praticien : bulles alignees a droite pour mes messages,
-/// a gauche pour ceux du praticien, avec leur date ; champ de saisie et bouton « Envoyer »
+/// Fil d'une conversation avec un praticien : bulles alignees du cote de la fin de ligne pour
+/// mes messages, du cote du debut pour ceux du praticien (alignement directionnel : l'arabe
+/// s'ecrit de droite a gauche), avec leur date ; champ de saisie et bouton « Envoyer »
 /// (desactive tant que le message est vide), fil rafraichi apres chaque envoi.
 class ConversationPage extends StatefulWidget {
   const ConversationPage({
@@ -66,7 +68,7 @@ class _ConversationPageState extends State<ConversationPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t(context, 'commun.connexionAnnulee'));
     }
   }
 
@@ -87,9 +89,9 @@ class _ConversationPageState extends State<ConversationPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted) setState(() => _erreur = messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -110,9 +112,9 @@ class _ConversationPageState extends State<ConversationPage> {
       await _charger(discret: true);
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      if (mounted) _message(messageApi(context, e));
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
     }
@@ -127,11 +129,11 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.nomMedecin ?? 'Conversation'),
+        title: Text(widget.nomMedecin ?? t(context, 'conversation.titre')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t(context, 'commun.actualiser'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -144,7 +146,7 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter cette conversation.',
+        message: _erreur ?? t(context, 'conversation.connectezVous'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -162,13 +164,10 @@ class _ConversationPageState extends State<ConversationPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Aucun message pour le moment. Écrivez le premier.',
-            textAlign: TextAlign.center,
-          ),
+          padding: const EdgeInsets.all(24),
+          child: Text(t(context, 'conversation.vide'), textAlign: TextAlign.center),
         ),
       );
     }
@@ -181,8 +180,8 @@ class _ConversationPageState extends State<ConversationPage> {
     );
   }
 
-  /// Bulle d'un message : a droite (couleur primaire) pour les miens, a gauche pour ceux
-  /// du praticien ; contenu puis date d'envoi.
+  /// Bulle d'un message : du cote de la fin de ligne (couleur primaire) pour les miens, du
+  /// cote du debut pour ceux du praticien ; contenu puis date d'envoi.
   Widget _bulle(BuildContext context, Message m) {
     final deMoi = estDeMoi(m, _moi);
     final couleurs = Theme.of(context).colorScheme;
@@ -203,7 +202,7 @@ class _ConversationPageState extends State<ConversationPage> {
           children: [
             Text(m.contenu),
             const SizedBox(height: 4),
-            Text(dateMessage(m), style: texte.bodySmall),
+            Text(dateMessage(langueDe(context), m), style: texte.bodySmall),
           ],
         ),
       ),
@@ -227,10 +226,10 @@ class _ConversationPageState extends State<ConversationPage> {
                 maxLines: 4,
                 maxLength: longueurMaxMessage,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Votre message',
+                decoration: InputDecoration(
+                  hintText: t(context, 'conversation.votreMessage'),
                   counterText: '',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -248,7 +247,7 @@ class _ConversationPageState extends State<ConversationPage> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Envoyer'),
+                      : Text(t(context, 'conversation.envoyer')),
                 );
               },
             ),

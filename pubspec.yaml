@@ -1,7 +1,7 @@
 name: tabibi_mobile
 description: Application mobile Tabibi (iOS + Android) — Flutter.
 publish_to: "none"
-version: 0.14.0+1
+version: 0.15.0+1
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -9,7 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:           # delegues Material / Cupertino pour fr, ar (RTL) et en
+    sdk: flutter
   http: ^1.2.2
+  intl: ^0.19.0                    # dates et mois selon la locale courante (DateFormat)
+  shared_preferences: ^2.3.0       # memorisation de la langue choisie par l'utilisateur
   flutter_appauth: ^8.0.0        # OAuth2/OIDC (Keycloak) natif iOS + Android
   flutter_secure_storage: ^9.2.2 # stockage sur du jeton
   url_launcher: ^6.3.0           # ouverture du lien de salle (teleconsultation) dans le navigateur

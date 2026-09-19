@@ -1,54 +1,63 @@
 // Lecture des demandes de medicament et des reponses de pharmacies (voir `BesoinMedicament`
 // et `ReponsePharmacie`) : prix, statut, disponibilite, nombre de reponses, lieu, dates et tri.
 
+import '../i18n/traductions.dart' as i18n;
 import '../models/besoin_medicament.dart';
 import '../models/reponse_pharmacie.dart';
 import 'dates.dart';
 import 'libelles.dart';
 
 /// « 850 DA » ; null si le prix est absent ou negatif.
-String? formaterPrix(int? prixDa) => prixDa == null || prixDa < 0 ? null : '$prixDa DA';
+String? formaterPrix(String langue, int? prixDa) => prixDa == null || prixDa < 0
+    ? null
+    : i18n.traduire(langue, 'dawini.prix', params: {'prix': prixDa});
 
 /// « OUVERT » -> « Ouverte », « CLOTURE » -> « Clôturée » (la demande) ;
 /// toute autre valeur suit la mise en forme generique ([libelleStatut]).
-String libelleStatutBesoin(Object? statut) {
-  return switch (statut?.toString().trim().toUpperCase()) {
-    'OUVERT' => 'Ouverte',
-    'CLOTURE' => 'Clôturée',
-    _ => libelleStatut(statut),
-  };
-}
+String libelleStatutBesoin(String langue, Object? statut) => libelleStatut(langue, statut);
 
 /// « 0 réponse », « 1 réponse », « 3 réponses ».
-String libelleReponses(int nombre) => nombre == 1 ? '1 réponse' : '$nombre réponses';
+String libelleReponses(String langue, int nombre) =>
+    i18n.traduirePluriel(langue, 'dawini.reponses', nombre);
 
 /// « Disponible » ou « Indisponible ».
-String libelleDisponibilite(bool disponible) => disponible ? 'Disponible' : 'Indisponible';
+String libelleDisponibilite(String langue, bool disponible) =>
+    i18n.traduire(langue, disponible ? 'dawini.disponible' : 'dawini.indisponible');
 
 /// Vrai tant que la demande est ouverte (elle peut encore etre cloturee).
 bool estOuvert(BesoinMedicament besoin) => besoin.statut.trim().toUpperCase() == 'OUVERT';
 
 /// « Wilaya 16 · Alger » ; la commune est omise si elle est absente.
-String lieuBesoin(BesoinMedicament besoin) {
-  final wilaya = 'Wilaya ${besoin.wilayaCode}';
+String lieuBesoin(String langue, BesoinMedicament besoin) {
+  final wilaya = i18n.traduire(langue, 'dawini.wilayaLieu', params: {'code': besoin.wilayaCode});
   final commune = besoin.commune;
-  return commune == null ? wilaya : '$wilaya · $commune';
+  if (commune == null) return wilaya;
+  return i18n.traduire(langue, 'dawini.lieuCommune',
+      params: {'wilaya': wilaya, 'commune': commune});
 }
 
-/// « Publiée le jeu. 4 dec. 09:00 » ; « Clôturée le ... » une fois la demande cloturee ;
+/// « Publiée le jeu. 4 déc. 09:00 » ; « Clôturée le ... » une fois la demande cloturee ;
 /// « Date inconnue » si aucune date n'est lisible.
-String dateBesoin(BesoinMedicament besoin) {
+String dateBesoin(String langue, BesoinMedicament besoin) {
   final clotureLe = besoin.clotureLe;
-  if (clotureLe != null) return 'Clôturée le ${formaterDateHeure(clotureLe)}';
+  if (clotureLe != null) {
+    return i18n.traduire(langue, 'dawini.clotureeLe',
+        params: {'date': formaterDateHeure(langue, clotureLe)});
+  }
   final publieLe = besoin.publieLe;
-  if (publieLe != null) return 'Publiée le ${formaterDateHeure(publieLe)}';
-  return 'Date inconnue';
+  if (publieLe != null) {
+    return i18n.traduire(langue, 'dawini.publieeLe',
+        params: {'date': formaterDateHeure(langue, publieLe)});
+  }
+  return i18n.traduire(langue, 'commun.dateInconnueMaj');
 }
 
-/// Date de la reponse formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
-String dateReponse(ReponsePharmacie reponse) {
+/// Date de la reponse formatee (« jeu. 4 déc. 09:00 ») ; « date inconnue » si absente.
+String dateReponse(String langue, ReponsePharmacie reponse) {
   final repondueLe = reponse.repondueLe;
-  return repondueLe == null ? 'date inconnue' : formaterDateHeure(repondueLe);
+  return repondueLe == null
+      ? i18n.traduire(langue, 'commun.dateInconnue')
+      : formaterDateHeure(langue, repondueLe);
 }
 
 /// Copie triee de la plus recente a la plus ancienne (`publieLe`) ;

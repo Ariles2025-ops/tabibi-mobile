@@ -1,35 +1,39 @@
-// Mise en forme des dates en francais, sans dependance a `intl`.
+// Mise en forme des dates dans la langue de l'interface, via `intl` (`DateFormat`) : la
+// locale et les motifs sont des cles de traduction (`dates.locale`, `dates.dateHeure`,
+// `dates.jour`), l'arabe utilisant la locale algerienne `ar_DZ` (mois « جانفي »...).
+//
+// [preparerDates] charge les donnees de locale une fois pour toutes, au demarrage (`main`)
+// comme dans les tests : sans cet appel, `DateFormat` ne connait que l'anglais.
 
-const List<String> _jours = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
-const List<String> _mois = [
-  'janv.',
-  'fevr.',
-  'mars',
-  'avr.',
-  'mai',
-  'juin',
-  'juil.',
-  'aout',
-  'sept.',
-  'oct.',
-  'nov.',
-  'dec.',
-];
+import '../i18n/traductions.dart' as i18n;
 
-/// « jeu. 4 dec. 09:00 » : jour de la semaine, jour, mois et heure locale.
-String formaterDateHeure(DateTime date) {
-  final d = date.toLocal();
-  final hh = d.hour.toString().padLeft(2, '0');
-  final mm = d.minute.toString().padLeft(2, '0');
-  return '${_jours[d.weekday - 1]} ${d.day} ${_mois[d.month - 1]} $hh:$mm';
+/// Charge les donnees de date de toutes les locales (a appeler avant tout formatage).
+Future<void> preparerDates() => initializeDateFormatting();
+
+/// Locale `intl` de [langue], repliee sur la langue seule (« ar_DZ » -> « ar ») puis sur
+/// l'anglais si ses donnees n'ont pas ete chargees.
+String localeDates(String langue) {
+  final demandee = i18n.traduire(langue, 'dates.locale');
+  if (DateFormat.localeExists(demandee)) return demandee;
+  final court = demandee.split('_').first;
+  return DateFormat.localeExists(court) ? court : 'en';
+}
+
+/// « jeu. 4 déc. 09:00 » : jour de la semaine, jour, mois et heure locale.
+String formaterDateHeure(String langue, DateTime date) {
+  final motif = i18n.traduire(langue, 'dates.dateHeure');
+  return DateFormat(motif, localeDates(langue)).format(date.toLocal());
 }
 
 /// Idem a partir d'une chaine ISO 8601 ; la chaine brute est renvoyee si elle est invalide.
-String formaterDateIso(String iso) {
+String formaterDateIso(String langue, String iso) {
   final d = DateTime.tryParse(iso);
-  return d == null ? iso : formaterDateHeure(d);
+  return d == null ? iso : formaterDateHeure(langue, d);
 }
 
 /// « 14 mai 1990 » : jour, mois et annee sans heure (date de naissance, par exemple).
-String formaterJour(DateTime date) => '${date.day} ${_mois[date.month - 1]} ${date.year}';
+String formaterJour(String langue, DateTime date) =>
+    DateFormat(i18n.traduire(langue, 'dates.jour'), localeDates(langue)).format(date);

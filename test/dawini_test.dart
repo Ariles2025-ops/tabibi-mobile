@@ -3,7 +3,11 @@ import 'package:tabibi_mobile/models/besoin_medicament.dart';
 import 'package:tabibi_mobile/models/reponse_pharmacie.dart';
 import 'package:tabibi_mobile/utils/dawini.dart';
 
+import 'outils.dart';
+
 void main() {
+  setUp(preparerTests);
+
   test("BesoinMedicament.fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final b = BesoinMedicament.fromJson({
       'id': 'b1b1b1b1-0000-4000-8000-000000000001',
@@ -127,51 +131,56 @@ void main() {
   });
 
   test('formaterPrix affiche les dinars et se tait sans prix', () {
-    expect(formaterPrix(850), '850 DA');
-    expect(formaterPrix(0), '0 DA');
-    expect(formaterPrix(null), isNull);
-    expect(formaterPrix(-1), isNull);
+    expect(formaterPrix('fr', 850), '850 DA');
+    expect(formaterPrix('fr', 0), '0 DA');
+    expect(formaterPrix('fr', null), isNull);
+    expect(formaterPrix('fr', -1), isNull);
+    expect(formaterPrix('ar', 850), '850 دج');
   });
 
   test('libelleStatutBesoin accorde le statut a la demande et tolere le reste', () {
-    expect(libelleStatutBesoin('OUVERT'), 'Ouverte');
-    expect(libelleStatutBesoin('CLOTURE'), 'Clôturée');
-    expect(libelleStatutBesoin('cloture'), 'Clôturée');
-    expect(libelleStatutBesoin('AUTRE_STATUT'), 'Autre statut');
-    expect(libelleStatutBesoin(null), '');
+    expect(libelleStatutBesoin('fr', 'OUVERT'), 'Ouverte');
+    expect(libelleStatutBesoin('fr', 'CLOTURE'), 'Clôturée');
+    expect(libelleStatutBesoin('fr', 'cloture'), 'Clôturée');
+    expect(libelleStatutBesoin('fr', 'AUTRE_STATUT'), 'Autre statut');
+    expect(libelleStatutBesoin('fr', null), '');
   });
 
   test('libelleReponses et libelleDisponibilite accordent les libelles', () {
-    expect(libelleReponses(0), '0 réponse');
-    expect(libelleReponses(1), '1 réponse');
-    expect(libelleReponses(3), '3 réponses');
-    expect(libelleDisponibilite(true), 'Disponible');
-    expect(libelleDisponibilite(false), 'Indisponible');
+    expect(libelleReponses('fr', 0), '0 réponse');
+    expect(libelleReponses('fr', 1), '1 réponse');
+    expect(libelleReponses('fr', 3), '3 réponses');
+    // Arabe : duel pour deux, pluriel restreint de 3 a 10.
+    expect(libelleReponses('ar', 1), 'رد واحد');
+    expect(libelleReponses('ar', 2), 'ردان');
+    expect(libelleReponses('ar', 3), '3 ردود');
+    expect(libelleDisponibilite('fr', true), 'Disponible');
+    expect(libelleDisponibilite('fr', false), 'Indisponible');
   });
 
   test('lieuBesoin et dateBesoin decrivent la demande', () {
     expect(
-      lieuBesoin(BesoinMedicament.fromJson({'wilayaCode': '16', 'commune': 'Alger-Centre'})),
+      lieuBesoin('fr', BesoinMedicament.fromJson({'wilayaCode': '16', 'commune': 'Alger-Centre'})),
       'Wilaya 16 · Alger-Centre',
     );
-    expect(lieuBesoin(BesoinMedicament.fromJson({'wilayaCode': '31'})), 'Wilaya 31');
+    expect(lieuBesoin('fr', BesoinMedicament.fromJson({'wilayaCode': '31'})), 'Wilaya 31');
     expect(
-      dateBesoin(BesoinMedicament.fromJson({'publieLe': '2026-11-20T09:00:00'})),
+      dateBesoin('fr', BesoinMedicament.fromJson({'publieLe': '2026-11-20T09:00:00'})),
       'Publiée le ven. 20 nov. 09:00',
     );
     expect(
-      dateBesoin(BesoinMedicament.fromJson({
+      dateBesoin('fr', BesoinMedicament.fromJson({
         'publieLe': '2026-11-20T09:00:00',
         'clotureLe': '2026-11-21T18:30:00',
       })),
       'Clôturée le sam. 21 nov. 18:30',
     );
-    expect(dateBesoin(BesoinMedicament.fromJson({})), 'Date inconnue');
+    expect(dateBesoin('fr', BesoinMedicament.fromJson({})), 'Date inconnue');
     expect(
-      dateReponse(ReponsePharmacie.fromJson({'repondueLe': '2026-11-20T10:15:00'})),
+      dateReponse('fr', ReponsePharmacie.fromJson({'repondueLe': '2026-11-20T10:15:00'})),
       'ven. 20 nov. 10:15',
     );
-    expect(dateReponse(ReponsePharmacie.fromJson({})), 'date inconnue');
+    expect(dateReponse('fr', ReponsePharmacie.fromJson({})), 'date inconnue');
   });
 
   test('trierParPublication place la plus recente en tete et les dates absentes en fin', () {

@@ -4,16 +4,28 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../config/configuration.dart';
+import '../i18n/traductions.dart';
 
 /// Erreur renvoyee par l'API Tabibi : statut HTTP et message lisible.
 ///
 /// Le message vient du corps JSON `{"erreur": "..."}` quand le backend en
 /// fournit un, sinon d'un libelle par defaut selon le statut (401, 403, 404, 409...).
+///
+/// Dans ce second cas, [cle] et [params] designent le libelle dans les dictionnaires de
+/// `lib/i18n/traductions.dart` : les ecrans l'affichent dans la langue de l'interface
+/// (`messageApi`), [message] n'etant qu'un repli en francais. Un message venu du serveur
+/// est affiche tel quel (il n'est pas traduisible ici) et laisse [cle] nulle.
 class ApiException implements Exception {
-  const ApiException(this.statusCode, this.message);
+  const ApiException(this.statusCode, this.message, {this.cle, this.params = const {}});
 
   final int statusCode;
   final String message;
+
+  /// Cle du libelle par defaut, ou null si [message] vient du serveur.
+  final String? cle;
+
+  /// Parametres du libelle par defaut (`{chemin}`, `{statut}`).
+  final Map<String, Object?> params;
 
   /// 401 : jeton absent ou expire.
   bool get nonAutorise => statusCode == 401;
@@ -31,15 +43,17 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode) : $message';
 }
 
-/// Message a afficher a l'utilisateur pour une erreur survenue lors d'un appel API.
-String messageErreur(Object erreur) =>
-    erreur is ApiException ? erreur.message : 'Impossible de joindre le serveur';
+/// Message a afficher pour une erreur survenue lors d'un appel API, en francais : repli hors
+/// de tout widget (les ecrans utilisent `messageApi(context, erreur)`, qui suit la langue).
+String messageErreur(Object erreur) => erreur is ApiException
+    ? erreur.message
+    : traduire(langueParDefaut, 'api.serveurInjoignable');
 
 /// Type de contenu d'un document PDF (`GET /api/ordonnances/{id}/pdf`).
 const String typePdf = 'application/pdf';
 
-/// Message quand le serveur repond 2xx sans renvoyer un PDF (mauvais type de contenu).
-const String messagePasUnPdf = "Le serveur n'a pas renvoyé un document PDF.";
+/// Cle du libelle affiche quand le serveur repond 2xx sans renvoyer un PDF.
+const String clePasUnPdf = 'api.pasUnPdf';
 
 /// Vrai si l'en-tete `Content-Type` designe un PDF (parametres tels que `charset` toleres,
 /// casse ignoree) ; faux s'il est absent.
@@ -133,7 +147,7 @@ class ApiService {
   /// Version imprimable d'une ordonnance (jeton requis) : octets du document PDF, avec le QR
   /// code de verification, tel que renvoye par `GET /api/ordonnances/{id}/pdf`
   /// (`application/pdf`) ; 403 si elle est a un autre patient, 404 si elle est inconnue.
-  /// Une reponse 2xx qui n'est pas un PDF est refusee ([messagePasUnPdf]).
+  /// Une reponse 2xx qui n'est pas un PDF est refusee ([clePasUnPdf]).
   Future<Uint8List> ordonnancePdf(String id, String token) async {
     final chemin = '/api/ordonnances/${Uri.encodeComponent(id)}/pdf';
     final res = await http.get(
@@ -141,7 +155,13 @@ class ApiService {
       headers: {..._bearer(token), 'Accept': typePdf},
     );
     _verifier(res, chemin);
-    if (!estPdf(res.headers['content-type'])) throw ApiException(res.statusCode, messagePasUnPdf);
+    if (!estPdf(res.headers['content-type'])) {
+      throw ApiException(
+        res.statusCode,
+        traduire(langueParDefaut, clePasUnPdf),
+        cle: clePasUnPdf,
+      );
+    }
     return res.bodyBytes;
   }
 
@@ -436,25 +456,39 @@ class ApiService {
     return (_json(res) as List).cast<Map<String, dynamic>>();
   }
 
-  /// Leve une [ApiException] si la reponse n'est pas un succes (2xx).
+  /// Leve une [ApiException] si la reponse n'est pas un succes (2xx) : message du serveur
+  /// s'il en donne un, sinon libelle par defaut traduisible (cle et parametres conserves).
   void _verifier(http.Response res, String chemin) {
     if (res.statusCode >= 200 && res.statusCode < 300) return;
-    throw ApiException(res.statusCode, _libelleErreur(res, chemin));
+    final duServeur = _messageDuServeur(res);
+    if (duServeur != null) throw ApiException(res.statusCode, duServeur);
+    final cle = _cleErreur(res.statusCode);
+    final params = <String, Object?>{'chemin': chemin, 'statut': res.statusCode};
+    throw ApiException(
+      res.statusCode,
+      traduire(langueParDefaut, cle, params: params),
+      cle: cle,
+      params: params,
+    );
   }
 
-  String _libelleErreur(http.Response res, String chemin) {
+  /// Message `{"erreur": "..."}` du backend ; null si le corps est vide, non JSON ou muet.
+  String? _messageDuServeur(http.Response res) {
     try {
       final corps = _json(res);
       if (corps is Map && corps['erreur'] is String) return corps['erreur'] as String;
     } on FormatException {
-      // Corps vide ou non JSON : libelle par defaut ci-dessous.
+      // Corps vide ou non JSON : libelle par defaut de l'application.
     }
-    return switch (res.statusCode) {
-      401 => 'Connexion requise',
-      403 => 'Acces refuse : un compte patient est necessaire',
-      404 => 'Ressource introuvable',
-      409 => "Ce creneau vient d'etre pris",
-      _ => 'Echec $chemin : ${res.statusCode}',
-    };
+    return null;
   }
+
+  /// Cle du libelle par defaut selon le statut HTTP.
+  String _cleErreur(int statut) => switch (statut) {
+        401 => 'api.connexionRequise',
+        403 => 'api.accesRefuse',
+        404 => 'api.introuvable',
+        409 => 'api.creneauPris',
+        _ => 'api.echec',
+      };
 }

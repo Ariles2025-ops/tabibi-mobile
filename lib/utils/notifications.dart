@@ -1,13 +1,16 @@
 // Lecture des notifications de l'utilisateur (voir `NotificationUtilisateur`) :
 // date, tri, compteur de non lues et libelle de l'entree d'accueil.
 
+import '../i18n/traductions.dart' as i18n;
 import '../models/notification.dart';
 import 'dates.dart';
 
-/// Date de creation formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
-String dateNotification(NotificationUtilisateur notification) {
+/// Date de creation formatee (« jeu. 4 déc. 09:00 ») ; « date inconnue » si absente.
+String dateNotification(String langue, NotificationUtilisateur notification) {
   final creeLe = notification.creeLe;
-  return creeLe == null ? 'date inconnue' : formaterDateHeure(creeLe);
+  return creeLe == null
+      ? i18n.traduire(langue, 'commun.dateInconnue')
+      : formaterDateHeure(langue, creeLe);
 }
 
 /// Copie triee de la plus recente a la plus ancienne (`creeLe`) ;
@@ -30,5 +33,7 @@ int compterNonLues(Iterable<NotificationUtilisateur> notifications) =>
 
 /// Libelle de l'entree d'accueil : « Notifications (3) », ou simplement « Notifications »
 /// sans non lue ou tant que le nombre est inconnu (hors connexion, echec).
-String libelleNotifications(int? nonLues) =>
-    nonLues != null && nonLues > 0 ? 'Notifications ($nonLues)' : 'Notifications';
+String libelleNotifications(String langue, int? nonLues) =>
+    nonLues != null && nonLues > 0
+        ? i18n.traduire(langue, 'accueil.notificationsNonLues', params: {'n': nonLues})
+        : i18n.traduire(langue, 'accueil.notifications');
