@@ -30,3 +30,6 @@ String formaterDateIso(String iso) {
   final d = DateTime.tryParse(iso);
   return d == null ? iso : formaterDateHeure(d);
 }
+
+/// « 14 mai 1990 » : jour, mois et annee sans heure (date de naissance, par exemple).
+String formaterJour(DateTime date) => '${date.day} ${_mois[date.month - 1]} ${date.year}';

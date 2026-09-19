@@ -11,4 +11,9 @@ void main() {
     expect(formaterDateIso('2026-12-03T09:00:00'), 'jeu. 3 dec. 09:00');
     expect(formaterDateIso('n/a'), 'n/a');
   });
+
+  test('formate un jour sans heure (date de naissance)', () {
+    expect(formaterJour(DateTime(1990, 5, 14)), '14 mai 1990');
+    expect(formaterJour(DateTime(1985, 12, 3)), '3 dec. 1985');
+  });
 }

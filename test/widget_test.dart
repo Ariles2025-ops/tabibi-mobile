@@ -14,10 +14,12 @@ import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
 import 'package:tabibi_mobile/pages/mes_rendez_vous_page.dart';
 import 'package:tabibi_mobile/pages/mes_teleconsultations_page.dart';
+import 'package:tabibi_mobile/pages/mon_profil_page.dart';
 import 'package:tabibi_mobile/pages/reponses_besoin_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
+import 'package:tabibi_mobile/utils/profil.dart';
 
 import 'outils.dart';
 
@@ -282,6 +284,29 @@ class FakeApiService extends ApiService {
         },
       ];
 
+  /// Profil du patient de test, deja renseigne.
+  @override
+  Future<Map<String, dynamic>> monProfil(String token) async => _profil();
+
+  /// Vue enregistree : les valeurs envoyees, datees par le serveur.
+  @override
+  Future<Map<String, dynamic>> enregistrerProfil(
+    Map<String, dynamic> profil,
+    String token,
+  ) async =>
+      _profil({...profil, 'misAJourLe': '2026-12-01T10:00:00'});
+
+  static Map<String, dynamic> _profil([Map<String, dynamic> valeurs = const {}]) => {
+        'utilisateurId': sujetPatient,
+        'nomComplet': 'Karim Haddad',
+        'telephone': '0550123456',
+        'dateNaissance': '1990-05-14',
+        'wilayaCode': '16',
+        'langue': 'fr',
+        'misAJourLe': '2026-11-20T09:00:00',
+        ...valeurs,
+      };
+
   static Map<String, dynamic> _besoin(
     String id,
     String medicament,
@@ -545,6 +570,44 @@ class FakeApiServiceSansAvis extends FakeApiService {
   @override
   Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async =>
       {'moyenne': null, 'nombre': 0, 'avis': []};
+}
+
+/// Variante qui conserve les profils enregistres (corps envoyes a PUT /api/moi/profil).
+class FakeApiServiceProfil extends FakeApiService {
+  FakeApiServiceProfil();
+
+  final List<Map<String, dynamic>> enregistres = [];
+
+  @override
+  Future<Map<String, dynamic>> enregistrerProfil(
+    Map<String, dynamic> profil,
+    String token,
+  ) async {
+    enregistres.add(profil);
+    return super.enregistrerProfil(profil, token);
+  }
+}
+
+/// Variante d'un patient qui n'a jamais renseigne son profil (404 tant qu'il n'est pas
+/// enregistre) ; conserve aussi les profils enregistres.
+class FakeApiServiceSansProfil extends FakeApiServiceProfil {
+  FakeApiServiceSansProfil();
+
+  @override
+  Future<Map<String, dynamic>> monProfil(String token) async =>
+      throw const ApiException(404, 'Profil non renseigne.');
+}
+
+/// Variante ou l'API refuse le profil (400, regle du serveur non verifiee localement).
+class FakeApiServiceProfilInvalide extends FakeApiService {
+  const FakeApiServiceProfilInvalide();
+
+  @override
+  Future<Map<String, dynamic>> enregistrerProfil(
+    Map<String, dynamic> profil,
+    String token,
+  ) async =>
+      throw const ApiException(400, 'Le nom complet doit compter de 2 a 120 caracteres.');
 }
 
 /// Session de test deja munie d'un jeton (JWT factice au sujet [FakeApiService.sujetPatient],
@@ -1218,5 +1281,139 @@ void main() {
     expect(find.text(messageDemandeDejaCloturee), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
     expect(find.text('Wilaya 16 · Clôturée'), findsOneWidget);
+  });
+
+  testWidgets("l'accueil propose l'entree Mon profil", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Mon profil'), findsOneWidget);
+  });
+
+  testWidgets('mon profil sans jeton propose de se connecter', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MonProfilPage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Enregistrer'), findsNothing);
+  });
+
+  testWidgets('mon profil preremplit le formulaire avec le profil existant, puis enregistre '
+      'la date effacee et la langue choisie', (tester) async {
+    surfaceHaute(tester);
+    final api = FakeApiServiceProfil();
+    await tester.pumpWidget(MaterialApp(
+      home: MonProfilPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mon profil'), findsOneWidget);
+    expect(find.text('Mis à jour le ven. 20 nov. 09:00'), findsOneWidget);
+    String champ(String libelle) =>
+        tester.widget<TextField>(find.widgetWithText(TextField, libelle)).controller?.text ?? '';
+    expect(champ('Nom complet *'), 'Karim Haddad');
+    expect(champ('Téléphone'), '0550123456');
+    expect(champ('Wilaya (code)'), '16');
+    expect(find.text('14 mai 1990'), findsOneWidget);
+    expect(find.text('Français'), findsOneWidget);
+
+    // Date effacee, langue passee a l'anglais.
+    await tester.tap(find.byTooltip('Effacer la date'));
+    await tester.pump();
+    expect(find.text('14 mai 1990'), findsNothing);
+    expect(find.text('Non renseignée'), findsOneWidget);
+    await tester.tap(find.text('Français'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+    expect(find.text('English'), findsOneWidget);
+
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(api.enregistres.single, {
+      'nomComplet': 'Karim Haddad',
+      'telephone': '0550123456',
+      'dateNaissance': null,
+      'wilayaCode': '16',
+      'langue': 'en',
+    });
+    expect(find.text('Profil enregistré.'), findsOneWidget);
+    // Le formulaire suit la vue renvoyee par le serveur (nouvelle date de mise a jour).
+    expect(find.text('Mis à jour le mar. 1 dec. 10:00'), findsOneWidget);
+    expect(find.text('Non renseignée'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+  });
+
+  testWidgets('mon profil non renseigne (404) affiche un formulaire vide, exige le nom et un '
+      'telephone valide, puis enregistre avec une date choisie', (tester) async {
+    surfaceHaute(tester);
+    final api = FakeApiServiceSansProfil();
+    await tester.pumpWidget(MaterialApp(
+      home: MonProfilPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Formulaire vide : aucune erreur, langue par defaut, date absente.
+    final nom = find.widgetWithText(TextField, 'Nom complet *');
+    expect(tester.widget<TextField>(nom).controller?.text, isEmpty);
+    expect(find.text('Karim Haddad'), findsNothing);
+    expect(find.text('Non renseignée'), findsOneWidget);
+    expect(find.text('Français'), findsOneWidget);
+    expect(find.text('Reessayer'), findsNothing);
+    expect(find.textContaining('Renseignez votre profil'), findsOneWidget);
+
+    // Nom obligatoire.
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageNomRequis), findsOneWidget);
+    expect(api.enregistres, isEmpty);
+    await laisserPasserLeMessage(tester);
+
+    // Telephone verifie localement (numero algerien).
+    await tester.enterText(nom, 'Amina Ait Ahmed');
+    await tester.enterText(find.widgetWithText(TextField, 'Téléphone'), '12345');
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageTelephoneInvalide), findsOneWidget);
+    expect(api.enregistres, isEmpty);
+    await laisserPasserLeMessage(tester);
+
+    // Date choisie dans le selecteur (date proposee par defaut), telephone avec espaces.
+    await tester.enterText(find.widgetWithText(TextField, 'Téléphone'), '05 50 12 34 56');
+    await tester.enterText(find.widgetWithText(TextField, 'Wilaya (code)'), '31');
+    await tester.tap(find.text('Non renseignée'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text('Non renseignée'), findsNothing);
+
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    final envoye = api.enregistres.single;
+    expect(envoye['nomComplet'], 'Amina Ait Ahmed');
+    expect(envoye['telephone'], '0550123456');
+    expect(envoye['wilayaCode'], '31');
+    expect(envoye['langue'], 'fr');
+    expect(envoye['dateNaissance'], matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
+    expect(find.text('Profil enregistré.'), findsOneWidget);
+    expect(find.text('Mis à jour le mar. 1 dec. 10:00'), findsOneWidget);
+  });
+
+  testWidgets("mon profil affiche tel quel le refus (400) de l'API", (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(MaterialApp(
+      home: MonProfilPage(api: const FakeApiServiceProfilInvalide(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Nom complet *'), 'A');
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Le nom complet doit compter de 2 a 120 caracteres.'), findsOneWidget);
+    expect(find.text('Profil enregistré.'), findsNothing);
+    expect(find.text('Mon profil'), findsOneWidget);
   });
 }

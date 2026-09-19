@@ -262,3 +262,26 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   Android, iOS, appareil physique et production).
 - Tests : `test/configuration_test.dart` (valeurs par defaut = emulateur Android, adresses sans
   barre oblique finale, base d'`ApiService` par defaut ou fournie).
+
+## v0.11.0 — Mon profil (mobile)
+- Ecran « Mon profil » (`mon_profil_page.dart`, utilisateur connecte ; bouton « Se connecter » sans
+  jeton) : formulaire prerempli si un profil existe (`GET /api/moi/profil`), vide si l'API repond
+  404 (profil jamais renseigne) ; champs nom complet (obligatoire, 120 caracteres au plus),
+  telephone (clavier telephone, verification locale d'un numero algerien de 9 a 10 chiffres
+  commencant par 0, espaces toleres), date de naissance (facultative, `showDatePicker` borne au
+  passe et apres 1900, icone pour l'effacer), wilaya (code a deux chiffres) et langue
+  (`DropdownButton` : Français, العربية, Taqbaylit, English -> fr, ar, kab, en).
+- « Enregistrer » : refus local sans nom (« Indiquez votre nom complet. ») ou avec un telephone
+  invalide, puis `PUT /api/moi/profil` ; « Profil enregistré. » et formulaire realigne sur la vue
+  renvoyee (« Mis à jour le ... ») ; 400 (regle de l'API) affiche tel quel, 401 -> deconnexion.
+- Accueil : entree « Mon profil ».
+- Modele `lib/models/profil.dart` (`Profil.fromJson` tolerant, `toJson` = corps du PUT avec la
+  date au format `yyyy-MM-dd` ou `null`, `langues`, `langueParDefaut`), utilitaires
+  `lib/utils/profil.dart` (`libellesLangues`, `libelleLangue`, `normaliserTelephone`,
+  `telephoneValide`, `libelleDateNaissance`, `libelleMiseAJour`) et `formaterJour` (« 14 mai 1990 »)
+  dans `lib/utils/dates.dart` ; `ApiService` : `monProfil`, `enregistrerProfil`.
+- Tests : `test/profil_test.dart` (modele : lecture complete, tolerance, `toJson` avec et sans date,
+  jour seul ; langues ; telephone ; libelles), `test/dates_test.dart` (`formaterJour`) ;
+  `test/widget_test.dart` (formulaire prerempli puis enregistrement avec date effacee et langue
+  changee, 404 -> formulaire vide puis nom obligatoire, telephone invalide, date choisie et
+  enregistrement, refus 400 affiche, sans jeton, entree d'accueil).

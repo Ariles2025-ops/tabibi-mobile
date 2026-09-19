@@ -175,3 +175,29 @@
   rappel du schema de redirection a declarer dans les projets natifs).
 - Tests : `test/configuration_test.dart` (configuration par defaut = emulateur Android, constantes
   `...ParDefaut`, adresses sans barre oblique finale, `ApiService().base` par defaut ou fournie).
+
+## v0.11.0 — Mon profil
+- Ecran « Mon profil » (`lib/pages/mon_profil_page.dart`, utilisateur connecte, invitation « Se connecter »
+  sans jeton) : `GET /api/moi/profil` preremplit le formulaire, un 404 (profil jamais renseigne) laisse
+  le formulaire vide sans erreur ; nom complet obligatoire (120 caracteres au plus), telephone (clavier
+  telephone, numero algerien de 9 a 10 chiffres commencant par 0 verifie localement, espaces retires),
+  date de naissance facultative (`showDatePicker`, de 1901 a hier, icone « Effacer la date »), wilaya
+  (code, deux chiffres), langue (`DropdownButton` Français / العربية / Taqbaylit / English -> fr, ar,
+  kab, en) ; « Enregistrer » -> refus local (« Indiquez votre nom complet. », telephone invalide) puis
+  `PUT /api/moi/profil` avec `Profil.toJson()`, « Profil enregistré. » et formulaire realigne sur la vue
+  renvoyee (« Mis à jour le ... ») ; 400 affiche tel quel, jeton expire (401) -> deconnexion.
+- Accueil : entree « Mon profil ».
+- Modele `Profil` (`lib/models/profil.dart`, `fromJson` tolerant : date ramenee au jour, langue par defaut
+  fr ; `toJson` = {nomComplet, telephone, dateNaissance yyyy-MM-dd ou null, wilayaCode, langue}, sans
+  identifiant ni date de mise a jour ; constantes `langues`, `langueParDefaut`) ; utilitaires
+  `lib/utils/profil.dart` (`libellesLangues`, `libelleLangue`, `messageTelephoneInvalide`,
+  `normaliserTelephone`, `telephoneValide`, `libelleDateNaissance`, `libelleMiseAJour`) et
+  `formaterJour` dans `lib/utils/dates.dart` ; `ApiService.monProfil` (404 en `ApiException`),
+  `enregistrerProfil(Map, token)` (PUT, corps JSON UTF-8).
+- Tests : `test/profil_test.dart` (fromJson complet et valeurs nulles, toJson avec date, sans date et
+  date horodatee, langues, telephone valide / invalide, normalisation, libelles), `test/dates_test.dart`
+  (`formaterJour`) ; `test/widget_test.dart` (`FakeApiService` etendu : `monProfil`, `enregistrerProfil` ;
+  variantes `FakeApiServiceProfil` (enregistrements conserves), `FakeApiServiceSansProfil` (404),
+  `FakeApiServiceProfilInvalide` (400) ; formulaire prerempli puis enregistrement avec date effacee et
+  langue anglaise, 404 -> formulaire vide, nom obligatoire, telephone invalide, date choisie dans le
+  selecteur puis enregistrement, refus 400 affiche, sans jeton, entree d'accueil).

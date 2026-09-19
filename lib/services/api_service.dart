@@ -329,6 +329,31 @@ class ApiService {
     return _objet(res, '/api/moi');
   }
 
+  /// Profil de l'utilisateur connecte : {utilisateurId, nomComplet, telephone, dateNaissance
+  /// (yyyy-MM-dd), wilayaCode, langue, misAJourLe (ISO 8601)} ; 404 tant qu'il n'a jamais ete
+  /// renseigne.
+  Future<Map<String, dynamic>> monProfil(String token) async {
+    final res = await http.get(Uri.parse('$base/api/moi/profil'), headers: _bearer(token));
+    return _objet(res, '/api/moi/profil');
+  }
+
+  /// Renseigne ou remplace le profil de l'utilisateur connecte et renvoie la vue enregistree
+  /// (memes champs que [monProfil]) ; 400 si une regle n'est pas respectee (nom absent,
+  /// telephone mal forme, date de naissance future, langue inconnue).
+  /// Corps `{"nomComplet": ..., "telephone": ..., "dateNaissance": "yyyy-MM-dd" ou null,
+  /// "wilayaCode": ..., "langue": ...}`, tel que produit par `Profil.toJson()`.
+  Future<Map<String, dynamic>> enregistrerProfil(
+    Map<String, dynamic> profil,
+    String token,
+  ) async {
+    final res = await http.put(
+      Uri.parse('$base/api/moi/profil'),
+      headers: _bearerJson(token),
+      body: jsonEncode(profil),
+    );
+    return _objet(res, '/api/moi/profil');
+  }
+
   // --- Outils internes ---
 
   Map<String, String> _bearer(String token) => {'Authorization': 'Bearer $token'};
