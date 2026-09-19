@@ -82,14 +82,18 @@ if [ -f "$ROOT_KTS" ] && ! grep -q "tabibi-compilesdk-override" "$ROOT_KTS"; the
 
 // tabibi-compilesdk-override : force compileSdk 36 sur tous les plugins (flutter_appauth fixe 31).
 subprojects {
-    afterEvaluate {
-        val androidExt = extensions.findByName("android")
-        if (androidExt != null) {
-            try {
-                androidExt.javaClass
-                    .getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
-                    .invoke(androidExt, 36)
-            } catch (e: Exception) {
+    // Le build.gradle racine de Flutter evalue deja :app (evaluationDependsOn) : on ne
+    // (re)planifie afterEvaluate que sur les sous-projets pas encore evalues (les plugins).
+    if (!state.executed) {
+        afterEvaluate {
+            val androidExt = extensions.findByName("android")
+            if (androidExt != null) {
+                try {
+                    androidExt.javaClass
+                        .getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
+                        .invoke(androidExt, 36)
+                } catch (e: Exception) {
+                }
             }
         }
     }
@@ -100,10 +104,12 @@ elif [ -f "$ROOT_GROOVY" ] && ! grep -q "tabibi-compilesdk-override" "$ROOT_GROO
 
 // tabibi-compilesdk-override : force compileSdk 36 sur tous les plugins (flutter_appauth fixe 31).
 subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android {
-                compileSdkVersion 36
+    if (!project.state.executed) {
+        afterEvaluate { project ->
+            if (project.hasProperty('android')) {
+                project.android {
+                    compileSdkVersion 36
+                }
             }
         }
     }
