@@ -36,6 +36,16 @@ if ! grep -q appAuthRedirectScheme "$GRADLE"; then
   perl -pi -e 's/^(\s*)(applicationId\b.*)$/$1$2\n$1'"$PLACEHOLDER"'/' "$GRADLE"
 fi
 
+# --- compileSdk : au moins 34 (exige par les dependances androidx de flutter_appauth) ---
+# Le gabarit Flutter fixe compileSdk = flutter.compileSdkVersion, parfois trop bas (31) : la
+# compilation des plugins echoue alors (CheckAarMetadata). On force 34, valeur qui satisfait
+# fragment/activity/core 1.13+. Idempotent.
+if [ "${GRADLE##*.}" = "kts" ]; then
+  perl -pi -e 's/^(\s*)compileSdk\s*=.*$/${1}compileSdk = 34/' "$GRADLE"
+else
+  perl -pi -e 's/^(\s*)compileSdk(Version)?\b.*$/${1}compileSdk 34/' "$GRADLE"
+fi
+
 # --- AndroidManifest.xml : requete des applications ouvrant les liens https ---
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 INTENT='        <intent>\n'
