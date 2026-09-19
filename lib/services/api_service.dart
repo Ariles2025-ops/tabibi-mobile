@@ -263,6 +263,54 @@ class ApiService {
     return _objet(res, '/api/medecins/$medecinId/avis');
   }
 
+  /// Publie un besoin en medicament aupres des pharmacies (Dawini, 201) : {id, patientId,
+  /// medicament, wilayaCode, commune, precision, statut (OUVERT, CLOTURE), publieLe, clotureLe,
+  /// nombreReponses} ; 400 si le medicament ou le code de wilaya est vide.
+  Future<Map<String, dynamic>> publierBesoin(
+    String medicament,
+    String wilayaCode,
+    String token, {
+    String? commune,
+    String? precision,
+  }) async {
+    final res = await http.post(
+      Uri.parse('$_base/api/dawini/besoins'),
+      headers: _bearerJson(token),
+      body: jsonEncode({
+        'medicament': medicament,
+        'wilayaCode': wilayaCode,
+        'commune': commune,
+        'precision': precision,
+      }),
+    );
+    return _objet(res, '/api/dawini/besoins');
+  }
+
+  /// Besoins publies par le patient connecte, les plus recents d'abord ; memes champs
+  /// que [publierBesoin].
+  Future<List<Map<String, dynamic>>> mesBesoins(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/dawini/besoins/mes'),
+      headers: _bearer(token),
+    );
+    return _liste(res, '/api/dawini/besoins/mes');
+  }
+
+  /// Cloture un besoin du patient connecte (200) ; 409 s'il est deja cloture.
+  Future<void> cloturerBesoin(String besoinId, String token) async {
+    final chemin = '/api/dawini/besoins/${Uri.encodeComponent(besoinId)}/cloturer';
+    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    _verifier(res, chemin);
+  }
+
+  /// Reponses des pharmacies a un besoin : {id, besoinId, pharmacieId, nomPharmacie,
+  /// disponible, prixDa (entier ou null), commentaire, repondueLe (ISO 8601)}.
+  Future<List<Map<String, dynamic>>> reponsesBesoin(String besoinId, String token) async {
+    final chemin = '/api/dawini/besoins/${Uri.encodeComponent(besoinId)}/reponses';
+    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    return _liste(res, chemin);
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(

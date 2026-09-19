@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/main.dart';
+import 'package:tabibi_mobile/models/besoin_medicament.dart';
 import 'package:tabibi_mobile/models/conversation.dart';
 import 'package:tabibi_mobile/pages/conversation_page.dart';
+import 'package:tabibi_mobile/pages/dawini_page.dart';
 import 'package:tabibi_mobile/pages/deposer_avis_page.dart';
 import 'package:tabibi_mobile/pages/detail_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
@@ -12,6 +14,7 @@ import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
 import 'package:tabibi_mobile/pages/mes_rendez_vous_page.dart';
 import 'package:tabibi_mobile/pages/mes_teleconsultations_page.dart';
+import 'package:tabibi_mobile/pages/reponses_besoin_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
@@ -171,6 +174,73 @@ class FakeApiService extends ApiService {
           },
           {'id': 'avis-b', 'note': 4, 'commentaire': null, 'deposeLe': '2026-11-05T16:30:00'},
         ],
+      };
+
+  /// Deux demandes Dawini : b-1 ouverte avec deux reponses, b-2 cloturee sans reponse.
+  @override
+  Future<List<Map<String, dynamic>>> mesBesoins(String token) async => [
+        _besoin('b-1', 'Doliprane 1000', 'OUVERT', nombreReponses: 2),
+        _besoin('b-2', 'Ventoline', 'CLOTURE', nombreReponses: 0),
+      ];
+
+  @override
+  Future<Map<String, dynamic>> publierBesoin(
+    String medicament,
+    String wilayaCode,
+    String token, {
+    String? commune,
+    String? precision,
+  }) async =>
+      _besoin('b-3', medicament, 'OUVERT', nombreReponses: 0)
+        ..['wilayaCode'] = wilayaCode
+        ..['commune'] = commune
+        ..['precision'] = precision;
+
+  @override
+  Future<void> cloturerBesoin(String besoinId, String token) async {}
+
+  /// Deux reponses : El Amel dispose du medicament a 850 DA, Ibn Sina non.
+  @override
+  Future<List<Map<String, dynamic>>> reponsesBesoin(String besoinId, String token) async => [
+        {
+          'id': 'r-1',
+          'besoinId': besoinId,
+          'pharmacieId': 'pharmacie-1',
+          'nomPharmacie': 'Pharmacie El Amel',
+          'disponible': true,
+          'prixDa': 850,
+          'commentaire': 'En stock, boite de 8.',
+          'repondueLe': '2026-11-20T10:15:00',
+        },
+        {
+          'id': 'r-2',
+          'besoinId': besoinId,
+          'pharmacieId': 'pharmacie-2',
+          'nomPharmacie': 'Pharmacie Ibn Sina',
+          'disponible': false,
+          'prixDa': null,
+          'commentaire': null,
+          'repondueLe': '2026-11-20T11:00:00',
+        },
+      ];
+
+  static Map<String, dynamic> _besoin(
+    String id,
+    String medicament,
+    String statut, {
+    required int nombreReponses,
+  }) =>
+      {
+        'id': id,
+        'patientId': sujetPatient,
+        'medicament': medicament,
+        'wilayaCode': '16',
+        'commune': 'Alger-Centre',
+        'precision': id == 'b-1' ? 'Boite de 8, urgent' : null,
+        'statut': statut,
+        'publieLe': id == 'b-1' ? '2026-11-20T09:00:00' : '2026-11-10T09:00:00',
+        'clotureLe': statut == 'CLOTURE' ? '2026-11-12T18:30:00' : null,
+        'nombreReponses': nombreReponses,
       };
 
   static Map<String, dynamic> _rendezVous(int id, String statut, String debut) => {
@@ -355,6 +425,51 @@ class FakeApiServiceAvisDejaDonne extends FakeApiService {
       throw const ApiException(409, 'Un avis existe deja pour ce rendez-vous');
 }
 
+/// Variante qui conserve les demandes publiees et les clotures demandees.
+class FakeApiServiceDawini extends FakeApiService {
+  FakeApiServiceDawini();
+
+  final List<Map<String, dynamic>> publies = [];
+  final List<String> clotures = [];
+
+  @override
+  Future<List<Map<String, dynamic>>> mesBesoins(String token) async =>
+      [...publies, ...await super.mesBesoins(token)];
+
+  @override
+  Future<Map<String, dynamic>> publierBesoin(
+    String medicament,
+    String wilayaCode,
+    String token, {
+    String? commune,
+    String? precision,
+  }) async {
+    final publie = await super.publierBesoin(
+      medicament,
+      wilayaCode,
+      token,
+      commune: commune,
+      precision: precision,
+    );
+    publies.add(publie);
+    return publie;
+  }
+
+  @override
+  Future<void> cloturerBesoin(String besoinId, String token) async {
+    clotures.add(besoinId);
+  }
+}
+
+/// Variante ou la demande est deja cloturee cote serveur (409 a la cloture).
+class FakeApiServiceDemandeDejaCloturee extends FakeApiService {
+  const FakeApiServiceDemandeDejaCloturee();
+
+  @override
+  Future<void> cloturerBesoin(String besoinId, String token) async =>
+      throw const ApiException(409, 'Cette demande est deja cloturee');
+}
+
 /// Variante d'un praticien sans aucun avis publie.
 class FakeApiServiceSansAvis extends FakeApiService {
   const FakeApiServiceSansAvis();
@@ -368,6 +483,21 @@ class FakeApiServiceSansAvis extends FakeApiService {
 /// aucun appel a Keycloak).
 AuthService sessionConnectee() =>
     AuthService()..accessToken = jetonAvecSujet(FakeApiService.sujetPatient);
+
+/// Surface de test haute (800 x 1600 points) pour les ecrans longs : les elements sous la
+/// ligne de flottaison d'une liste ne sont pas visibles des finders. Retablie en fin de test.
+void surfaceHaute(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+/// Laisse disparaitre le message (SnackBar) affiche, les suivants etant mis en attente.
+Future<void> laisserPasserLeMessage(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 5));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('affiche le champ de recherche et les acces aux ordonnances au demarrage',
@@ -734,6 +864,7 @@ void main() {
 
   testWidgets('la fiche medecin affiche la moyenne des avis et les derniers avis anonymes',
       (tester) async {
+    surfaceHaute(tester);
     await tester.pumpWidget(const MaterialApp(
       home: FicheMedecinPage(medecinId: 1, api: FakeApiService()),
     ));
@@ -833,5 +964,141 @@ void main() {
     expect(find.text('4 / 5 · Publié'), findsOneWidget);
     expect(find.text('Explications claires, merci.'), findsOneWidget);
     expect(find.text('Déposé le mar. 11 aout 18:00'), findsOneWidget);
+  });
+
+  testWidgets("l'accueil propose l'entree Dawini (pharmacies)", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Dawini (pharmacies)'), findsOneWidget);
+  });
+
+  testWidgets('dawini sans jeton propose de se connecter', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: DawiniPage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Publier la demande'), findsNothing);
+  });
+
+  testWidgets('dawini refuse une demande sans medicament ni wilaya, puis publie et liste '
+      'mes demandes avec leur statut et leurs reponses', (tester) async {
+    surfaceHaute(tester);
+    final api = FakeApiServiceDawini();
+    await tester.pumpWidget(MaterialApp(
+      home: DawiniPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Mes demandes : statut et nombre de reponses.
+    expect(find.text('Doliprane 1000'), findsOneWidget);
+    expect(find.text('Wilaya 16 · Alger-Centre · Ouverte'), findsOneWidget);
+    expect(find.text('2 réponses'), findsOneWidget);
+    expect(find.text('Ventoline'), findsOneWidget);
+    expect(find.text('Wilaya 16 · Alger-Centre · Clôturée'), findsOneWidget);
+    expect(find.text('0 réponse'), findsOneWidget);
+
+    // Formulaire vide : refus sans medicament, puis sans wilaya.
+    final medicament = find.widgetWithText(TextField, 'Médicament recherché *');
+    await tester.tap(find.text('Publier la demande'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageMedicamentRequis), findsOneWidget);
+    expect(api.publies, isEmpty);
+    await laisserPasserLeMessage(tester);
+
+    await tester.enterText(medicament, 'Insuline');
+    await tester.tap(find.text('Publier la demande'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageWilayaRequise), findsOneWidget);
+    expect(api.publies, isEmpty);
+    await laisserPasserLeMessage(tester);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Wilaya (code) *'), '16');
+    await tester.enterText(find.widgetWithText(TextField, 'Commune'), 'Bab Ezzouar');
+    await tester.tap(find.text('Publier la demande'));
+    await tester.pumpAndSettle();
+    expect(api.publies.single['medicament'], 'Insuline');
+    expect(api.publies.single['wilayaCode'], '16');
+    expect(api.publies.single['commune'], 'Bab Ezzouar');
+    expect(api.publies.single['precision'], isNull);
+    expect(find.text('Demande publiée.'), findsOneWidget);
+    // La nouvelle demande apparait dans la liste, le formulaire est vide.
+    expect(find.text('Insuline'), findsOneWidget);
+    expect(find.text('Wilaya 16 · Bab Ezzouar · Ouverte'), findsOneWidget);
+    expect(tester.widget<TextField>(medicament).controller?.text, isEmpty);
+  });
+
+  testWidgets("les reponses d'une demande affichent la pharmacie, la disponibilite, le prix "
+      'et la date, puis permettent de cloturer la demande', (tester) async {
+    surfaceHaute(tester);
+    final api = FakeApiServiceDawini();
+    await tester.pumpWidget(MaterialApp(
+      home: ReponsesBesoinPage(
+        besoin: BesoinMedicament.fromJson({
+          'id': 'b-1',
+          'medicament': 'Doliprane 1000',
+          'wilayaCode': '16',
+          'commune': 'Alger-Centre',
+          'precision': 'Boite de 8, urgent',
+          'statut': 'OUVERT',
+          'publieLe': '2026-11-20T09:00:00',
+          'nombreReponses': 2,
+        }),
+        api: api,
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Réponses des pharmacies'), findsOneWidget);
+    expect(find.text('Doliprane 1000'), findsOneWidget);
+    expect(find.text('Wilaya 16 · Alger-Centre · Ouverte'), findsOneWidget);
+    expect(find.text('Boite de 8, urgent'), findsOneWidget);
+    expect(find.text('Publiée le ven. 20 nov. 09:00'), findsOneWidget);
+    expect(find.text('Pharmacie El Amel'), findsOneWidget);
+    expect(find.text('Disponible'), findsOneWidget);
+    expect(find.text('850 DA'), findsOneWidget);
+    expect(find.text('En stock, boite de 8.'), findsOneWidget);
+    expect(find.text('ven. 20 nov. 10:15'), findsOneWidget);
+    expect(find.text('Pharmacie Ibn Sina'), findsOneWidget);
+    expect(find.text('Indisponible'), findsOneWidget);
+    expect(find.text('ven. 20 nov. 11:00'), findsOneWidget);
+
+    await tester.tap(find.text('Clôturer la demande'));
+    await tester.pumpAndSettle();
+    expect(find.text('Clôturer cette demande ?'), findsOneWidget);
+    await tester.tap(find.text('Oui, clôturer'));
+    await tester.pumpAndSettle();
+    expect(api.clotures, ['b-1']);
+    expect(find.text('Demande clôturée.'), findsOneWidget);
+    expect(find.text('Clôturer la demande'), findsNothing);
+    expect(find.text('Wilaya 16 · Alger-Centre · Clôturée'), findsOneWidget);
+  });
+
+  testWidgets('cloturer une demande deja cloturee explique le conflit (409)', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: ReponsesBesoinPage(
+        besoin: BesoinMedicament.fromJson({
+          'id': 'b-1',
+          'medicament': 'Doliprane 1000',
+          'wilayaCode': '16',
+          'statut': 'OUVERT',
+        }),
+        api: const FakeApiServiceDemandeDejaCloturee(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Clôturer la demande'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oui, clôturer'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageDemandeDejaCloturee), findsOneWidget);
+    expect(find.text('Clôturer la demande'), findsNothing);
+    expect(find.text('Wilaya 16 · Clôturée'), findsOneWidget);
   });
 }

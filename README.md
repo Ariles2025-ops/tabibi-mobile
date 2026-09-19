@@ -158,3 +158,31 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   date, eligibilite) ; `test/widget_test.dart` (fiche avec synthese et derniers avis, fiche sans
   avis, parcours « Donner mon avis » -> note obligatoire -> envoi -> « Avis donné », refus 409,
   « Mes avis », entree d'accueil).
+
+## v0.9.0 — Dawini, demander un medicament aux pharmacies (mobile)
+- Ecran « Dawini » (`dawini_page.dart`, jeton PATIENT ; bouton « Se connecter » sans jeton) :
+  formulaire « Demander un médicament » avec le medicament (obligatoire), le code de wilaya
+  (obligatoire, champ texte a deux chiffres : l'annuaire mobile n'a pas encore de selecteur de wilayas),
+  la commune et une precision facultatives ; « Publier la demande » refuse localement une demande sans
+  medicament (« Indiquez le médicament recherché. ») ou sans wilaya (« Indiquez le code de votre
+  wilaya. »), puis `POST /api/dawini/besoins` (400 affiche tel quel), « Demande publiée. », formulaire
+  vide (la wilaya est conservee) et liste rechargee.
+- Sous le formulaire, « Mes demandes » (`GET /api/dawini/besoins/mes`, les plus recentes d'abord) :
+  medicament, « Wilaya 16 · Alger-Centre · Ouverte » (statuts Ouverte, Clôturée), « Publiée le ... »
+  ou « Clôturée le ... », et « n réponses » (accord au singulier) ; un toucher ouvre les reponses.
+- Ecran « Réponses des pharmacies » (`reponses_besoin_page.dart`, `GET /api/dawini/besoins/{id}/reponses`) :
+  rappel de la demande, puis une carte par reponse avec le nom de la pharmacie, « Disponible » /
+  « Indisponible », le prix « 850 DA » s'il est indique, le commentaire et la date ; bouton
+  « Clôturer la demande » tant qu'elle est ouverte, avec confirmation
+  (`POST /api/dawini/besoins/{id}/cloturer`) ; 409 -> « Cette demande est déjà clôturée. » et la demande
+  passe cloturee localement ; la liste des demandes est rechargee au retour.
+- Accueil : entree « Dawini (pharmacies) ».
+- Modeles `lib/models/besoin_medicament.dart` (`BesoinMedicament.fromJson`, copie `cloturer`) et
+  `lib/models/reponse_pharmacie.dart` (`ReponsePharmacie.fromJson`), utilitaires `lib/utils/dawini.dart`
+  (`formaterPrix`, `libelleStatutBesoin`, `libelleReponses`, `libelleDisponibilite`, `estOuvert`,
+  `lieuBesoin`, `dateBesoin`, `dateReponse`, `trierParPublication`) ; `ApiService` : `publierBesoin`,
+  `mesBesoins`, `cloturerBesoin`, `reponsesBesoin`.
+- Tests : `test/dawini_test.dart` (modeles, copie cloturee, prix, statuts, accords, lieu, dates, tri) ;
+  `test/widget_test.dart` (formulaire refuse sans medicament puis sans wilaya, publication et liste,
+  reponses avec disponibilite, prix et date puis cloture, refus 409, sans jeton, entree d'accueil ;
+  surface de test haute pour les ecrans longs et attente entre deux messages).

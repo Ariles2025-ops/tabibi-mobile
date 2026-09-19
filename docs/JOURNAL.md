@@ -104,3 +104,26 @@
   « Aucun avis », note, statuts, date, `noteValide`, `estHonore`) ; `test/widget_test.dart` (fiche avec
   synthese et derniers avis, fiche sans avis, parcours « Donner mon avis » avec note obligatoire puis
   « Avis donné », refus 409, « Mes avis », entree d'accueil).
+
+## v0.9.0 — Dawini (pharmacies)
+- Ecran « Dawini » (`lib/pages/dawini_page.dart`, jeton PATIENT, invitation « Se connecter » sans jeton) :
+  formulaire (medicament et code de wilaya obligatoires, commune et precision facultatives ; champ texte
+  pour la wilaya faute de selecteur dans l'annuaire mobile), refus local sans medicament (« Indiquez le
+  médicament recherché. ») ou sans wilaya, `POST /api/dawini/besoins` (400 affiche), « Demande publiée. »,
+  formulaire vide et liste rechargee ; « Mes demandes » (`GET /api/dawini/besoins/mes`, tri par publication) :
+  medicament, lieu et statut (Ouverte, Clôturée), date, « n réponses ».
+- Ecran « Réponses des pharmacies » (`lib/pages/reponses_besoin_page.dart`,
+  `GET /api/dawini/besoins/{id}/reponses`) : rappel de la demande, cartes pharmacie / « Disponible » ou
+  « Indisponible » / prix « 850 DA » / commentaire / date ; « Clôturer la demande » (confirmation,
+  `POST /api/dawini/besoins/{id}/cloturer`) tant qu'elle est ouverte ; 409 -> « Cette demande est déjà
+  clôturée. » et statut cloture localement ; jeton expire (401) -> deconnexion ; liste rechargee au retour.
+- Accueil : entree « Dawini (pharmacies) ».
+- Modeles `BesoinMedicament` (`lib/models/besoin_medicament.dart`, `fromJson` tolerant, copie `cloturer`) et
+  `ReponsePharmacie` (`lib/models/reponse_pharmacie.dart`, `fromJson` tolerant) ; utilitaires
+  `lib/utils/dawini.dart` (`formaterPrix`, `libelleStatutBesoin`, `libelleReponses`, `libelleDisponibilite`,
+  `estOuvert`, `lieuBesoin`, `dateBesoin`, `dateReponse`, `trierParPublication`) ; `ApiService.publierBesoin`
+  (corps JSON), `mesBesoins`, `cloturerBesoin` (sans lecture du corps de reponse), `reponsesBesoin`.
+- Tests : `test/dawini_test.dart` (fromJson complets et valeurs nulles, copie cloturee, prix, statuts, accords,
+  lieu, dates, tri) ; `test/widget_test.dart` (formulaire refuse sans medicament puis sans wilaya, publication
+  et liste, reponses puis cloture, refus 409, sans jeton, entree d'accueil ; aides `surfaceHaute` pour les
+  ecrans longs, appliquee aussi a la fiche avec avis, et `laisserPasserLeMessage` entre deux SnackBar).
