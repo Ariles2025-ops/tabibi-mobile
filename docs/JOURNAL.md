@@ -229,3 +229,33 @@
   `FakeApiServiceDejaInscrit` (409) ; inscription depuis la fiche puis texte d'etat, refus 409, liste avec
   praticien et date puis refus dans la confirmation et retrait, repli « Médecin 00000000 »
   (`FakeApiServiceSansFiche`), sans jeton, entree d'accueil ; `surfaceHaute` sur la fiche sans avis).
+
+## v0.13.0 — Integration continue et preparation des stores
+- `.github/workflows/ci.yml` (GitHub Actions, `push` et `pull_request`, `permissions: contents:
+  read`, `concurrency` par branche, `timeout-minutes: 30`) : `actions/checkout@v4`,
+  `actions/setup-java@v4` (Temurin 17 pour Gradle), `subosito/flutter-action@v2`
+  (`channel: stable`, `cache: true`), `flutter --version`, `flutter pub get`, `flutter analyze`,
+  `flutter test`, `tool/preparer_android.sh`, `flutter build apk --debug`,
+  `actions/upload-artifact@v4` (`app-debug.apk`, sept jours). Android uniquement : iOS (macOS,
+  Xcode, certificats Apple) reste manuel et documente.
+- `tool/preparer_android.sh` (bash + perl, executable) : `android/` n'etant pas versionne, le
+  genere avec `flutter create . --platforms=android --org dz.tabibi --project-name tabibi_mobile`
+  s'il manque, puis remplace `applicationId` par `dz.tabibi.app`, ajoute `manifestPlaceholders`
+  `appAuthRedirectScheme` (obligatoire pour compiler avec `flutter_appauth` ; syntaxe Kotlin DSL
+  `build.gradle.kts` ou Groovy `build.gradle`) et l'intent VIEW https dans `<queries>`
+  (`url_launcher`) ; idempotent. Verifie hors SDK sur des extraits de templates Groovy ancien /
+  recent et Kotlin DSL, avec et sans `<queries>`.
+- `analysis_options.yaml` deja en place (`package:flutter_lints/flutter.yaml`,
+  `flutter_lints: ^5.0.0` en devDependency) ; `.gitignore` : `android/key.properties`,
+  `key.properties`, `*.jks`, `*.keystore`, `*.p12`, `*.mobileprovision` ; `pubspec.yaml` :
+  `version: 0.13.0+1` (versionName 0.13.0, versionCode 1 ; le numero apres `+` s'incremente a
+  chaque envoi sur un store).
+- README : « Note plateforme » (script), « Integration continue », « Publication » (version,
+  valeurs de production par `--dart-define`, icone et ecran de lancement a fournir via
+  `flutter_launcher_icons` / `flutter_native_splash` sans fichier binaire dans le depot,
+  exigences des stores pour des donnees de sante ; Android : script, `keytool -genkey`,
+  `android/key.properties`, `signingConfigs` en Kotlin DSL, `flutter build appbundle --release`,
+  Play Console ; iOS : `flutter create . --platforms=ios`, bundle id `dz.tabibi.app` et signature
+  automatique dans Xcode, `CFBundleURLTypes` / `LSApplicationQueriesSchemes` dans `Info.plist`,
+  `flutter build ipa`, Transporter / Organizer, TestFlight, revue) ; « Prochaines etapes » :
+  signature release en CI par secrets, iOS sur macOS.

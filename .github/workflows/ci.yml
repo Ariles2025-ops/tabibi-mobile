@@ -1,0 +1,64 @@
+name: CI
+
+# Integration continue de l'application mobile : analyse statique, tests et APK Android de
+# debogage a chaque envoi et pull request. iOS n'est pas construit ici (macOS, certificats
+# Apple) : voir README, « Publication ».
+on:
+  push:
+  pull_request:
+
+# Une seule execution par branche : un nouvel envoi annule la precedente.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  flutter:
+    name: Analyse, tests et APK Android (debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Sources
+        uses: actions/checkout@v4
+
+      - name: JDK 17 (Gradle, Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Flutter (canal stable, cache)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Versions
+        run: flutter --version
+
+      - name: Dependances
+        run: flutter pub get
+
+      - name: Analyse statique
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      # Le projet android/ n'est pas versionne : il est genere puis configure (identifiant
+      # dz.tabibi.app, schema de redirection OAuth, requetes https) par le script.
+      - name: Projet Android
+        run: tool/preparer_android.sh
+
+      - name: APK de debogage (Android)
+        run: flutter build apk --debug
+
+      - name: APK en artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tabibi-mobile-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7

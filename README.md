@@ -54,9 +54,136 @@ sur iOS), voir la documentation de `flutter_appauth`. Les tests (`flutter test`)
 ## Note plateforme
 Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 (non versionnes ici pour rester leger). L'essentiel — code, auth, API, test — est present.
+Pour Android, `tool/preparer_android.sh` genere le projet s'il manque et y applique la
+configuration Tabibi (identifiant `dz.tabibi.app`, schema de redirection OAuth exige par
+`flutter_appauth`, requete `<queries>` https pour `url_launcher`) ; il est relancable sans effet
+de bord et sert aussi a la CI. Pour iOS, voir « Publication ».
+
+## Integration continue
+`.github/workflows/ci.yml` (GitHub Actions) s'execute a chaque `push` et `pull_request` :
+`subosito/flutter-action@v2` (canal `stable`, cache), `flutter pub get`, `flutter analyze`
+(`analysis_options.yaml` inclut `package:flutter_lints/flutter.yaml`), `flutter test`, puis
+`tool/preparer_android.sh` et `flutter build apk --debug` ; l'APK de debogage est conserve sept
+jours en artefact. Seul Android est construit en CI (JDK 17, `ubuntu-latest`) : la construction
+iOS exige macOS, Xcode et les certificats Apple, elle reste manuelle (voir « Publication »).
+Une execution en cours est annulee par un nouvel envoi sur la meme branche.
+
+## Publication
+Identifiant d'application sur les deux stores : `dz.tabibi.app` (aussi schema de l'URI de
+redirection OAuth). Avant toute publication :
+- `pubspec.yaml` : `version: 0.13.0+1` donne `versionName` / `CFBundleShortVersionString`
+  (`0.13.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
+  chaque envoi sur un store (et la version a chaque livraison fonctionnelle).
+- Construire avec les valeurs de production (`--dart-define`, voir « Configuration ») : API et
+  Keycloak en HTTPS, jamais les adresses de developpement.
+- Icone et ecran de lancement : aucun fichier graphique n'est fourni dans ce depot. Prevoir une
+  icone 1024 x 1024 (PNG, sans transparence pour iOS) et un visuel de lancement, puis les
+  appliquer aux projets natifs, par exemple avec les paquets `flutter_launcher_icons` et
+  `flutter_native_splash` (configuration dans `pubspec.yaml`, images dans `assets/`).
+- Donnees de patients : fiche store avec politique de confidentialite (obligatoire sur Google
+  Play et l'App Store pour une application de sante), declarations de collecte de donnees
+  (Play « Securite des donnees », App Store « Confidentialite de l'app ») limitees au strict
+  necessaire (identite, contact, rendez-vous), aucun suivi publicitaire.
+
+### Android (Google Play)
+1. Projet natif : `tool/preparer_android.sh` (genere `android/` et applique l'identifiant, le
+   schema de redirection et la requete https). Une fois configure, le dossier `android/` peut
+   etre versionne ; `key.properties` et le keystore ne le sont jamais (`.gitignore`).
+2. Cle de signature (une seule fois, a conserver hors du depot et sauvegarder) :
+   ```bash
+   keytool -genkey -v -keystore ~/tabibi-release.jks -keyalg RSA -keysize 2048 \
+           -validity 10000 -alias tabibi
+   ```
+3. `android/key.properties` (non versionne) :
+   ```properties
+   storePassword=<mot de passe du keystore>
+   keyPassword=<mot de passe de la cle>
+   keyAlias=tabibi
+   storeFile=/chemin/vers/tabibi-release.jks
+   ```
+4. Signature de la version release dans `android/app/build.gradle.kts` (Kotlin DSL ; meme
+   principe en Groovy dans `build.gradle`) :
+   ```kotlin
+   import java.util.Properties
+   import java.io.FileInputStream
+
+   val keystoreProperties = Properties()
+   val keystorePropertiesFile = rootProject.file("key.properties")
+   if (keystorePropertiesFile.exists()) {
+       keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+   }
+
+   android {
+       signingConfigs {
+           create("release") {
+               keyAlias = keystoreProperties["keyAlias"] as String
+               keyPassword = keystoreProperties["keyPassword"] as String
+               storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+               storePassword = keystoreProperties["storePassword"] as String
+           }
+       }
+       buildTypes {
+           release {
+               signingConfig = signingConfigs.getByName("release")
+           }
+       }
+   }
+   ```
+5. Bundle signe (format exige par Google Play) :
+   ```bash
+   flutter build appbundle --release \
+     --dart-define=TABIBI_API_URL=https://api.tabibi.dz \
+     --dart-define=TABIBI_ISSUER=https://auth.tabibi.dz/realms/tabibi \
+     --dart-define=TABIBI_CLIENT_ID=tabibi-mobile \
+     --dart-define=TABIBI_REDIRECT=dz.tabibi.app:/oauthredirect
+   # -> build/app/outputs/bundle/release/app-release.aab
+   ```
+6. Play Console : creer l'application (`dz.tabibi.app`, ne peut plus changer ensuite), activer
+   la signature par Google Play (la cle ci-dessus devient la cle d'envoi), remplir la fiche
+   (textes, captures, politique de confidentialite, securite des donnees), publier d'abord
+   en test interne, puis en production progressive.
+
+### iOS (App Store)
+1. Sur macOS avec Xcode et un compte Apple Developer : `flutter create . --platforms=ios
+   --org dz.tabibi --project-name tabibi_mobile` genere `ios/`.
+2. Dans Xcode (`open ios/Runner.xcworkspace`), cible `Runner` : Bundle Identifier
+   `dz.tabibi.app`, equipe de developpement et signature automatique (Xcode cree et renouvelle
+   les certificats et profils de provisionnement ; rien a versionner).
+3. `ios/Runner/Info.plist` : schema de redirection OAuth (`flutter_appauth`) et requete https
+   (`url_launcher`) :
+   ```xml
+   <key>CFBundleURLTypes</key>
+   <array>
+     <dict>
+       <key>CFBundleTypeRole</key><string>Editor</string>
+       <key>CFBundleURLSchemes</key>
+       <array><string>dz.tabibi.app</string></array>
+     </dict>
+   </array>
+   <key>LSApplicationQueriesSchemes</key>
+   <array><string>https</string></array>
+   ```
+4. Archive signee et IPA :
+   ```bash
+   flutter build ipa --release \
+     --dart-define=TABIBI_API_URL=https://api.tabibi.dz \
+     --dart-define=TABIBI_ISSUER=https://auth.tabibi.dz/realms/tabibi \
+     --dart-define=TABIBI_CLIENT_ID=tabibi-mobile \
+     --dart-define=TABIBI_REDIRECT=dz.tabibi.app:/oauthredirect
+   # -> build/ios/ipa/tabibi_mobile.ipa (et l'archive build/ios/archive/Runner.xcarchive)
+   ```
+5. Envoi vers App Store Connect avec l'application Transporter ou l'Organizer de Xcode
+   (archive -> Distribute App), puis TestFlight (testeurs internes, puis externes apres la
+   revue TestFlight) et enfin soumission a la revue de l'App Store avec la fiche complete
+   (captures, confidentialite, categorie Medecine).
+
+Simulateur iOS en developpement : `flutter run --dart-define=TABIBI_API_URL=http://localhost:8080`
+(et `TABIBI_ISSUER` sur `localhost`), voir « Configuration ».
 
 ## Prochaines etapes
 - Notifications push, stockage securise du jeton, rafraichissement du jeton.
+- CI : signature release Android a partir de secrets GitHub (keystore encode en base64) et
+  execution iOS sur `macos-latest` si un compte Apple Developer est rattache au depot.
 
 ## v0.2.0 — Annuaire (mobile)
 - Ecran d'accueil : recherche de praticiens (nom, specialite) via `GET /api/medecins`.
@@ -307,3 +434,21 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 - Tests : `test/liste_attente_test.dart` (modele complet et tolerant, date, tri) ;
   `test/widget_test.dart` (inscription depuis la fiche, refus 409, liste puis refus dans la
   confirmation et retrait, repli « Médecin 00000000 », sans jeton, entree d'accueil).
+
+## v0.13.0 — Integration continue et preparation des stores (mobile)
+- `.github/workflows/ci.yml` : a chaque `push` et `pull_request`, `subosito/flutter-action@v2`
+  (canal `stable`, cache), `flutter pub get`, `flutter analyze`, `flutter test`, generation du
+  projet Android puis `flutter build apk --debug` (artefact sept jours) ; JDK 17 ; une execution
+  par branche. Android seulement en CI, iOS documente.
+- `tool/preparer_android.sh` : `flutter create . --platforms=android --org dz.tabibi
+  --project-name tabibi_mobile` si `android/` manque, puis `applicationId` `dz.tabibi.app`,
+  `manifestPlaceholders` `appAuthRedirectScheme` (Kotlin DSL ou Groovy) et `<queries>` https
+  dans le manifeste ; idempotent, portable (perl).
+- `analysis_options.yaml` inchange (`package:flutter_lints/flutter.yaml`, `flutter_lints` deja en
+  devDependency) ; `.gitignore` exclut `key.properties`, `*.jks`, `*.keystore`, `*.p12`,
+  `*.mobileprovision` ; `pubspec.yaml` en `version: 0.13.0+1`.
+- README : sections « Integration continue » et « Publication » pas a pas (Android : keystore
+  `keytool -genkey`, `android/key.properties` non versionne, `signingConfigs` release,
+  `flutter build appbundle --release --dart-define=...`, Play Console ; iOS : projet genere sur
+  macOS, bundle id `dz.tabibi.app`, certificats via Xcode, `Info.plist`, `flutter build ipa`,
+  TestFlight) ; icone et ecran de lancement a fournir (aucun fichier binaire dans le depot).

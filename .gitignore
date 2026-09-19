@@ -5,3 +5,13 @@ build/
 .packages
 ios/Pods/
 .DS_Store
+
+# Signature Android (voir README, « Publication ») : jamais versionnee.
+android/key.properties
+key.properties
+*.jks
+*.keystore
+
+# Certificats et profils iOS : geres par Xcode, jamais versionnes.
+*.p12
+*.mobileprovision
