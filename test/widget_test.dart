@@ -835,6 +835,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(appels, 1);
     expect(find.text(libelle('ordonnance.pdfImpossible')), findsOneWidget);
+    await laisserPasserLeMessage(tester); // laisse le premier message disparaitre avant le scenario suivant
 
     // PDF indisponible cote serveur (404) : message de l'API, rien n'est ecrit ni ouvert.
     await tester.pumpWidget(MaterialApp(
@@ -1718,7 +1719,9 @@ void main() {
     await laisserPasserLeMessage(tester);
 
     // Retour a l'accueil : les libelles y sont aussi en arabe.
-    await tester.pageBack();
+    // pageBack() cherche un bouton retour par son libelle anglais / Cupertino : introuvable en
+    // arabe. On tape directement le BackButton de la barre (icone, independant de la langue).
+    await tester.tap(find.byType(BackButton).first);
     await tester.pumpAndSettle();
     expect(find.text(libelleArabe('accueil.nomMedecin')), findsOneWidget);
     expect(find.text(libelleArabe('accueil.mesAvis')), findsOneWidget);
