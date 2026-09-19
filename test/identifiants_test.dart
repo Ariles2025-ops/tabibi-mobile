@@ -22,8 +22,8 @@ void main() {
   });
 
   test('libelleMedecin nomme le praticien par son identifiant abrege, ou inconnu', () {
-    expect(libelleMedecin(uuid), 'Médecin 00000000');
-    expect(libelleMedecin('7'), 'Médecin 7');
-    expect(libelleMedecin(''), 'Médecin inconnu');
+    expect(libelleMedecin('fr', uuid), 'Médecin 00000000');
+    expect(libelleMedecin('fr', '7'), 'Médecin 7');
+    expect(libelleMedecin('fr', ''), 'Médecin inconnu');
   });
 }

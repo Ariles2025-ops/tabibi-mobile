@@ -127,8 +127,8 @@ class ControleurLangue extends ChangeNotifier {
 /// Porte la langue courante dans l'arbre de widgets : les dependants sont rebatis a chaque
 /// changement de langue.
 class LangueScope extends InheritedNotifier<ControleurLangue> {
-  const LangueScope({super.key, required ControleurLangue controleur, required Widget child})
-      : super(notifier: controleur, child: child);
+  const LangueScope({super.key, required ControleurLangue controleur, required super.child})
+      : super(notifier: controleur);
 
   /// Controleur de la portee la plus proche ; [langues] a defaut (tests d'un ecran isole).
   static ControleurLangue de(BuildContext context) =>
