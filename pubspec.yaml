@@ -12,7 +12,7 @@ dependencies:
   flutter_localizations:           # delegues Material / Cupertino pour fr, ar (RTL) et en
     sdk: flutter
   http: ^1.2.2
-  intl: ^0.19.0                    # dates et mois selon la locale courante (DateFormat)
+  intl: ^0.20.3                    # dates et mois selon la locale courante (DateFormat)
   shared_preferences: ^2.3.0       # memorisation de la langue choisie par l'utilisateur
   flutter_appauth: ^8.0.0        # OAuth2/OIDC (Keycloak) natif iOS + Android
   flutter_secure_storage: ^9.2.2 # stockage sur du jeton
