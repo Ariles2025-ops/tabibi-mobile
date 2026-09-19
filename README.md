@@ -10,9 +10,46 @@ Application mobile Tabibi — **Flutter** (iOS + Android), un seul code.
 ## Lancer
 ```bash
 flutter pub get
-flutter run          # iOS (localhost) ou Android (emulateur : 10.0.2.2)
+flutter run          # emulateur Android : valeurs par defaut (10.0.2.2), voir « Configuration »
 # necessite l'API + Keycloak (docker compose up) en marche
 ```
+
+## Configuration
+Aucune adresse n'est codee en dur : `lib/config/configuration.dart` (classe `Configuration`) lit
+quatre variables fixees a la compilation avec `--dart-define` (`String.fromEnvironment`), et
+`ApiService` comme `AuthService` s'y referent.
+
+| Variable | Role | Valeur par defaut (emulateur Android) |
+|---|---|---|
+| `TABIBI_API_URL` | adresse de base de l'API (sans barre oblique finale) | `http://10.0.2.2:8080` |
+| `TABIBI_ISSUER` | emetteur OIDC (realm Keycloak) | `http://10.0.2.2:8081/realms/tabibi` |
+| `TABIBI_CLIENT_ID` | client public Keycloak (PKCE, aucun secret) | `tabibi-mobile` |
+| `TABIBI_REDIRECT` | URI de redirection apres connexion | `dz.tabibi.app:/oauthredirect` |
+
+```bash
+# Emulateur Android : 10.0.2.2 designe la machine hote, rien a preciser.
+flutter run
+
+# Simulateur iOS : la machine hote est localhost.
+flutter run --dart-define=TABIBI_API_URL=http://localhost:8080 \
+            --dart-define=TABIBI_ISSUER=http://localhost:8081/realms/tabibi
+
+# Appareil physique : adresse IP de la machine sur le reseau local (API et Keycloak).
+flutter run --dart-define=TABIBI_API_URL=http://192.168.1.10:8080 \
+            --dart-define=TABIBI_ISSUER=http://192.168.1.10:8081/realms/tabibi
+
+# Production : API et Keycloak publics en HTTPS (memes options pour `flutter build`).
+flutter build apk --release \
+  --dart-define=TABIBI_API_URL=https://api.tabibi.dz \
+  --dart-define=TABIBI_ISSUER=https://auth.tabibi.dz/realms/tabibi \
+  --dart-define=TABIBI_CLIENT_ID=tabibi-mobile \
+  --dart-define=TABIBI_REDIRECT=dz.tabibi.app:/oauthredirect
+```
+Les valeurs par defaut (`http://`) ne conviennent qu'au developpement local ; en production,
+l'API et Keycloak sont servis en HTTPS. Le schema de l'URI de redirection (`dz.tabibi.app`)
+doit etre declare dans les projets natifs (`appAuthRedirectScheme` sur Android, `CFBundleURLSchemes`
+sur iOS), voir la documentation de `flutter_appauth`. Les tests (`flutter test`) s'executent sans
+`--dart-define` et verifient les valeurs par defaut (`test/configuration_test.dart`).
 
 ## Note plateforme
 Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
@@ -210,3 +247,18 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 - Tests : fakes signes `String` comme `ApiService`, fixtures en UUID (`FakeApiService.medecinDemo`,
   `sujetPatient`, `rdvHonore`...), variante `FakeApiServiceSansFiche` pour le repli
   « Médecin 00000000 », `test/identifiants_test.dart`.
+
+## v0.10.0 — Configuration par environnement (mobile)
+- `lib/config/configuration.dart` : classe `Configuration` (`apiUrl`, `issuer`, `clientId`,
+  `redirect`) lue a la compilation via `String.fromEnvironment` (`TABIBI_API_URL`, `TABIBI_ISSUER`,
+  `TABIBI_CLIENT_ID`, `TABIBI_REDIRECT`) ; valeurs par defaut de l'emulateur Android
+  (`http://10.0.2.2:8080`, `http://10.0.2.2:8081/realms/tabibi`, `tabibi-mobile`,
+  `dz.tabibi.app:/oauthredirect`) exposees en `...ParDefaut`. Sur le simulateur iOS :
+  `--dart-define=TABIBI_API_URL=http://localhost:8080`.
+- `ApiService` n'a plus d'adresse codee en dur : `const ApiService({base = Configuration.apiUrl})`,
+  la base pouvant etre fournie (tests) ; `AuthService` lit l'emetteur, le client et la redirection
+  dans `Configuration`.
+- README : section « Configuration » (variables, commandes `flutter run --dart-define=...` pour
+  Android, iOS, appareil physique et production).
+- Tests : `test/configuration_test.dart` (valeurs par defaut = emulateur Android, adresses sans
+  barre oblique finale, base d'`ApiService` par defaut ou fournie).

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/configuration.dart';
+
 /// Erreur renvoyee par l'API Tabibi : statut HTTP et message lisible.
 ///
 /// Le message vient du corps JSON `{"erreur": "..."}` quand le backend en
@@ -37,11 +39,14 @@ String messageErreur(Object erreur) =>
 /// Tous les identifiants (id, medecinId, creneauId, rendezVousId, conversationId, besoinId...)
 /// sont des UUID que le backend serialise en texte : ils sont recus, transmis dans les chemins
 /// et envoyes dans les corps JSON sous forme de chaines, jamais de nombres.
+///
+/// L'adresse de base vient de la configuration par environnement ([Configuration.apiUrl],
+/// `--dart-define=TABIBI_API_URL=...`) ; les tests peuvent en fournir une autre.
 class ApiService {
-  const ApiService();
+  const ApiService({this.base = Configuration.apiUrl});
 
-  // Emulateur Android -> 10.0.2.2 ; iOS -> localhost.
-  static const String _base = 'http://10.0.2.2:8080';
+  /// Adresse de base de l'API, sans barre oblique finale.
+  final String base;
 
   /// Recherche publique de praticiens (sans jeton).
   Future<List<Map<String, dynamic>>> rechercherMedecins({
@@ -53,7 +58,7 @@ class ApiService {
     if (specialite != null && specialite.isNotEmpty) params['specialite'] = specialite;
     if (wilaya != null && wilaya.isNotEmpty) params['wilaya'] = wilaya;
     if (q != null && q.isNotEmpty) params['q'] = q;
-    final uri = Uri.parse('$_base/api/medecins').replace(queryParameters: params);
+    final uri = Uri.parse('$base/api/medecins').replace(queryParameters: params);
     final res = await http.get(uri);
     return _liste(res, '/api/medecins');
   }
@@ -62,28 +67,28 @@ class ApiService {
   /// {id, nomComplet, specialiteSlug, specialiteFr, wilayaCode, wilayaFr, ville}.
   Future<Map<String, dynamic>> medecin(String id) async {
     final chemin = '/api/medecins/${Uri.encodeComponent(id)}';
-    final res = await http.get(Uri.parse('$_base$chemin'));
+    final res = await http.get(Uri.parse('$base$chemin'));
     return _objet(res, chemin);
   }
 
   /// Creneaux d'un praticien : {id, medecinId, debut (ISO 8601), dureeMinutes, disponible}.
   Future<List<Map<String, dynamic>>> creneaux(String medecinId) async {
     final chemin = '/api/medecins/${Uri.encodeComponent(medecinId)}/creneaux';
-    final res = await http.get(Uri.parse('$_base$chemin'));
+    final res = await http.get(Uri.parse('$base$chemin'));
     return _liste(res, chemin);
   }
 
   /// Reserve un creneau pour le patient connecte (201) ; 409 s'il vient d'etre pris.
   Future<Map<String, dynamic>> reserverCreneau(String creneauId, String token) async {
     final chemin = '/api/creneaux/${Uri.encodeComponent(creneauId)}/reserver';
-    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _objet(res, chemin);
   }
 
   /// Rendez-vous du patient connecte : {id, patientId, medecinId, debut, statut, creneauId}.
   Future<List<Map<String, dynamic>>> mesRendezVous(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/rendezvous/mes'),
+      Uri.parse('$base/api/rendezvous/mes'),
       headers: _bearer(token),
     );
     return _liste(res, '/api/rendezvous/mes');
@@ -92,7 +97,7 @@ class ApiService {
   /// Annule un rendez-vous du patient connecte.
   Future<void> annuler(String rdvId, String token) async {
     final chemin = '/api/rendezvous/${Uri.encodeComponent(rdvId)}/annuler';
-    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
     _verifier(res, chemin);
   }
 
@@ -100,7 +105,7 @@ class ApiService {
   /// lignes: [{medicament, posologie, duree}], emiseLe (ISO 8601), codeVerification, statut}.
   Future<List<Map<String, dynamic>>> mesOrdonnances(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/ordonnances/mes'),
+      Uri.parse('$base/api/ordonnances/mes'),
       headers: _bearer(token),
     );
     return _liste(res, '/api/ordonnances/mes');
@@ -109,14 +114,14 @@ class ApiService {
   /// Une ordonnance par identifiant (jeton requis), memes champs que [mesOrdonnances].
   Future<Map<String, dynamic>> ordonnance(String id, String token) async {
     final chemin = '/api/ordonnances/${Uri.encodeComponent(id)}';
-    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.get(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _objet(res, chemin);
   }
 
   /// Verification publique (sans jeton) d'un code d'ordonnance : {valide, emiseLe, statut}.
   Future<Map<String, dynamic>> verifierOrdonnance(String code) async {
     final chemin = '/api/ordonnances/verifier/${Uri.encodeComponent(code)}';
-    final res = await http.get(Uri.parse('$_base$chemin'));
+    final res = await http.get(Uri.parse('$base$chemin'));
     return _objet(res, chemin);
   }
 
@@ -124,7 +129,7 @@ class ApiService {
   /// {id, destinataireId, canal, sujet, message, lue, creeLe (ISO 8601)}.
   Future<List<Map<String, dynamic>>> mesNotifications(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/notifications/mes'),
+      Uri.parse('$base/api/notifications/mes'),
       headers: _bearer(token),
     );
     return _liste(res, '/api/notifications/mes');
@@ -133,7 +138,7 @@ class ApiService {
   /// Nombre de notifications non lues de l'utilisateur connecte (corps { "nombre": n }).
   Future<int> nombreNonLues(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/notifications/non-lues/nombre'),
+      Uri.parse('$base/api/notifications/non-lues/nombre'),
       headers: _bearer(token),
     );
     return _nombre(_objet(res, '/api/notifications/non-lues/nombre'));
@@ -143,7 +148,7 @@ class ApiService {
   /// (403 si elle est adressee a un autre utilisateur, 404 si elle est inconnue).
   Future<Map<String, dynamic>> marquerLue(String notificationId, String token) async {
     final chemin = '/api/notifications/${Uri.encodeComponent(notificationId)}/lue';
-    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _objet(res, chemin);
   }
 
@@ -151,7 +156,7 @@ class ApiService {
   /// renvoie le nombre de notifications passees a lues (corps { "nombre": n }).
   Future<int> toutMarquerLu(String token) async {
     final res = await http.post(
-      Uri.parse('$_base/api/notifications/toutes-lues'),
+      Uri.parse('$base/api/notifications/toutes-lues'),
       headers: _bearer(token),
     );
     return _nombre(_objet(res, '/api/notifications/toutes-lues'));
@@ -162,7 +167,7 @@ class ApiService {
   /// n'a pas consenti), creeLe, demarreeLe, termineeLe} (dates ISO 8601).
   Future<List<Map<String, dynamic>>> mesTeleconsultations(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/teleconsultations/mes'),
+      Uri.parse('$base/api/teleconsultations/mes'),
       headers: _bearer(token),
     );
     return _liste(res, '/api/teleconsultations/mes');
@@ -172,7 +177,7 @@ class ApiService {
   /// (403 si elle concerne un autre patient, 404 si elle est inconnue).
   Future<Map<String, dynamic>> teleconsultation(String id, String token) async {
     final chemin = '/api/teleconsultations/${Uri.encodeComponent(id)}';
-    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.get(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _objet(res, chemin);
   }
 
@@ -180,7 +185,7 @@ class ApiService {
   /// (409 si la teleconsultation est terminee ou annulee).
   Future<Map<String, dynamic>> consentir(String teleconsultationId, String token) async {
     final chemin = '/api/teleconsultations/${Uri.encodeComponent(teleconsultationId)}/consentir';
-    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _objet(res, chemin);
   }
 
@@ -188,7 +193,7 @@ class ApiService {
   /// {id, patientId, medecinId, creeLe, dernierMessageLe (ISO 8601), nonLus}.
   Future<List<Map<String, dynamic>>> mesConversations(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/conversations'),
+      Uri.parse('$base/api/conversations'),
       headers: _bearer(token),
     );
     return _liste(res, '/api/conversations');
@@ -199,7 +204,7 @@ class ApiService {
   /// Corps `{"medecinId": "<uuid>"}` (identifiant en texte).
   Future<Map<String, dynamic>> ouvrirConversation(String medecinId, String token) async {
     final res = await http.post(
-      Uri.parse('$_base/api/conversations'),
+      Uri.parse('$base/api/conversations'),
       headers: _bearerJson(token),
       body: jsonEncode({'medecinId': medecinId}),
     );
@@ -211,7 +216,7 @@ class ApiService {
   /// (403 si la conversation est a un autre patient, 404 si elle est inconnue).
   Future<List<Map<String, dynamic>>> messages(String conversationId, String token) async {
     final chemin = '/api/conversations/${Uri.encodeComponent(conversationId)}/messages';
-    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.get(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _liste(res, chemin);
   }
 
@@ -224,7 +229,7 @@ class ApiService {
   ) async {
     final chemin = '/api/conversations/${Uri.encodeComponent(conversationId)}/messages';
     final res = await http.post(
-      Uri.parse('$_base$chemin'),
+      Uri.parse('$base$chemin'),
       headers: _bearerJson(token),
       body: jsonEncode({'contenu': contenu}),
     );
@@ -242,7 +247,7 @@ class ApiService {
     String token,
   ) async {
     final res = await http.post(
-      Uri.parse('$_base/api/avis'),
+      Uri.parse('$base/api/avis'),
       headers: _bearerJson(token),
       body: jsonEncode({
         'rendezVousId': rendezVousId,
@@ -255,7 +260,7 @@ class ApiService {
 
   /// Avis deposes par le patient connecte, memes champs que [deposerAvis].
   Future<List<Map<String, dynamic>>> mesAvis(String token) async {
-    final res = await http.get(Uri.parse('$_base/api/avis/mes'), headers: _bearer(token));
+    final res = await http.get(Uri.parse('$base/api/avis/mes'), headers: _bearer(token));
     return _liste(res, '/api/avis/mes');
   }
 
@@ -263,7 +268,7 @@ class ApiService {
   /// {moyenne (decimal ou null), nombre, avis: [{id, note, commentaire, deposeLe}]}.
   Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async {
     final chemin = '/api/medecins/${Uri.encodeComponent(medecinId)}/avis';
-    final res = await http.get(Uri.parse('$_base$chemin'));
+    final res = await http.get(Uri.parse('$base$chemin'));
     return _objet(res, chemin);
   }
 
@@ -278,7 +283,7 @@ class ApiService {
     String? precision,
   }) async {
     final res = await http.post(
-      Uri.parse('$_base/api/dawini/besoins'),
+      Uri.parse('$base/api/dawini/besoins'),
       headers: _bearerJson(token),
       body: jsonEncode({
         'medicament': medicament,
@@ -294,7 +299,7 @@ class ApiService {
   /// que [publierBesoin].
   Future<List<Map<String, dynamic>>> mesBesoins(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/dawini/besoins/mes'),
+      Uri.parse('$base/api/dawini/besoins/mes'),
       headers: _bearer(token),
     );
     return _liste(res, '/api/dawini/besoins/mes');
@@ -303,7 +308,7 @@ class ApiService {
   /// Cloture un besoin du patient connecte (200) ; 409 s'il est deja cloture.
   Future<void> cloturerBesoin(String besoinId, String token) async {
     final chemin = '/api/dawini/besoins/${Uri.encodeComponent(besoinId)}/cloturer';
-    final res = await http.post(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
     _verifier(res, chemin);
   }
 
@@ -311,14 +316,14 @@ class ApiService {
   /// disponible, prixDa (entier ou null), commentaire, repondueLe (ISO 8601)}.
   Future<List<Map<String, dynamic>>> reponsesBesoin(String besoinId, String token) async {
     final chemin = '/api/dawini/besoins/${Uri.encodeComponent(besoinId)}/reponses';
-    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    final res = await http.get(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _liste(res, chemin);
   }
 
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(
-      Uri.parse('$_base/api/moi'),
+      Uri.parse('$base/api/moi'),
       headers: _bearer(token),
     );
     return _objet(res, '/api/moi');

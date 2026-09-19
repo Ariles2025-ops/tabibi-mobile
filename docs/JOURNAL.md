@@ -159,3 +159,19 @@
   `conversationDemo`...) ; variante `FakeApiServiceSansFiche` (404 sur la fiche) pour le repli
   « Médecin 00000000 » dans la messagerie, « Mes rendez-vous » et le detail d'ordonnance ;
   `test/identifiants_test.dart` ; `test/ordonnances_test.dart` avec des identifiants en texte.
+
+## v0.10.0 — Configuration par environnement
+- `lib/config/configuration.dart` : `Configuration.apiUrl`, `issuer`, `clientId`, `redirect`, constantes
+  `String.fromEnvironment` (`TABIBI_API_URL`, `TABIBI_ISSUER`, `TABIBI_CLIENT_ID`, `TABIBI_REDIRECT`)
+  fixees par `--dart-define` a la compilation ; valeurs par defaut de l'emulateur Android
+  (`http://10.0.2.2:8080`, `http://10.0.2.2:8081/realms/tabibi`, `tabibi-mobile`,
+  `dz.tabibi.app:/oauthredirect`, aussi exposees en `apiUrlParDefaut`...) ; simulateur iOS :
+  `--dart-define=TABIBI_API_URL=http://localhost:8080` (et `TABIBI_ISSUER` sur localhost).
+- `ApiService` : plus de constante `_base` ; `const ApiService({this.base = Configuration.apiUrl})`
+  (parametre nomme optionnel pour les tests), chemins construits sur `base`. `AuthService` : plus de
+  constantes `_issuer`, `_clientId`, `_redirect`, lecture de `Configuration`.
+- README : section « Configuration » (tableau des variables, commandes `flutter run --dart-define=...`
+  pour l'emulateur Android, le simulateur iOS, un appareil physique et la production en HTTPS ;
+  rappel du schema de redirection a declarer dans les projets natifs).
+- Tests : `test/configuration_test.dart` (configuration par defaut = emulateur Android, constantes
+  `...ParDefaut`, adresses sans barre oblique finale, `ApiService().base` par defaut ou fournie).

@@ -1,18 +1,16 @@
 import 'package:flutter_appauth/flutter_appauth.dart';
 
+import '../config/configuration.dart';
 import '../utils/jetons.dart';
 
 /// Authentification OIDC contre le realm Keycloak « tabibi ».
 ///
 /// Une seule instance est partagee par toute l'application (voir `session.dart`)
-/// afin de conserver le jeton d'un ecran a l'autre.
+/// afin de conserver le jeton d'un ecran a l'autre. L'emetteur, le client et l'URI de
+/// redirection viennent de la configuration par environnement ([Configuration],
+/// `--dart-define=TABIBI_ISSUER=...`).
 class AuthService {
   final FlutterAppAuth _appAuth = const FlutterAppAuth();
-
-  // En dev : emulateur Android -> 10.0.2.2 ; iOS -> localhost.
-  static const String _issuer = 'http://10.0.2.2:8081/realms/tabibi';
-  static const String _clientId = 'tabibi-mobile';
-  static const String _redirect = 'dz.tabibi.app:/oauthredirect';
 
   String? accessToken;
 
@@ -28,9 +26,9 @@ class AuthService {
     try {
       final result = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
-          _clientId,
-          _redirect,
-          issuer: _issuer,
+          Configuration.clientId,
+          Configuration.redirect,
+          issuer: Configuration.issuer,
           scopes: ['openid', 'profile'],
         ),
       );
