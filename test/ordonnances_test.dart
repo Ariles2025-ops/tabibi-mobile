@@ -1,8 +1,30 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/libelles.dart';
 import 'package:tabibi_mobile/utils/ordonnances.dart';
 
 void main() {
+  test('nomFichierPdf nomme le fichier par le code de verification, sinon par l identifiant', () {
+    expect(nomFichierPdf({'id': 'd4d4d4d4-0000', 'codeVerification': 'ABC123'}),
+        'ordonnance-ABC123.pdf');
+    // Caracteres hors lettres, chiffres, tiret et soulignement retires.
+    expect(nomFichierPdf({'codeVerification': 'AB/C 1..23'}), 'ordonnance-ABC123.pdf');
+    expect(
+      nomFichierPdf({'id': 'd4d4d4d4-0000-4000-8000-000000000042', 'codeVerification': ''}),
+      'ordonnance-d4d4d4d4.pdf',
+    );
+    expect(nomFichierPdf({}), 'ordonnance.pdf');
+  });
+
+  test('estPdf reconnait le type de contenu application/pdf', () {
+    expect(estPdf('application/pdf'), isTrue);
+    expect(estPdf('Application/PDF; charset=binary'), isTrue);
+    expect(estPdf('application/json'), isFalse);
+    expect(estPdf(''), isFalse);
+    expect(estPdf(null), isFalse);
+    expect(typePdf, 'application/pdf');
+  });
+
   test('libelleStatut met en forme un statut brut et tolere une valeur absente', () {
     expect(libelleStatut('EMISE'), 'Emise');
     expect(libelleStatut('EN_ATTENTE'), 'En attente');

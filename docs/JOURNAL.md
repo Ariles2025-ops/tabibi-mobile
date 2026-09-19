@@ -259,3 +259,29 @@
   automatique dans Xcode, `CFBundleURLTypes` / `LSApplicationQueriesSchemes` dans `Info.plist`,
   `flutter build ipa`, Transporter / Organizer, TestFlight, revue) ; « Prochaines etapes » :
   signature release en CI par secrets, iOS sur macOS.
+
+## v0.14.0 — Ordonnance imprimable (PDF)
+- Detail d'une ordonnance (`lib/pages/detail_ordonnance_page.dart`) : bouton « Ouvrir le PDF »
+  (icone PDF, indicateur pendant le telechargement) sous la carte du code de verification ;
+  `GET /api/ordonnances/{id}/pdf` (jeton, `Accept: application/pdf`), fichier
+  `ordonnance-<code>.pdf` ecrit dans `getTemporaryDirectory()` (`path_provider`) puis
+  `OpenFilex.open(chemin, type: application/pdf)` (`open_filex`) ; echec d'ecriture ou
+  d'ouverture (`ResultType` autre que `done`, exception) -> SnackBar `messagePdfImpossible` ;
+  erreur de l'API affichee telle quelle, jeton expire (401) -> deconnexion.
+- `ApiService.ordonnancePdf(String id, String token)` -> `Future<Uint8List>` : `_verifier`
+  (erreurs `{ "erreur": ... }` comme ailleurs) puis controle du `Content-Type` (`estPdf`, casse
+  et parametres toleres ; sinon `ApiException(statut, messagePasUnPdf)`) ; `typePdf` partage.
+- `lib/utils/ordonnances.dart` : `nomFichierPdf(ordonnance)` (code de verification reduit a
+  `[A-Za-z0-9_-]`, repli sur l'identifiant abrege, puis `ordonnance.pdf`).
+- Injection : `typedef EnregistrerEtOuvrir = Future<bool> Function(String, Uint8List)`,
+  parametre `enregistrerEtOuvrir` de `DetailOrdonnancePage` (defaut `enregistrerEtOuvrirFichier`,
+  implementation reelle, comme `ouvrirLien` pour la teleconsultation) : les tests de widget ne
+  chargent aucun greffon.
+- `pubspec.yaml` : `path_provider: ^2.1.4`, `open_filex: ^4.5.0`, `version: 0.14.0+1` ;
+  `tool/preparer_android.sh` : intent VIEW `application/pdf` dans `<queries>` (idempotent,
+  verifie hors SDK sur un manifeste factice).
+- README : section v0.14.0, note plateforme et publication mises a jour.
+- Tests : `FakeApiService.ordonnancePdf` (`pdfDemo`, octets `%PDF-1.4`) et
+  `FakeApiServiceSansPdf` (404) ; `test/widget_test.dart` (bouton, appel avec
+  `ordonnance-ABC123.pdf` et octets `%PDF`, bouton reactive ; ouverture refusee -> message ; 404
+  -> message de l'API sans ecriture) ; `test/ordonnances_test.dart` (`nomFichierPdf`, `estPdf`).

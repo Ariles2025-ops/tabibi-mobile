@@ -112,6 +112,12 @@ class FakeApiService extends ApiService {
   @override
   Future<Map<String, dynamic>> ordonnance(String id, String token) async => _ordonnance(id);
 
+  /// Debut d'un document PDF (en-tete « %PDF-1.4 ») : seuls les premiers octets comptent.
+  static final Uint8List pdfDemo = Uint8List.fromList('%PDF-1.4\n%tabibi\n'.codeUnits);
+
+  @override
+  Future<Uint8List> ordonnancePdf(String id, String token) async => pdfDemo;
+
   @override
   Future<Map<String, dynamic>> verifierOrdonnance(String code) async => code == codeValide
       ? {'valide': true, 'emiseLe': '2026-12-03T10:15:00', 'statut': 'EMISE'}
@@ -504,6 +510,15 @@ class FakeApiServiceSansFiche extends FakeApiService {
       throw const ApiException(404, 'Praticien introuvable');
 }
 
+/// Variante dont le PDF de l'ordonnance est indisponible (404 sur la version imprimable).
+class FakeApiServiceSansPdf extends FakeApiService {
+  const FakeApiServiceSansPdf();
+
+  @override
+  Future<Uint8List> ordonnancePdf(String id, String token) async =>
+      throw const ApiException(404, 'Ordonnance introuvable');
+}
+
 /// Variante qui conserve les avis deposes : « Mes rendez-vous » les voit au rechargement.
 class FakeApiServiceAvis extends FakeApiService {
   FakeApiServiceAvis();
@@ -762,6 +777,78 @@ void main() {
     expect(find.text('Posologie : 1 comprime matin et soir'), findsOneWidget);
     expect(find.text('Duree : 5 jours'), findsOneWidget);
     expect(find.text('Amoxicilline 500 mg'), findsOneWidget);
+  });
+
+  testWidgets("le detail d'une ordonnance telecharge le PDF, l'enregistre sous son code et "
+      "l'ouvre avec l'application du telephone", (tester) async {
+    String? nomFichier;
+    Uint8List? octets;
+    await tester.pumpWidget(MaterialApp(
+      home: DetailOrdonnancePage(
+        ordonnanceId: FakeApiService.ordonnanceDemo,
+        api: const FakeApiService(),
+        auth: sessionConnectee(),
+        enregistrerEtOuvrir: (nom, contenu) async {
+          nomFichier = nom;
+          octets = contenu;
+          return true;
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Ouvrir le PDF'), findsOneWidget);
+
+    await tester.tap(find.text('Ouvrir le PDF'));
+    await tester.pumpAndSettle();
+    expect(nomFichier, 'ordonnance-ABC123.pdf');
+    expect(String.fromCharCodes(octets!.take(4)), '%PDF');
+    expect(find.text(messagePdfImpossible), findsNothing);
+    // Le bouton redevient actif une fois le document ouvert (OutlinedButton.icon : sous-type).
+    final bouton = tester.widget<OutlinedButton>(
+      find.ancestor(of: find.text('Ouvrir le PDF'), matching: find.bySubtype<OutlinedButton>()),
+    );
+    expect(bouton.onPressed, isNotNull);
+  });
+
+  testWidgets("le detail d'une ordonnance signale un PDF qu'aucune application n'ouvre, "
+      "puis l'erreur de l'API", (tester) async {
+    var appels = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: DetailOrdonnancePage(
+        ordonnanceId: FakeApiService.ordonnanceDemo,
+        api: const FakeApiService(),
+        auth: sessionConnectee(),
+        enregistrerEtOuvrir: (nom, contenu) async {
+          appels++;
+          return false;
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ouvrir le PDF'));
+    await tester.pumpAndSettle();
+    expect(appels, 1);
+    expect(find.text(messagePdfImpossible), findsOneWidget);
+
+    // PDF indisponible cote serveur (404) : message de l'API, rien n'est ecrit ni ouvert.
+    await tester.pumpWidget(MaterialApp(
+      home: DetailOrdonnancePage(
+        ordonnanceId: FakeApiService.ordonnanceDemo,
+        api: const FakeApiServiceSansPdf(),
+        auth: sessionConnectee(),
+        enregistrerEtOuvrir: (nom, contenu) async {
+          appels++;
+          return true;
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ouvrir le PDF'));
+    await tester.pumpAndSettle();
+    expect(appels, 1);
+    expect(find.text('Ordonnance introuvable'), findsOneWidget);
+    expect(find.text('ABC123'), findsOneWidget);
   });
 
   testWidgets("la verification publique distingue un code authentique d'un code inconnu",

@@ -3,8 +3,8 @@
 # 1. le genere avec `flutter create` s'il est absent (dossier android/) ;
 # 2. y applique la configuration Tabibi : identifiant d'application dz.tabibi.app, schema de
 #    redirection OAuth exige par flutter_appauth (appAuthRedirectScheme, sans lequel la
-#    compilation Android echoue) et declaration <queries> recommandee par url_launcher pour
-#    l'ouverture des liens https.
+#    compilation Android echoue) et declarations <queries> recommandees par url_launcher pour
+#    l'ouverture des liens https et par open_filex pour l'ouverture des PDF (ordonnances).
 # Idempotent : relancable sans effet de bord. Utilise par la CI (.github/workflows/ci.yml)
 # et en local avant `flutter build apk` / `flutter build appbundle`. Portable (perl, present
 # avec Git sur toutes les plateformes ; aucune option sed propre a GNU ou BSD).
@@ -51,5 +51,14 @@ if ! grep -q 'android:scheme="https"' "$MANIFEST"; then
   fi
 fi
 
+# --- AndroidManifest.xml : requete des applications ouvrant les PDF (open_filex, Android 11+) ---
+INTENT_PDF='        <intent>\n'
+INTENT_PDF+='            <action android:name="android.intent.action.VIEW" />\n'
+INTENT_PDF+='            <data android:mimeType="application/pdf" />\n'
+INTENT_PDF+='        </intent>'
+if ! grep -q 'android:mimeType="application/pdf"' "$MANIFEST"; then
+  perl -0pi -e 's#<queries>#<queries>\n'"$INTENT_PDF"'#' "$MANIFEST"
+fi
+
 echo "Projet Android pret : $GRADLE (applicationId $ID_APPLICATION, appAuthRedirectScheme)"
-echo "et $MANIFEST (requete https)."
+echo "et $MANIFEST (requetes https et PDF)."

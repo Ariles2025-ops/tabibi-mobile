@@ -3,6 +3,20 @@
 //  emiseLe (ISO 8601), codeVerification, statut}.
 
 import 'dates.dart';
+import 'identifiants.dart';
+
+/// Caracteres autorises dans le nom de fichier du PDF (le code de verification en est fait).
+final RegExp _caracteresNomFichier = RegExp(r'[^A-Za-z0-9_-]');
+
+/// Nom du fichier PDF telecharge : « ordonnance-ABC123.pdf » (code de verification, meme nom
+/// que celui propose par le serveur) ; a defaut de code, l'identifiant abrege de l'ordonnance,
+/// et « ordonnance.pdf » sans aucun des deux. Tout caractere hors lettres, chiffres, `-` et `_`
+/// est retire.
+String nomFichierPdf(Map<String, dynamic> ordonnance) {
+  var code = '${ordonnance['codeVerification'] ?? ''}'.replaceAll(_caracteresNomFichier, '');
+  if (code.isEmpty) code = abreger(identifiant(ordonnance['id']));
+  return code.isEmpty ? 'ordonnance.pdf' : 'ordonnance-$code.pdf';
+}
 
 /// Date d'emission formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
 String dateEmission(Map<String, dynamic> ordonnance) {

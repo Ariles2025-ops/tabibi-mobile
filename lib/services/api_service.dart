@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -33,6 +34,17 @@ class ApiException implements Exception {
 /// Message a afficher a l'utilisateur pour une erreur survenue lors d'un appel API.
 String messageErreur(Object erreur) =>
     erreur is ApiException ? erreur.message : 'Impossible de joindre le serveur';
+
+/// Type de contenu d'un document PDF (`GET /api/ordonnances/{id}/pdf`).
+const String typePdf = 'application/pdf';
+
+/// Message quand le serveur repond 2xx sans renvoyer un PDF (mauvais type de contenu).
+const String messagePasUnPdf = "Le serveur n'a pas renvoyé un document PDF.";
+
+/// Vrai si l'en-tete `Content-Type` designe un PDF (parametres tels que `charset` toleres,
+/// casse ignoree) ; faux s'il est absent.
+bool estPdf(String? contentType) =>
+    contentType != null && contentType.trim().toLowerCase().startsWith(typePdf);
 
 /// Appels a l'API Tabibi.
 ///
@@ -116,6 +128,21 @@ class ApiService {
     final chemin = '/api/ordonnances/${Uri.encodeComponent(id)}';
     final res = await http.get(Uri.parse('$base$chemin'), headers: _bearer(token));
     return _objet(res, chemin);
+  }
+
+  /// Version imprimable d'une ordonnance (jeton requis) : octets du document PDF, avec le QR
+  /// code de verification, tel que renvoye par `GET /api/ordonnances/{id}/pdf`
+  /// (`application/pdf`) ; 403 si elle est a un autre patient, 404 si elle est inconnue.
+  /// Une reponse 2xx qui n'est pas un PDF est refusee ([messagePasUnPdf]).
+  Future<Uint8List> ordonnancePdf(String id, String token) async {
+    final chemin = '/api/ordonnances/${Uri.encodeComponent(id)}/pdf';
+    final res = await http.get(
+      Uri.parse('$base$chemin'),
+      headers: {..._bearer(token), 'Accept': typePdf},
+    );
+    _verifier(res, chemin);
+    if (!estPdf(res.headers['content-type'])) throw ApiException(res.statusCode, messagePasUnPdf);
+    return res.bodyBytes;
   }
 
   /// Verification publique (sans jeton) d'un code d'ordonnance : {valide, emiseLe, statut}.

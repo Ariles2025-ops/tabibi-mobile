@@ -56,8 +56,8 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 (non versionnes ici pour rester leger). L'essentiel — code, auth, API, test — est present.
 Pour Android, `tool/preparer_android.sh` genere le projet s'il manque et y applique la
 configuration Tabibi (identifiant `dz.tabibi.app`, schema de redirection OAuth exige par
-`flutter_appauth`, requete `<queries>` https pour `url_launcher`) ; il est relancable sans effet
-de bord et sert aussi a la CI. Pour iOS, voir « Publication ».
+`flutter_appauth`, requetes `<queries>` https pour `url_launcher` et PDF pour `open_filex`) ; il
+est relancable sans effet de bord et sert aussi a la CI. Pour iOS, voir « Publication ».
 
 ## Integration continue
 `.github/workflows/ci.yml` (GitHub Actions) s'execute a chaque `push` et `pull_request` :
@@ -71,8 +71,8 @@ Une execution en cours est annulee par un nouvel envoi sur la meme branche.
 ## Publication
 Identifiant d'application sur les deux stores : `dz.tabibi.app` (aussi schema de l'URI de
 redirection OAuth). Avant toute publication :
-- `pubspec.yaml` : `version: 0.13.0+1` donne `versionName` / `CFBundleShortVersionString`
-  (`0.13.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
+- `pubspec.yaml` : `version: 0.14.0+1` donne `versionName` / `CFBundleShortVersionString`
+  (`0.14.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
   chaque envoi sur un store (et la version a chaque livraison fonctionnelle).
 - Construire avec les valeurs de production (`--dart-define`, voir « Configuration ») : API et
   Keycloak en HTTPS, jamais les adresses de developpement.
@@ -87,8 +87,9 @@ redirection OAuth). Avant toute publication :
 
 ### Android (Google Play)
 1. Projet natif : `tool/preparer_android.sh` (genere `android/` et applique l'identifiant, le
-   schema de redirection et la requete https). Une fois configure, le dossier `android/` peut
-   etre versionne ; `key.properties` et le keystore ne le sont jamais (`.gitignore`).
+   schema de redirection et les requetes https et PDF). Une fois configure, le dossier
+   `android/` peut etre versionne ; `key.properties` et le keystore ne le sont jamais
+   (`.gitignore`).
 2. Cle de signature (une seule fois, a conserver hors du depot et sauvegarder) :
    ```bash
    keytool -genkey -v -keystore ~/tabibi-release.jks -keyalg RSA -keysize 2048 \
@@ -452,3 +453,31 @@ Simulateur iOS en developpement : `flutter run --dart-define=TABIBI_API_URL=http
   `flutter build appbundle --release --dart-define=...`, Play Console ; iOS : projet genere sur
   macOS, bundle id `dz.tabibi.app`, certificats via Xcode, `Info.plist`, `flutter build ipa`,
   TestFlight) ; icone et ecran de lancement a fournir (aucun fichier binaire dans le depot).
+
+## v0.14.0 — Ordonnance imprimable, PDF (mobile)
+- Detail d'une ordonnance : bouton « Ouvrir le PDF » sous le code de verification. La version
+  imprimable (avec QR code de verification) est telechargee via `GET /api/ordonnances/{id}/pdf`
+  (jeton PATIENT, `application/pdf`), ecrite sous `ordonnance-<code>.pdf` dans le dossier
+  temporaire de l'application (`getTemporaryDirectory`, `path_provider`) puis ouverte avec
+  l'application du telephone qui lit les PDF (`OpenFilex.open`, `open_filex`) ; indicateur
+  pendant le telechargement, bouton desactive entre-temps.
+- Erreurs : une erreur de l'API (403 ordonnance d'un autre patient, 404 inconnue, 401 -> retour
+  au bouton « Se connecter ») est affichee telle quelle ; une reponse 2xx qui n'est pas un PDF
+  (`Content-Type`) est refusee ; si le fichier ne peut etre ecrit ou qu'aucune application ne
+  l'ouvre, « Impossible d'ouvrir le PDF : aucune application ne prend en charge ce document. ».
+- `ApiService.ordonnancePdf(id, token)` -> `Uint8List` (en-tete `Accept: application/pdf`,
+  verification du statut puis du type de contenu, `estPdf`, `typePdf`, `messagePasUnPdf`) ;
+  `nomFichierPdf` dans `lib/utils/ordonnances.dart` (code de verification epure, repli sur
+  l'identifiant abrege puis `ordonnance.pdf`).
+- Injection testable : `DetailOrdonnancePage(enregistrerEtOuvrir: ...)` (type
+  `EnregistrerEtOuvrir`, `Future<bool> Function(String nomFichier, Uint8List octets)`) ; par
+  defaut `enregistrerEtOuvrirFichier`, l'implementation reelle avec les greffons. Les tests de
+  widget verifient l'appel (nom de fichier, octets commencant par `%PDF`) sans aucun greffon.
+- Dependances `path_provider: ^2.1.4` et `open_filex: ^4.5.0` (`flutter pub get`) ;
+  `tool/preparer_android.sh` ajoute au manifeste Android la requete `<queries>` VIEW
+  `application/pdf` (visibilite des lecteurs de PDF sur Android 11+). Sur iOS, aucun reglage :
+  `open_filex` s'appuie sur l'apercu du systeme. `pubspec.yaml` en `version: 0.14.0+1`.
+- Tests : `FakeApiService.ordonnancePdf` (octets `%PDF-1.4`), variante `FakeApiServiceSansPdf`
+  (404) ; detail : bouton, appel avec `ordonnance-ABC123.pdf` et octets `%PDF`, echec
+  d'ouverture puis erreur de l'API sans appel ; `test/ordonnances_test.dart` (`nomFichierPdf`,
+  `estPdf`).
