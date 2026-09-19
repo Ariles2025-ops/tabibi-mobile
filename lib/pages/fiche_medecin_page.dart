@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
+import '../utils/identifiants.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 
@@ -28,7 +29,8 @@ class FicheMedecinPage extends StatefulWidget {
     this.auth,
   });
 
-  final int medecinId;
+  /// Identifiant du praticien (UUID en texte, tel que renvoye par l'annuaire).
+  final String medecinId;
   final ApiService api;
 
   /// Session a utiliser ; par defaut la session partagee [session].
@@ -48,8 +50,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   bool _charge = true;
   String? _erreur;
 
-  /// Identifiant du creneau en cours de reservation (boutons desactives).
-  int? _enCours;
+  /// Identifiant (texte) du creneau en cours de reservation (boutons desactives).
+  String? _enCours;
 
   /// Vrai pendant l'ouverture de la conversation (bouton desactive).
   bool _conversationEnCours = false;
@@ -93,7 +95,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   }
 
   Future<void> _reserver(Map<String, dynamic> creneau) async {
-    final creneauId = creneau['id'] as int;
+    final creneauId = identifiant(creneau['id']);
+    if (creneauId.isEmpty) return;
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
@@ -108,13 +111,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     try {
       await widget.api.reserverCreneau(creneauId, token);
       if (!mounted) return;
-      setState(() => _creneaux.removeWhere((c) => c['id'] == creneauId));
+      setState(() => _retirerCreneau(creneauId));
       _message('Rendez-vous confirme');
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.conflit) {
         // Pris entre-temps par un autre patient : il n'est plus reservable.
-        setState(() => _creneaux.removeWhere((c) => c['id'] == creneauId));
+        setState(() => _retirerCreneau(creneauId));
         _message("Ce creneau vient d'etre pris");
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
@@ -127,6 +130,11 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     } finally {
       if (mounted) setState(() => _enCours = null);
     }
+  }
+
+  /// Retire de la liste le creneau d'identifiant [creneauId] (compare en texte).
+  void _retirerCreneau(String creneauId) {
+    _creneaux.removeWhere((c) => identifiant(c['id']) == creneauId);
   }
 
   /// Ouvre (ou retrouve) la conversation avec ce praticien (POST /api/conversations),
@@ -294,7 +302,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   }
 
   Widget _creneauTile(Map<String, dynamic> creneau) {
-    final enCours = _enCours == creneau['id'];
+    final enCours = _enCours == identifiant(creneau['id']);
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.schedule),

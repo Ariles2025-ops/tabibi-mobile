@@ -186,3 +186,27 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   `test/widget_test.dart` (formulaire refuse sans medicament puis sans wilaya, publication et liste,
   reponses avec disponibilite, prix et date puis cloture, refus 409, sans jeton, entree d'accueil ;
   surface de test haute pour les ecrans longs et attente entre deux messages).
+
+## v0.9.1 — Correctif identifiants (mobile)
+- Le backend identifie tout (praticien, creneau, rendez-vous, ordonnance, conversation, avis,
+  besoin...) par un **UUID serialise en texte**, par exemple `00000000-0000-0000-0000-000000000001`
+  pour le premier praticien de demonstration. L'application traitait plusieurs identifiants comme
+  des entiers (`as int`, parametres `int` d'`ApiService`, resolution du nom du praticien
+  « uniquement si l'identifiant est numerique ») : plantage a l'ouverture d'une fiche, creneaux
+  non reservables, noms de praticiens jamais resolus.
+- Tous les identifiants sont desormais des chaines de bout en bout : `ApiService.medecin`,
+  `creneaux`, `reserverCreneau`, `annuler`, `ordonnance`, `ouvrirConversation`, `deposerAvis`,
+  `avisDuMedecin` prennent un `String` (chemins encodes avec `Uri.encodeComponent`, corps JSON
+  `{"medecinId": "<uuid>"}` et `{"rendezVousId": "<uuid>", ...}`), de meme que
+  `FicheMedecinPage.medecinId`, `DetailOrdonnancePage.ordonnanceId` et
+  `DeposerAvisPage.rendezVousId`. Les compteurs (`nonLues`, `nombre`, `note`, `prixDa`,
+  `dureeMinutes`) restent des entiers.
+- `lib/utils/identifiants.dart` : `identifiant(Object?)` (identifiant en texte, quel que soit le
+  type recu), `abreger(String)` (8 premiers caracteres) et `libelleMedecin(String)`
+  (« Médecin 00000000 »). Le nom d'un praticien est toujours demande a `GET /api/medecins/{id}` ;
+  a defaut, l'ecran affiche « Médecin » suivi de l'identifiant abrege. Cette regle remplace les
+  replis « Medecin n° ... » / « Médecin n° ... » et la condition « quand l'identifiant est
+  numerique » decrits dans les sections v0.4.0, v0.7.0 et v0.8.0.
+- Tests : fakes signes `String` comme `ApiService`, fixtures en UUID (`FakeApiService.medecinDemo`,
+  `sujetPatient`, `rdvHonore`...), variante `FakeApiServiceSansFiche` pour le repli
+  « Médecin 00000000 », `test/identifiants_test.dart`.

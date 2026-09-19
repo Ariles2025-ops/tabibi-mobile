@@ -127,3 +127,35 @@
   lieu, dates, tri) ; `test/widget_test.dart` (formulaire refuse sans medicament puis sans wilaya, publication
   et liste, reponses puis cloture, refus 409, sans jeton, entree d'accueil ; aides `surfaceHaute` pour les
   ecrans longs, appliquee aussi a la fiche avec avis, et `laisserPasserLeMessage` entre deux SnackBar).
+
+## v0.9.1 — Correctif identifiants
+- Bug bloquant a l'execution : le backend identifie tout par des UUID serialises en texte
+  (`"00000000-0000-0000-0000-000000000001"` pour le premier praticien de demonstration ; `id`,
+  `medecinId`, `creneauId`, `rendezVousId`, `conversationId`, `besoinId`... dans toutes les vues),
+  alors que l'application lisait plusieurs identifiants comme des entiers (`m['id'] as int`,
+  `rdv['medecinId'] as int`, `creneau['id'] as int`, `int.tryParse(medecinId)`, `is! int`) et
+  typait `int` les parametres de `ApiService.medecin`, `creneaux`, `reserverCreneau`, `annuler`,
+  `ordonnance`, `ouvrirConversation`, `deposerAvis`, `avisDuMedecin` ainsi que `FicheMedecinPage`,
+  `DetailOrdonnancePage` et `DeposerAvisPage` : `as int` plantait sur un vrai UUID, la fiche et
+  les creneaux ne s'ouvraient pas, et les noms de praticiens n'etaient jamais resolus dans la
+  messagerie et « Mes avis » (fiche demandee « uniquement si l'identifiant est numerique »).
+- Tous les identifiants sont desormais des `String` de bout en bout : parametres des huit
+  methodes ci-dessus (chemins construits avec `Uri.encodeComponent`), champs `medecinId`,
+  `ordonnanceId`, `rendezVousId` des pages, creneau en cours de reservation, cache des noms de
+  praticiens (`Map<String, String>`), corps JSON `{"medecinId": "<uuid>"}` et
+  `{"rendezVousId": "<uuid>", ...}` en texte. Les compteurs (`nonLues`, `nombre`, `note`,
+  `prixDa`, `dureeMinutes`) restent des `int`.
+- Nouvel utilitaire `lib/utils/identifiants.dart` : `identifiant(Object?)` (valeur en texte,
+  tolere un nombre, chaine vide si absente ; remplace tous les `as int` sur des identifiants),
+  `abreger(String)` (8 premiers caracteres, premier groupe de l'UUID) et `libelleMedecin(String)`
+  (« Médecin 00000000 », « Médecin inconnu » sans identifiant). Comparaisons en texte
+  (`identifiant(c['id']) == creneauId`), aucun tri ne depend d'un type numerique.
+- Messagerie, « Mes avis », « Mes rendez-vous », detail d'ordonnance : le nom du praticien est
+  toujours resolu via `GET /api/medecins/{id}` ; en cas d'echec, repli « Médecin » suivi de
+  l'identifiant abrege (plus jamais « Médecin n° ... » ni un UUID entier a l'ecran).
+- Tests : `FakeApiService` et ses variantes signent `String` comme `ApiService` (verifie par
+  script, hors SDK) ; fixtures en UUID (`FakeApiService.medecinDemo` =
+  `00000000-0000-0000-0000-000000000001`, `sujetPatient`, `rdvHonore`, `ordonnanceDemo`,
+  `conversationDemo`...) ; variante `FakeApiServiceSansFiche` (404 sur la fiche) pour le repli
+  « Médecin 00000000 » dans la messagerie, « Mes rendez-vous » et le detail d'ordonnance ;
+  `test/identifiants_test.dart` ; `test/ordonnances_test.dart` avec des identifiants en texte.

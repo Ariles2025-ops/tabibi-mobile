@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
+import '../utils/identifiants.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 
@@ -70,23 +71,22 @@ class _MesAvisPageState extends State<MesAvisPage> {
     }
   }
 
-  /// Noms des praticiens via la fiche publique (identifiants numeriques) ; un echec
-  /// n'empeche pas l'affichage, l'identifiant est alors montre a la place.
+  /// Noms des praticiens via la fiche publique (`GET /api/medecins/{id}`, identifiant UUID en
+  /// texte) ; un echec n'empeche pas l'affichage, « Médecin » et l'identifiant abrege sont
+  /// alors montres a la place.
   Future<void> _chargerNomsMedecins(List<Avis> avis) async {
     for (final medecinId in avis.map((a) => a.medecinId).toSet()) {
-      if (_nomsMedecins.containsKey(medecinId)) continue;
-      final id = int.tryParse(medecinId);
-      if (id == null) continue;
+      if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await widget.api.medecin(id))['nomComplet'];
+        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
-        // Fiche indisponible : l'identifiant sera affiche a la place.
+        // Fiche indisponible : libelle de repli ([libelleMedecin]).
       }
     }
   }
 
-  String _nomMedecin(Avis a) => _nomsMedecins[a.medecinId] ?? 'Médecin n° ${a.medecinId}';
+  String _nomMedecin(Avis a) => _nomsMedecins[a.medecinId] ?? libelleMedecin(a.medecinId);
 
   void _message(String texte) {
     if (!mounted) return;

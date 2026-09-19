@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
+import '../utils/identifiants.dart';
 import '../utils/libelles.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -29,8 +30,8 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   late final AuthService _auth = widget.auth ?? session;
   List<Map<String, dynamic>> _rdvs = [];
 
-  /// Noms des praticiens deja resolus, par identifiant.
-  final Map<int, String> _nomsMedecins = {};
+  /// Noms des praticiens deja resolus, par identifiant (UUID en texte).
+  final Map<String, String> _nomsMedecins = {};
 
   /// Identifiants (texte) des rendez-vous pour lesquels un avis a deja ete depose.
   Set<String> _rendezVousEvalues = {};
@@ -81,15 +82,16 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     }
   }
 
-  /// Noms des praticiens (endpoint public) ; un echec n'empeche pas l'affichage.
+  /// Noms des praticiens (endpoint public, identifiant UUID en texte) ; un echec n'empeche
+  /// pas l'affichage.
   Future<void> _chargerNomsMedecins(List<Map<String, dynamic>> rdvs) async {
-    for (final id in rdvs.map((r) => r['medecinId'] as int).toSet()) {
-      if (_nomsMedecins.containsKey(id)) continue;
+    for (final id in rdvs.map((r) => identifiant(r['medecinId'])).toSet()) {
+      if (id.isEmpty || _nomsMedecins.containsKey(id)) continue;
       try {
-        final m = await widget.api.medecin(id);
-        _nomsMedecins[id] = m['nomComplet'] as String;
+        final Object? nom = (await widget.api.medecin(id))['nomComplet'];
+        if (nom is String && nom.isNotEmpty) _nomsMedecins[id] = nom;
       } on Exception {
-        // Nom indisponible : l'identifiant sera affiche a la place.
+        // Nom indisponible : « Médecin » et l'identifiant abrege seront affiches a la place.
       }
     }
   }
@@ -105,12 +107,13 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     }
   }
 
-  bool _aDonneSonAvis(Map<String, dynamic> rdv) => _rendezVousEvalues.contains('${rdv['id']}');
+  bool _aDonneSonAvis(Map<String, dynamic> rdv) =>
+      _rendezVousEvalues.contains(identifiant(rdv['id']));
 
   /// Ouvre le formulaire d'avis ; au retour, la liste est rechargee si un avis a ete depose.
   Future<void> _donnerAvis(Map<String, dynamic> rdv) async {
-    final Object? id = rdv['id'];
-    if (id is! int) return;
+    final id = identifiant(rdv['id']);
+    if (id.isEmpty) return;
     final depose = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => DeposerAvisPage(
@@ -152,7 +155,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final token = _auth.accessToken;
     if (token == null) return;
     try {
-      await widget.api.annuler(rdv['id'] as int, token);
+      await widget.api.annuler(identifiant(rdv['id']), token);
       _message('Rendez-vous annule');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
@@ -175,9 +178,10 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
 
   String _dateRdv(Map<String, dynamic> rdv) => formaterDateIso(rdv['debut'] as String);
 
+  /// Nom du praticien ; « Médecin » suivi de l'identifiant abrege s'il n'a pu etre resolu.
   String _nomMedecin(Map<String, dynamic> rdv) {
-    final id = rdv['medecinId'] as int;
-    return _nomsMedecins[id] ?? 'Medecin n° $id';
+    final id = identifiant(rdv['medecinId']);
+    return _nomsMedecins[id] ?? libelleMedecin(id);
   }
 
   String _statut(Map<String, dynamic> rdv) => '${rdv['statut'] ?? ''}';

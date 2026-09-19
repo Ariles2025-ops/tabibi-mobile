@@ -25,7 +25,8 @@ class DeposerAvisPage extends StatefulWidget {
     this.auth,
   });
 
-  final int rendezVousId;
+  /// Identifiant du rendez-vous honore (UUID en texte), envoye tel quel dans le corps JSON.
+  final String rendezVousId;
 
   /// Praticien et date du rendez-vous, rappeles en tete de l'ecran s'ils sont connus.
   final String? nomMedecin;

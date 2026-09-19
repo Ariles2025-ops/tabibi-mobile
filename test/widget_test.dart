@@ -21,15 +21,46 @@ import 'package:tabibi_mobile/services/auth_service.dart';
 
 import 'outils.dart';
 
-/// API factice : aucune requete reseau, donnees fixes.
+/// API factice : aucune requete reseau, donnees fixes. Tous les identifiants sont des UUID en
+/// texte, comme ceux que le backend serialise (jamais des nombres).
 class FakeApiService extends ApiService {
   const FakeApiService();
 
   /// Code de verification de l'ordonnance factice (seul code reconnu par [verifierOrdonnance]).
   static const String codeValide = 'ABC123';
 
+  /// Identifiant fixe du premier praticien de demonstration de l'annuaire du backend.
+  static const String medecinDemo = '00000000-0000-0000-0000-000000000001';
+
   /// Identifiant (sujet du jeton) du patient de test : ses messages sont alignes a droite.
-  static const String sujetPatient = 'patient-7';
+  static const String sujetPatient = 'a1a1a1a1-0000-4000-8000-000000000007';
+
+  /// Creneaux du praticien de demonstration : le premier disponible, le second deja pris.
+  static const String creneauLibre = 'c1c1c1c1-0000-4000-8000-000000000010';
+  static const String creneauPris = 'c1c1c1c1-0000-4000-8000-000000000011';
+
+  /// Rendez-vous du patient de test : honore sans avis, confirme (annulable), honore deja evalue.
+  static const String rdvHonore = 'b2b2b2b2-0000-4000-8000-000000000003';
+  static const String rdvConfirme = 'b2b2b2b2-0000-4000-8000-000000000004';
+  static const String rdvEvalue = 'b2b2b2b2-0000-4000-8000-000000000005';
+
+  /// Ordonnance du patient de test (rendez-vous [rdvHonore]).
+  static const String ordonnanceDemo = 'd4d4d4d4-0000-4000-8000-000000000042';
+
+  /// Conversation du patient de test avec le praticien de demonstration.
+  static const String conversationDemo = 'e5e5e5e5-0000-4000-8000-000000000001';
+
+  /// Notifications : la plus recente non lue, l'autre deja lue.
+  static const String notificationNonLue = 'f6f6f6f6-0000-4000-8000-000000000001';
+  static const String notificationLue = 'f6f6f6f6-0000-4000-8000-000000000002';
+
+  /// Teleconsultations : la plus recente planifiee sans consentement, l'autre terminee.
+  static const String teleconsultationPlanifiee = 'a7a7a7a7-0000-4000-8000-000000000001';
+  static const String teleconsultationTerminee = 'a7a7a7a7-0000-4000-8000-000000000002';
+
+  /// Demandes Dawini : ouverte avec deux reponses, cloturee sans reponse.
+  static const String besoinOuvert = 'b8b8b8b8-0000-4000-8000-000000000001';
+  static const String besoinCloture = 'b8b8b8b8-0000-4000-8000-000000000002';
 
   @override
   Future<List<Map<String, dynamic>>> rechercherMedecins({
@@ -37,10 +68,10 @@ class FakeApiService extends ApiService {
     String? wilaya,
     String? q,
   }) async =>
-      [await medecin(1)];
+      [await medecin(medecinDemo)];
 
   @override
-  Future<Map<String, dynamic>> medecin(int id) async => {
+  Future<Map<String, dynamic>> medecin(String id) async => {
         'id': id,
         'nomComplet': 'Dr Amina Benali',
         'specialiteSlug': 'cardiologue',
@@ -51,16 +82,16 @@ class FakeApiService extends ApiService {
       };
 
   @override
-  Future<List<Map<String, dynamic>>> creneaux(int medecinId) async => [
+  Future<List<Map<String, dynamic>>> creneaux(String medecinId) async => [
         {
-          'id': 10,
+          'id': creneauLibre,
           'medecinId': medecinId,
           'debut': '2026-12-03T09:00:00',
           'dureeMinutes': 30,
           'disponible': true,
         },
         {
-          'id': 11,
+          'id': creneauPris,
           'medecinId': medecinId,
           'debut': '2026-12-03T09:30:00',
           'dureeMinutes': 30,
@@ -69,21 +100,22 @@ class FakeApiService extends ApiService {
       ];
 
   @override
-  Future<List<Map<String, dynamic>>> mesOrdonnances(String token) async => [_ordonnance(42)];
+  Future<List<Map<String, dynamic>>> mesOrdonnances(String token) async =>
+      [_ordonnance(ordonnanceDemo)];
 
   @override
-  Future<Map<String, dynamic>> ordonnance(int id, String token) async => _ordonnance(id);
+  Future<Map<String, dynamic>> ordonnance(String id, String token) async => _ordonnance(id);
 
   @override
   Future<Map<String, dynamic>> verifierOrdonnance(String code) async => code == codeValide
       ? {'valide': true, 'emiseLe': '2026-12-03T10:15:00', 'statut': 'EMISE'}
       : {'valide': false};
 
-  /// Deux notifications : la plus recente (n-1) non lue, l'autre deja lue.
+  /// Deux notifications : la plus recente non lue, l'autre deja lue.
   @override
   Future<List<Map<String, dynamic>>> mesNotifications(String token) async => [
-        _notification('n-1', lue: false),
-        _notification('n-2', lue: true),
+        _notification(notificationNonLue, lue: false),
+        _notification(notificationLue, lue: true),
       ];
 
   @override
@@ -99,12 +131,12 @@ class FakeApiService extends ApiService {
   /// Lien de salle remis une fois le consentement donne.
   static const String lienSalle = 'https://meet.jit.si/tabibi-salle-test';
 
-  /// Deux teleconsultations : la plus recente (tc-1) planifiee sans consentement,
-  /// l'autre (tc-2) terminee avec consentement (lien remis mais session close).
+  /// Deux teleconsultations : la plus recente planifiee sans consentement,
+  /// l'autre terminee avec consentement (lien remis mais session close).
   @override
   Future<List<Map<String, dynamic>>> mesTeleconsultations(String token) async => [
-        _teleconsultation('tc-1', 'PLANIFIEE', consentie: false),
-        _teleconsultation('tc-2', 'TERMINEE', consentie: true),
+        _teleconsultation(teleconsultationPlanifiee, 'PLANIFIEE', consentie: false),
+        _teleconsultation(teleconsultationTerminee, 'TERMINEE', consentie: true),
       ];
 
   @override
@@ -115,20 +147,30 @@ class FakeApiService extends ApiService {
   Future<Map<String, dynamic>> consentir(String teleconsultationId, String token) async =>
       _teleconsultation(teleconsultationId, 'PLANIFIEE', consentie: true);
 
-  /// Une conversation avec le praticien 1, deux messages non lus.
+  /// Une conversation avec le praticien de demonstration, deux messages non lus.
   @override
   Future<List<Map<String, dynamic>>> mesConversations(String token) async =>
-      [_conversation('conv-1', nonLus: 2)];
+      [_conversation(conversationDemo, nonLus: 2)];
 
   @override
-  Future<Map<String, dynamic>> ouvrirConversation(int medecinId, String token) async =>
-      _conversation('conv-1', nonLus: 0);
+  Future<Map<String, dynamic>> ouvrirConversation(String medecinId, String token) async =>
+      _conversation(conversationDemo, nonLus: 0);
 
   /// Deux messages : le premier du praticien, le second du patient de test.
   @override
   Future<List<Map<String, dynamic>>> messages(String conversationId, String token) async => [
-        _messageJson('m-1', 'medecin-1', 'Bonjour, comment allez-vous ?', '2026-12-01T09:00:00'),
-        _messageJson('m-2', sujetPatient, 'Bonjour docteur, mieux merci.', '2026-12-01T09:05:00'),
+        _messageJson(
+          'd9d9d9d9-0000-4000-8000-000000000001',
+          medecinDemo,
+          'Bonjour, comment allez-vous ?',
+          '2026-12-01T09:00:00',
+        ),
+        _messageJson(
+          'd9d9d9d9-0000-4000-8000-000000000002',
+          sujetPatient,
+          'Bonjour docteur, mieux merci.',
+          '2026-12-01T09:05:00',
+        ),
       ];
 
   @override
@@ -137,50 +179,66 @@ class FakeApiService extends ApiService {
     String contenu,
     String token,
   ) async =>
-      _messageJson('m-3', sujetPatient, contenu, '2026-12-01T09:10:00');
+      _messageJson(
+        'd9d9d9d9-0000-4000-8000-000000000003',
+        sujetPatient,
+        contenu,
+        '2026-12-01T09:10:00',
+      );
 
-  /// Trois rendez-vous : 3 honore sans avis, 4 confirme (annulable), 5 honore deja evalue.
+  /// Trois rendez-vous : honore sans avis, confirme (annulable), honore deja evalue.
   @override
   Future<List<Map<String, dynamic>>> mesRendezVous(String token) async => [
-        _rendezVous(3, 'HONORE', '2026-09-01T09:00:00'),
-        _rendezVous(4, 'CONFIRME', '2026-12-03T09:00:00'),
-        _rendezVous(5, 'HONORE', '2026-08-10T14:30:00'),
+        _rendezVous(rdvHonore, 'HONORE', '2026-09-01T09:00:00'),
+        _rendezVous(rdvConfirme, 'CONFIRME', '2026-12-03T09:00:00'),
+        _rendezVous(rdvEvalue, 'HONORE', '2026-08-10T14:30:00'),
       ];
 
-  /// Un seul avis depose, sur le rendez-vous 5.
+  /// Un seul avis depose, sur le rendez-vous [rdvEvalue].
   @override
-  Future<List<Map<String, dynamic>>> mesAvis(String token) async => [_avis('avis-5', 5)];
+  Future<List<Map<String, dynamic>>> mesAvis(String token) async =>
+      [_avis('e0e0e0e0-0000-4000-8000-000000000005', rdvEvalue)];
 
   @override
   Future<Map<String, dynamic>> deposerAvis(
-    int rendezVousId,
+    String rendezVousId,
     int note,
     String? commentaire,
     String token,
   ) async =>
-      _avis('avis-$rendezVousId', rendezVousId, note: note, commentaire: commentaire);
+      _avis(
+        'e0e0e0e0-0000-4000-8000-000000000099',
+        rendezVousId,
+        note: note,
+        commentaire: commentaire,
+      );
 
   /// Synthese publique du praticien : 12 avis, moyenne 4,5, deux derniers avis.
   @override
-  Future<Map<String, dynamic>> avisDuMedecin(int medecinId) async => {
+  Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async => {
         'moyenne': 4.5,
         'nombre': 12,
         'avis': [
           {
-            'id': 'avis-a',
+            'id': 'e0e0e0e0-0000-4000-8000-00000000000a',
             'note': 5,
             'commentaire': "Très bon médecin, à l'écoute.",
             'deposeLe': '2026-11-20T10:15:00',
           },
-          {'id': 'avis-b', 'note': 4, 'commentaire': null, 'deposeLe': '2026-11-05T16:30:00'},
+          {
+            'id': 'e0e0e0e0-0000-4000-8000-00000000000b',
+            'note': 4,
+            'commentaire': null,
+            'deposeLe': '2026-11-05T16:30:00',
+          },
         ],
       };
 
-  /// Deux demandes Dawini : b-1 ouverte avec deux reponses, b-2 cloturee sans reponse.
+  /// Deux demandes Dawini : l'une ouverte avec deux reponses, l'autre cloturee sans reponse.
   @override
   Future<List<Map<String, dynamic>>> mesBesoins(String token) async => [
-        _besoin('b-1', 'Doliprane 1000', 'OUVERT', nombreReponses: 2),
-        _besoin('b-2', 'Ventoline', 'CLOTURE', nombreReponses: 0),
+        _besoin(besoinOuvert, 'Doliprane 1000', 'OUVERT', nombreReponses: 2),
+        _besoin(besoinCloture, 'Ventoline', 'CLOTURE', nombreReponses: 0),
       ];
 
   @override
@@ -191,7 +249,7 @@ class FakeApiService extends ApiService {
     String? commune,
     String? precision,
   }) async =>
-      _besoin('b-3', medicament, 'OUVERT', nombreReponses: 0)
+      _besoin('b8b8b8b8-0000-4000-8000-000000000003', medicament, 'OUVERT', nombreReponses: 0)
         ..['wilayaCode'] = wilayaCode
         ..['commune'] = commune
         ..['precision'] = precision;
@@ -203,9 +261,9 @@ class FakeApiService extends ApiService {
   @override
   Future<List<Map<String, dynamic>>> reponsesBesoin(String besoinId, String token) async => [
         {
-          'id': 'r-1',
+          'id': 'c9c9c9c9-0000-4000-8000-000000000001',
           'besoinId': besoinId,
-          'pharmacieId': 'pharmacie-1',
+          'pharmacieId': 'aa11aa11-0000-4000-8000-000000000001',
           'nomPharmacie': 'Pharmacie El Amel',
           'disponible': true,
           'prixDa': 850,
@@ -213,9 +271,9 @@ class FakeApiService extends ApiService {
           'repondueLe': '2026-11-20T10:15:00',
         },
         {
-          'id': 'r-2',
+          'id': 'c9c9c9c9-0000-4000-8000-000000000002',
           'besoinId': besoinId,
-          'pharmacieId': 'pharmacie-2',
+          'pharmacieId': 'aa11aa11-0000-4000-8000-000000000002',
           'nomPharmacie': 'Pharmacie Ibn Sina',
           'disponible': false,
           'prixDa': null,
@@ -236,17 +294,17 @@ class FakeApiService extends ApiService {
         'medicament': medicament,
         'wilayaCode': '16',
         'commune': 'Alger-Centre',
-        'precision': id == 'b-1' ? 'Boite de 8, urgent' : null,
+        'precision': id == besoinOuvert ? 'Boite de 8, urgent' : null,
         'statut': statut,
-        'publieLe': id == 'b-1' ? '2026-11-20T09:00:00' : '2026-11-10T09:00:00',
+        'publieLe': id == besoinOuvert ? '2026-11-20T09:00:00' : '2026-11-10T09:00:00',
         'clotureLe': statut == 'CLOTURE' ? '2026-11-12T18:30:00' : null,
         'nombreReponses': nombreReponses,
       };
 
-  static Map<String, dynamic> _rendezVous(int id, String statut, String debut) => {
+  static Map<String, dynamic> _rendezVous(String id, String statut, String debut) => {
         'id': id,
         'patientId': sujetPatient,
-        'medecinId': 1,
+        'medecinId': medecinDemo,
         'creneauId': null,
         'debut': debut,
         'statut': statut,
@@ -254,14 +312,14 @@ class FakeApiService extends ApiService {
 
   static Map<String, dynamic> _avis(
     String id,
-    int rendezVousId, {
+    String rendezVousId, {
     int note = 4,
     String? commentaire = 'Explications claires, merci.',
   }) =>
       {
         'id': id,
         'rendezVousId': rendezVousId,
-        'medecinId': 1,
+        'medecinId': medecinDemo,
         'note': note,
         'commentaire': commentaire,
         'statut': 'PUBLIE',
@@ -271,7 +329,7 @@ class FakeApiService extends ApiService {
   static Map<String, dynamic> _conversation(String id, {required int nonLus}) => {
         'id': id,
         'patientId': sujetPatient,
-        'medecinId': 1,
+        'medecinId': medecinDemo,
         'creeLe': '2026-11-20T09:00:00',
         'dernierMessageLe': '2026-12-01T09:05:00',
         'nonLus': nonLus,
@@ -285,7 +343,7 @@ class FakeApiService extends ApiService {
   ) =>
       {
         'id': id,
-        'conversationId': 'conv-1',
+        'conversationId': conversationDemo,
         'auteurId': auteurId,
         'contenu': contenu,
         'envoyeLe': envoyeLe,
@@ -299,35 +357,35 @@ class FakeApiService extends ApiService {
   }) =>
       {
         'id': id,
-        'rendezVousId': 'rdv-3',
-        'patientId': 'patient-7',
-        'medecinId': 'medecin-1',
+        'rendezVousId': rdvHonore,
+        'patientId': sujetPatient,
+        'medecinId': medecinDemo,
         'statut': statut,
         'consentementPatientLe': consentie ? '2026-12-03T08:30:00' : null,
         'lienSalle': consentie ? lienSalle : null,
-        'creeLe': id == 'tc-1' ? '2026-12-03T08:00:00' : '2026-11-20T09:00:00',
+        'creeLe': id == teleconsultationPlanifiee ? '2026-12-03T08:00:00' : '2026-11-20T09:00:00',
         'demarreeLe': statut == 'TERMINEE' ? '2026-11-20T09:05:00' : null,
         'termineeLe': statut == 'TERMINEE' ? '2026-11-20T09:40:00' : null,
       };
 
   static Map<String, dynamic> _notification(String id, {required bool lue}) => {
         'id': id,
-        'destinataireId': 'patient-7',
+        'destinataireId': sujetPatient,
         'canal': 'INTERNE',
-        'sujet': id == 'n-1' ? 'Teleconsultation proposee' : 'Rendez-vous confirme',
-        'message': id == 'n-1'
+        'sujet': id == notificationNonLue ? 'Teleconsultation proposee' : 'Rendez-vous confirme',
+        'message': id == notificationNonLue
             ? 'Votre medecin vous propose une teleconsultation pour votre rendez-vous '
                 'du 3 dec. 2026 09:00.'
             : 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.',
         'lue': lue,
-        'creeLe': id == 'n-1' ? '2026-12-03T10:15:00' : '2026-12-01T18:00:00',
+        'creeLe': id == notificationNonLue ? '2026-12-03T10:15:00' : '2026-12-01T18:00:00',
       };
 
-  static Map<String, dynamic> _ordonnance(int id) => {
+  static Map<String, dynamic> _ordonnance(String id) => {
         'id': id,
-        'medecinId': 1,
-        'patientId': 7,
-        'rendezVousId': 3,
+        'medecinId': medecinDemo,
+        'patientId': sujetPatient,
+        'rendezVousId': rdvHonore,
         'lignes': [
           {
             'medicament': 'Paracetamol 1 g',
@@ -384,8 +442,18 @@ class FakeApiServiceSansRendezVous extends FakeApiService {
   const FakeApiServiceSansRendezVous();
 
   @override
-  Future<Map<String, dynamic>> ouvrirConversation(int medecinId, String token) async =>
+  Future<Map<String, dynamic>> ouvrirConversation(String medecinId, String token) async =>
       throw const ApiException(403, 'Aucun rendez-vous avec ce medecin');
+}
+
+/// Variante dont l'annuaire ne repond plus (404 sur la fiche publique) : les ecrans montrent
+/// « Médecin » suivi de l'identifiant abrege a la place du nom.
+class FakeApiServiceSansFiche extends FakeApiService {
+  const FakeApiServiceSansFiche();
+
+  @override
+  Future<Map<String, dynamic>> medecin(String id) async =>
+      throw const ApiException(404, 'Praticien introuvable');
 }
 
 /// Variante qui conserve les avis deposes : « Mes rendez-vous » les voit au rechargement.
@@ -400,7 +468,7 @@ class FakeApiServiceAvis extends FakeApiService {
 
   @override
   Future<Map<String, dynamic>> deposerAvis(
-    int rendezVousId,
+    String rendezVousId,
     int note,
     String? commentaire,
     String token,
@@ -417,7 +485,7 @@ class FakeApiServiceAvisDejaDonne extends FakeApiService {
 
   @override
   Future<Map<String, dynamic>> deposerAvis(
-    int rendezVousId,
+    String rendezVousId,
     int note,
     String? commentaire,
     String token,
@@ -475,7 +543,7 @@ class FakeApiServiceSansAvis extends FakeApiService {
   const FakeApiServiceSansAvis();
 
   @override
-  Future<Map<String, dynamic>> avisDuMedecin(int medecinId) async =>
+  Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async =>
       {'moyenne': null, 'nombre': 0, 'avis': []};
 }
 
@@ -511,7 +579,7 @@ void main() {
   testWidgets('la fiche medecin affiche le titre, le praticien et ses creneaux disponibles',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: FicheMedecinPage(medecinId: 1, api: FakeApiService()),
+      home: FicheMedecinPage(medecinId: FakeApiService.medecinDemo, api: FakeApiService()),
     ));
     await tester.pumpAndSettle();
 
@@ -555,7 +623,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: DetailOrdonnancePage(
-        ordonnanceId: 42,
+        ordonnanceId: FakeApiService.ordonnanceDemo,
         api: const FakeApiService(),
         auth: sessionConnectee(),
       ),
@@ -777,15 +845,34 @@ void main() {
     expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
   });
 
+  testWidgets("mes conversations affiche « Médecin » et l'identifiant abrege si la fiche du "
+      'praticien est indisponible', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesConversationsPage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Repli sur les 8 premiers caracteres de l'UUID, jamais l'identifiant entier.
+    expect(find.text('Médecin 00000000'), findsOneWidget);
+    expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
+    expect(find.text('2 non lus'), findsOneWidget);
+
+    await tester.tap(find.text('Médecin 00000000'));
+    await tester.pumpAndSettle();
+    // Sans nom, le fil garde son titre generique mais s'ouvre bien sur les messages.
+    expect(find.text('Conversation'), findsOneWidget);
+    expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
+  });
+
   testWidgets('le fil aligne mes messages a droite et ceux du medecin a gauche, '
       "n'envoie pas un message vide et se rafraichit apres un envoi", (tester) async {
     final api = FakeApiServiceMessagerie();
     await tester.pumpWidget(MaterialApp(
       home: ConversationPage(
         conversation: Conversation.fromJson({
-          'id': 'conv-1',
+          'id': FakeApiService.conversationDemo,
           'patientId': FakeApiService.sujetPatient,
-          'medecinId': 1,
+          'medecinId': FakeApiService.medecinDemo,
         }),
         api: api,
         auth: sessionConnectee(),
@@ -826,7 +913,11 @@ void main() {
 
   testWidgets('la fiche medecin ouvre une conversation avec le praticien', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: FicheMedecinPage(medecinId: 1, api: const FakeApiService(), auth: sessionConnectee()),
+      home: FicheMedecinPage(
+        medecinId: FakeApiService.medecinDemo,
+        api: const FakeApiService(),
+        auth: sessionConnectee(),
+      ),
     ));
     await tester.pumpAndSettle();
     expect(find.text('Ouvrir une conversation'), findsOneWidget);
@@ -841,7 +932,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: FicheMedecinPage(
-        medecinId: 1,
+        medecinId: FakeApiService.medecinDemo,
         api: const FakeApiServiceSansRendezVous(),
         auth: sessionConnectee(),
       ),
@@ -866,7 +957,7 @@ void main() {
       (tester) async {
     surfaceHaute(tester);
     await tester.pumpWidget(const MaterialApp(
-      home: FicheMedecinPage(medecinId: 1, api: FakeApiService()),
+      home: FicheMedecinPage(medecinId: FakeApiService.medecinDemo, api: FakeApiService()),
     ));
     await tester.pumpAndSettle();
 
@@ -883,7 +974,7 @@ void main() {
 
   testWidgets('la fiche medecin sans avis publie le signale', (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: FicheMedecinPage(medecinId: 1, api: FakeApiServiceSansAvis()),
+      home: FicheMedecinPage(medecinId: FakeApiService.medecinDemo, api: FakeApiServiceSansAvis()),
     ));
     await tester.pumpAndSettle();
 
@@ -925,7 +1016,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Avis envoye (note et commentaire), retour a la liste rechargee.
-    expect(api.deposes.single['rendezVousId'], 3);
+    expect(api.deposes.single['rendezVousId'], FakeApiService.rdvHonore);
     expect(api.deposes.single['note'], 4);
     expect(api.deposes.single['commentaire'], 'Explications claires, merci.');
     expect(find.text('Merci pour votre avis.'), findsOneWidget);
@@ -934,11 +1025,38 @@ void main() {
     expect(find.text('Avis donné'), findsNWidgets(2));
   });
 
+  testWidgets("mes rendez-vous et le detail d'une ordonnance replient sur « Médecin » et "
+      "l'identifiant abrege si la fiche du praticien est indisponible", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Trois rendez-vous du meme praticien : le libelle de repli, jamais l'UUID entier.
+    expect(find.text('Médecin 00000000 · Confirme'), findsOneWidget);
+    expect(find.text('Médecin 00000000 · Honore'), findsNWidgets(2));
+    expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
+    // Les actions restent disponibles (identifiants en texte).
+    expect(find.text('Donner mon avis'), findsOneWidget);
+    expect(find.text('Annuler'), findsOneWidget);
+
+    await tester.pumpWidget(MaterialApp(
+      home: DetailOrdonnancePage(
+        ordonnanceId: FakeApiService.ordonnanceDemo,
+        api: const FakeApiServiceSansFiche(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Médecin 00000000'), findsOneWidget);
+    expect(find.text('ABC123'), findsOneWidget);
+  });
+
   testWidgets("deposer un avis deja donne explique le conflit (409) sans fermer l'ecran",
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: DeposerAvisPage(
-        rendezVousId: 5,
+        rendezVousId: FakeApiService.rdvEvalue,
         api: const FakeApiServiceAvisDejaDonne(),
         auth: sessionConnectee(),
       ),
@@ -1038,7 +1156,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: ReponsesBesoinPage(
         besoin: BesoinMedicament.fromJson({
-          'id': 'b-1',
+          'id': FakeApiService.besoinOuvert,
           'medicament': 'Doliprane 1000',
           'wilayaCode': '16',
           'commune': 'Alger-Centre',
@@ -1072,7 +1190,7 @@ void main() {
     expect(find.text('Clôturer cette demande ?'), findsOneWidget);
     await tester.tap(find.text('Oui, clôturer'));
     await tester.pumpAndSettle();
-    expect(api.clotures, ['b-1']);
+    expect(api.clotures, [FakeApiService.besoinOuvert]);
     expect(find.text('Demande clôturée.'), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
     expect(find.text('Wilaya 16 · Alger-Centre · Clôturée'), findsOneWidget);
@@ -1082,7 +1200,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: ReponsesBesoinPage(
         besoin: BesoinMedicament.fromJson({
-          'id': 'b-1',
+          'id': FakeApiService.besoinOuvert,
           'medicament': 'Doliprane 1000',
           'wilayaCode': '16',
           'statut': 'OUVERT',

@@ -31,16 +31,16 @@ void main() {
 
   test('trierParEmission place la plus recente en tete et les dates illisibles en fin', () {
     final triees = trierParEmission([
-      {'id': 1, 'emiseLe': '2026-01-10T09:00:00'},
-      {'id': 2},
-      {'id': 3, 'emiseLe': '2026-03-05T09:00:00'},
+      {'id': '1', 'emiseLe': '2026-01-10T09:00:00'},
+      {'id': '2'},
+      {'id': '3', 'emiseLe': '2026-03-05T09:00:00'},
     ]);
-    expect(triees.map((o) => o['id']).toList(), [3, 1, 2]);
+    expect(triees.map((o) => o['id']).toList(), ['3', '1', '2']);
 
     final illisible = trierParEmission([
-      {'id': 4, 'emiseLe': 'n/a'},
-      {'id': 5, 'emiseLe': '2026-03-05T09:00:00'},
+      {'id': '4', 'emiseLe': 'n/a'},
+      {'id': '5', 'emiseLe': '2026-03-05T09:00:00'},
     ]);
-    expect(illisible.map((o) => o['id']).toList(), [5, 4]);
+    expect(illisible.map((o) => o['id']).toList(), ['5', '4']);
   });
 }

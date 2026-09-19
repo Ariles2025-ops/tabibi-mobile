@@ -12,6 +12,7 @@ import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/session.dart';
+import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
 
 void main() => runApp(const TabibiApp());
@@ -117,7 +118,8 @@ class _RecherchePageState extends State<RecherchePage> {
     await _chargerNonLues();
   }
 
-  Future<void> _ouvrirFiche(int medecinId) async {
+  /// Ouvre la fiche d'un praticien ([medecinId] : UUID en texte).
+  Future<void> _ouvrirFiche(String medecinId) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
@@ -285,7 +287,7 @@ class _RecherchePageState extends State<RecherchePage> {
                     title: Text(m['nomComplet'] as String),
                     subtitle: Text('${m['specialiteFr']} · ${m['ville']} (${m['wilayaFr']})'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _ouvrirFiche(m['id'] as int),
+                    onTap: () => _ouvrirFiche(identifiant(m['id'])),
                   );
                 },
               ),

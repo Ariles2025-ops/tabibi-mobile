@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/identifiants.dart';
 import '../utils/libelles.dart';
 import '../utils/ordonnances.dart';
 import '../widgets/vue_connexion.dart';
@@ -19,7 +20,8 @@ class DetailOrdonnancePage extends StatefulWidget {
     this.auth,
   });
 
-  final int ordonnanceId;
+  /// Identifiant de l'ordonnance (UUID en texte).
+  final String ordonnanceId;
   final ApiService api;
 
   /// Session a utiliser ; par defaut la session partagee [session].
@@ -33,7 +35,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   late final AuthService _auth = widget.auth ?? session;
   Map<String, dynamic>? _ordonnance;
 
-  /// Nom du praticien resolu via la fiche publique ; « Medecin n° ... » a defaut.
+  /// Nom du praticien resolu via la fiche publique ; « Médecin » et l'identifiant abrege a defaut.
   String _nomMedecin = '';
   bool _charge = false;
   String? _erreur;
@@ -81,17 +83,18 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     }
   }
 
-  /// Nom du praticien (endpoint public) ; un echec n'empeche pas l'affichage.
+  /// Nom du praticien (endpoint public, identifiant UUID en texte) ; un echec n'empeche pas
+  /// l'affichage : « Médecin » et l'identifiant abrege sont montres a la place.
   Future<String> _resoudreNomMedecin(Map<String, dynamic> ordonnance) async {
-    final Object? id = ordonnance['medecinId'];
-    if (id is! int) return 'Medecin inconnu';
+    final id = identifiant(ordonnance['medecinId']);
+    if (id.isEmpty) return libelleMedecin(id);
     try {
       final Object? nom = (await widget.api.medecin(id))['nomComplet'];
       if (nom is String && nom.isNotEmpty) return nom;
     } on Exception {
-      // Fiche indisponible : l'identifiant est affiche a la place.
+      // Fiche indisponible : libelle de repli ci-dessous.
     }
-    return 'Medecin n° $id';
+    return libelleMedecin(id);
   }
 
   Future<void> _copier(String code) async {

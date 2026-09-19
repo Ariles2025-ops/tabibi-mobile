@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/identifiants.dart';
 import '../utils/libelles.dart';
 import '../utils/ordonnances.dart';
 import '../widgets/vue_connexion.dart';
@@ -67,9 +68,10 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
     }
   }
 
+  /// Ouvre le detail de l'ordonnance (identifiant UUID en texte) ; rien sans identifiant.
   Future<void> _ouvrirDetail(Map<String, dynamic> ordonnance) async {
-    final Object? id = ordonnance['id'];
-    if (id is! int) return;
+    final id = identifiant(ordonnance['id']);
+    if (id.isEmpty) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => DetailOrdonnancePage(ordonnanceId: id, api: widget.api, auth: _auth),

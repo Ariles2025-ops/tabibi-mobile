@@ -4,14 +4,15 @@ import '../models/conversation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/identifiants.dart';
 import '../utils/messagerie.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 
-/// Conversations du patient connecte avec ses praticiens : nom du praticien (ou son
-/// identifiant si sa fiche est indisponible), date du dernier message et pastille
-/// « n non lus » ; un toucher ouvre le fil de messages.
+/// Conversations du patient connecte avec ses praticiens : nom du praticien (ou « Médecin »
+/// et son identifiant abrege si sa fiche est indisponible), date du dernier message et
+/// pastille « n non lus » ; un toucher ouvre le fil de messages.
 class MesConversationsPage extends StatefulWidget {
   const MesConversationsPage({super.key, this.api = const ApiService(), this.auth});
 
@@ -78,23 +79,22 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
 
   Future<void> _rafraichir() => _charger(discret: true);
 
-  /// Noms des praticiens via la fiche publique de l'annuaire (identifiants numeriques) ;
-  /// un echec n'empeche pas l'affichage, l'identifiant est alors montre a la place.
+  /// Noms des praticiens via la fiche publique de l'annuaire (`GET /api/medecins/{id}`,
+  /// identifiant UUID en texte, toujours tente) ; un echec n'empeche pas l'affichage,
+  /// « Médecin » et l'identifiant abrege sont alors montres a la place.
   Future<void> _chargerNomsMedecins(List<Conversation> conversations) async {
     for (final medecinId in conversations.map((c) => c.medecinId).toSet()) {
-      if (_nomsMedecins.containsKey(medecinId)) continue;
-      final id = int.tryParse(medecinId);
-      if (id == null) continue;
+      if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await widget.api.medecin(id))['nomComplet'];
+        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
-        // Fiche indisponible : l'identifiant sera affiche a la place.
+        // Fiche indisponible : libelle de repli ([libelleMedecin]).
       }
     }
   }
 
-  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? 'Médecin n° ${c.medecinId}';
+  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? libelleMedecin(c.medecinId);
 
   /// Ouvre le fil ; au retour, les non lus ont pu changer (la lecture les marque lus).
   Future<void> _ouvrir(Conversation c) async {
