@@ -320,6 +320,32 @@ class ApiService {
     return _liste(res, chemin);
   }
 
+  /// Inscrit le patient connecte sur la liste d'attente d'un praticien (201) :
+  /// {id, patientId, medecinId, inscritLe (ISO 8601)} ; 409 s'il y est deja inscrit.
+  Future<Map<String, dynamic>> inscrireListeAttente(String medecinId, String token) async {
+    final chemin = '/api/medecins/${Uri.encodeComponent(medecinId)}/liste-attente';
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
+    return _objet(res, chemin);
+  }
+
+  /// Inscriptions du patient connecte en liste d'attente, les plus anciennes d'abord ; memes
+  /// champs que [inscrireListeAttente].
+  Future<List<Map<String, dynamic>>> mesInscriptionsAttente(String token) async {
+    final res = await http.get(
+      Uri.parse('$base/api/liste-attente/mes'),
+      headers: _bearer(token),
+    );
+    return _liste(res, '/api/liste-attente/mes');
+  }
+
+  /// Retire le patient connecte d'une liste d'attente (204 sans corps ; 404 si l'inscription
+  /// est inconnue, 403 si elle est a un autre patient).
+  Future<void> retirerListeAttente(String inscriptionId, String token) async {
+    final chemin = '/api/liste-attente/${Uri.encodeComponent(inscriptionId)}/retirer';
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
+    _verifier(res, chemin);
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(

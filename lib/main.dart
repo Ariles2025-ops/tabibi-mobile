@@ -4,6 +4,7 @@ import 'pages/dawini_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/mes_avis_page.dart';
 import 'pages/mes_conversations_page.dart';
+import 'pages/mes_listes_attente_page.dart';
 import 'pages/mes_notifications_page.dart';
 import 'pages/mes_ordonnances_page.dart';
 import 'pages/mes_rendez_vous_page.dart';
@@ -35,7 +36,7 @@ class TabibiApp extends StatelessWidget {
 /// aux ordonnances (les miennes, ou la verification publique d'un code), aux
 /// notifications (entree « Notifications (n) » avec le nombre de non lues), aux
 /// teleconsultations, a la messagerie avec mes medecins, a mes avis, a Dawini
-/// (demander un medicament aux pharmacies) et a mon profil.
+/// (demander un medicament aux pharmacies), a mes listes d'attente et a mon profil.
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -192,6 +193,15 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  Future<void> _ouvrirListesAttente() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MesListesAttentePage(api: widget.api, auth: _auth),
+      ),
+    );
+    await _apresRetour();
+  }
+
   Future<void> _ouvrirMonProfil() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -310,8 +320,8 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
   /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
-  /// « Teleconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) » et
-  /// « Mon profil ».
+  /// « Teleconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
+  /// « Liste d'attente » et « Mon profil ».
   Widget _entrees() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -343,6 +353,11 @@ class _RecherchePageState extends State<RecherchePage> {
             avatar: const Icon(Icons.local_pharmacy_outlined, size: 18),
             label: const Text('Dawini (pharmacies)'),
             onPressed: _ouvrirDawini,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.hourglass_top_outlined, size: 18),
+            label: const Text("Liste d'attente"),
+            onPressed: _ouvrirListesAttente,
           ),
           ActionChip(
             avatar: const Icon(Icons.badge_outlined, size: 18),

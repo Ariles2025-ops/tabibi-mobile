@@ -201,3 +201,31 @@
   `FakeApiServiceProfilInvalide` (400) ; formulaire prerempli puis enregistrement avec date effacee et
   langue anglaise, 404 -> formulaire vide, nom obligatoire, telephone invalide, date choisie dans le
   selecteur puis enregistrement, refus 400 affiche, sans jeton, entree d'accueil).
+
+## v0.12.0 — Liste d'attente par medecin
+- Fiche medecin (`lib/pages/fiche_medecin_page.dart`) : section « Liste d'attente » entre les creneaux et
+  les avis, texte « Vous serez notifié dès qu'un créneau se libère. » (`texteListeAttente`) et bouton
+  « M'inscrire sur la liste d'attente » (`POST /api/medecins/{id}/liste-attente`, 201, connexion a la
+  volee) ; succes -> « Inscription enregistrée. ... » et texte d'etat `texteInscrit` a la place du bouton ;
+  409 -> « Vous êtes déjà inscrit sur cette liste. » (`messageDejaInscrit`) et meme etat ; jeton expire
+  (401) -> deconnexion. Pas d'appel authentifie a l'ouverture de la fiche (ecran public) : l'etat
+  « inscrit » n'est connu qu'apres une inscription ou un 409.
+- Ecran « Mes listes d'attente » (`lib/pages/mes_listes_attente_page.dart`, `GET /api/liste-attente/mes`,
+  jeton PATIENT, invitation « Se connecter » sans jeton) : cartes praticien (nom via `GET /api/medecins/{id}`,
+  repli `libelleMedecin`) + « Inscription le ... », tri par date d'inscription (plus anciennes d'abord, ordre
+  de la file) ; « Me retirer » -> boite de confirmation (« Non » / « Oui, me retirer »),
+  `POST /api/liste-attente/{id}/retirer` (204 sans corps, `_verifier` seulement), « Retrait de la liste
+  d'attente effectué. » et carte retiree localement (404 : retiree aussi, message de l'API) ; erreurs
+  `VueErreur`, jeton expire (401) -> deconnexion ; etat vide explicatif.
+- Accueil : entree « Liste d'attente ».
+- Modele `InscriptionAttente` (`lib/models/inscription_attente.dart`, `fromJson` tolerant : id, patientId,
+  medecinId, inscritLe) ; utilitaires `lib/utils/liste_attente.dart` (`dateInscription`,
+  `trierParInscription`) ; `ApiService.inscrireListeAttente`, `mesInscriptionsAttente`,
+  `retirerListeAttente` (identifiants UUID en texte, chemins encodes).
+- Tests : `test/liste_attente_test.dart` (fromJson complet et valeurs nulles, date, tri) ;
+  `test/widget_test.dart` (`FakeApiService` etendu : `mesInscriptionsAttente`, `inscrireListeAttente`,
+  `retirerListeAttente`, fixture `inscriptionDemo` ; variantes `FakeApiServiceListeAttente`
+  (inscriptions et retraits conserves, inscription retiree absente de la liste) et
+  `FakeApiServiceDejaInscrit` (409) ; inscription depuis la fiche puis texte d'etat, refus 409, liste avec
+  praticien et date puis refus dans la confirmation et retrait, repli « Médecin 00000000 »
+  (`FakeApiServiceSansFiche`), sans jeton, entree d'accueil ; `surfaceHaute` sur la fiche sans avis).

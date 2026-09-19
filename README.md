@@ -285,3 +285,25 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   `test/widget_test.dart` (formulaire prerempli puis enregistrement avec date effacee et langue
   changee, 404 -> formulaire vide puis nom obligatoire, telephone invalide, date choisie et
   enregistrement, refus 400 affiche, sans jeton, entree d'accueil).
+
+## v0.12.0 — Liste d'attente par medecin (mobile)
+- Fiche medecin : section « Liste d'attente » sous les creneaux (surtout utile quand aucun creneau
+  n'est disponible) avec le rappel « Vous serez notifié dès qu'un créneau se libère. » et le bouton
+  « M'inscrire sur la liste d'attente » (`POST /api/medecins/{id}/liste-attente`, connexion Keycloak
+  a la volee si necessaire) ; « Inscription enregistrée. ... » puis texte d'etat « Vous êtes inscrit
+  sur la liste d'attente de ce médecin. » ; 409 -> « Vous êtes déjà inscrit sur cette liste. » (meme
+  etat) ; 401 -> deconnexion.
+- Ecran « Mes listes d'attente » (`mes_listes_attente_page.dart`, `GET /api/liste-attente/mes`,
+  jeton PATIENT ; bouton « Se connecter » sans jeton) : une carte par inscription avec le praticien
+  (nom via `GET /api/medecins/{id}`, repli « Médecin » et identifiant abrege) et « Inscription le ... »,
+  dans l'ordre de la file (plus anciennes d'abord) ; bouton « Me retirer » avec confirmation
+  (`POST /api/liste-attente/{id}/retirer`, 204 sans corps) puis « Retrait de la liste d'attente
+  effectué. » et retrait de la carte (une inscription deja disparue, 404, est retiree aussi) ;
+  etat vide explicatif.
+- Accueil : entree « Liste d'attente ».
+- Modele `lib/models/inscription_attente.dart` (`InscriptionAttente.fromJson` tolerant), utilitaires
+  `lib/utils/liste_attente.dart` (`dateInscription`, `trierParInscription`) ; `ApiService` :
+  `inscrireListeAttente`, `mesInscriptionsAttente`, `retirerListeAttente` (identifiants en texte).
+- Tests : `test/liste_attente_test.dart` (modele complet et tolerant, date, tri) ;
+  `test/widget_test.dart` (inscription depuis la fiche, refus 409, liste puis refus dans la
+  confirmation et retrait, repli « Médecin 00000000 », sans jeton, entree d'accueil).

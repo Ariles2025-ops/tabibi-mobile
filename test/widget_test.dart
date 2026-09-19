@@ -10,6 +10,7 @@ import 'package:tabibi_mobile/pages/detail_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
 import 'package:tabibi_mobile/pages/mes_avis_page.dart';
 import 'package:tabibi_mobile/pages/mes_conversations_page.dart';
+import 'package:tabibi_mobile/pages/mes_listes_attente_page.dart';
 import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
 import 'package:tabibi_mobile/pages/mes_rendez_vous_page.dart';
@@ -63,6 +64,9 @@ class FakeApiService extends ApiService {
   /// Demandes Dawini : ouverte avec deux reponses, cloturee sans reponse.
   static const String besoinOuvert = 'b8b8b8b8-0000-4000-8000-000000000001';
   static const String besoinCloture = 'b8b8b8b8-0000-4000-8000-000000000002';
+
+  /// Inscription du patient de test sur la liste d'attente du praticien de demonstration.
+  static const String inscriptionDemo = 'aa77aa77-0000-4000-8000-000000000001';
 
   @override
   Future<List<Map<String, dynamic>>> rechercherMedecins({
@@ -283,6 +287,25 @@ class FakeApiService extends ApiService {
           'repondueLe': '2026-11-20T11:00:00',
         },
       ];
+
+  /// Une inscription en liste d'attente, chez le praticien de demonstration.
+  @override
+  Future<List<Map<String, dynamic>>> mesInscriptionsAttente(String token) async =>
+      [_inscription(inscriptionDemo, medecinDemo)];
+
+  @override
+  Future<Map<String, dynamic>> inscrireListeAttente(String medecinId, String token) async =>
+      _inscription('aa77aa77-0000-4000-8000-000000000002', medecinId);
+
+  @override
+  Future<void> retirerListeAttente(String inscriptionId, String token) async {}
+
+  static Map<String, dynamic> _inscription(String id, String medecinId) => {
+        'id': id,
+        'patientId': sujetPatient,
+        'medecinId': medecinId,
+        'inscritLe': '2026-11-20T09:00:00',
+      };
 
   /// Profil du patient de test, deja renseigne.
   @override
@@ -570,6 +593,41 @@ class FakeApiServiceSansAvis extends FakeApiService {
   @override
   Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async =>
       {'moyenne': null, 'nombre': 0, 'avis': []};
+}
+
+/// Variante qui conserve les inscriptions en liste d'attente demandees et les retraits ;
+/// une inscription retiree disparait de « mes inscriptions ».
+class FakeApiServiceListeAttente extends FakeApiService {
+  FakeApiServiceListeAttente();
+
+  final List<String> inscriptions = [];
+  final List<String> retraits = [];
+
+  @override
+  Future<List<Map<String, dynamic>>> mesInscriptionsAttente(String token) async =>
+      (await super.mesInscriptionsAttente(token))
+          .where((i) => !retraits.contains(i['id']))
+          .toList();
+
+  @override
+  Future<Map<String, dynamic>> inscrireListeAttente(String medecinId, String token) async {
+    inscriptions.add(medecinId);
+    return super.inscrireListeAttente(medecinId, token);
+  }
+
+  @override
+  Future<void> retirerListeAttente(String inscriptionId, String token) async {
+    retraits.add(inscriptionId);
+  }
+}
+
+/// Variante ou le patient est deja inscrit sur la liste d'attente (409 a l'inscription).
+class FakeApiServiceDejaInscrit extends FakeApiService {
+  const FakeApiServiceDejaInscrit();
+
+  @override
+  Future<Map<String, dynamic>> inscrireListeAttente(String medecinId, String token) async =>
+      throw const ApiException(409, "Vous etes deja inscrit sur la liste d'attente de ce medecin.");
 }
 
 /// Variante qui conserve les profils enregistres (corps envoyes a PUT /api/moi/profil).
@@ -1036,6 +1094,7 @@ void main() {
   });
 
   testWidgets('la fiche medecin sans avis publie le signale', (tester) async {
+    surfaceHaute(tester);
     await tester.pumpWidget(const MaterialApp(
       home: FicheMedecinPage(medecinId: FakeApiService.medecinDemo, api: FakeApiServiceSansAvis()),
     ));
@@ -1281,6 +1340,116 @@ void main() {
     expect(find.text(messageDemandeDejaCloturee), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
     expect(find.text('Wilaya 16 · Clôturée'), findsOneWidget);
+  });
+
+  testWidgets("l'accueil propose l'entree Liste d'attente", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text("Liste d'attente"), findsOneWidget);
+  });
+
+  testWidgets("la fiche medecin inscrit le patient sur la liste d'attente du praticien",
+      (tester) async {
+    surfaceHaute(tester);
+    final api = FakeApiServiceListeAttente();
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+        medecinId: FakeApiService.medecinDemo,
+        api: api,
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Liste d'attente"), findsOneWidget);
+    expect(find.text(texteListeAttente), findsOneWidget);
+    expect(find.text("M'inscrire sur la liste d'attente"), findsOneWidget);
+    expect(find.text(texteInscrit), findsNothing);
+
+    await tester.tap(find.text("M'inscrire sur la liste d'attente"));
+    await tester.pumpAndSettle();
+    expect(api.inscriptions, [FakeApiService.medecinDemo]);
+    expect(find.text('Inscription enregistrée. $texteListeAttente'), findsOneWidget);
+    expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
+    expect(find.text(texteInscrit), findsOneWidget);
+    // Les creneaux restent proposes.
+    expect(find.text('Reserver'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin explique le conflit (409) si le patient est deja inscrit',
+      (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+        medecinId: FakeApiService.medecinDemo,
+        api: const FakeApiServiceDejaInscrit(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text("M'inscrire sur la liste d'attente"));
+    await tester.pumpAndSettle();
+    expect(find.text(messageDejaInscrit), findsOneWidget);
+    expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
+    expect(find.text(texteInscrit), findsOneWidget);
+  });
+
+  testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesListesAttentePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Me retirer'), findsNothing);
+  });
+
+  testWidgets("mes listes d'attente liste le praticien et la date d'inscription, puis permet "
+      'de me retirer avec confirmation', (tester) async {
+    final api = FakeApiServiceListeAttente();
+    await tester.pumpWidget(MaterialApp(
+      home: MesListesAttentePage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Mes listes d'attente"), findsOneWidget);
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+    expect(find.text('Inscription le ven. 20 nov. 09:00'), findsOneWidget);
+    expect(find.text('Me retirer'), findsOneWidget);
+
+    // Refus dans la boite de confirmation : rien n'est envoye.
+    await tester.tap(find.text('Me retirer'));
+    await tester.pumpAndSettle();
+    expect(find.text("Vous retirer de cette liste d'attente ?"), findsOneWidget);
+    await tester.tap(find.text('Non'));
+    await tester.pumpAndSettle();
+    expect(api.retraits, isEmpty);
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+
+    await tester.tap(find.text('Me retirer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oui, me retirer'));
+    await tester.pumpAndSettle();
+    expect(api.retraits, [FakeApiService.inscriptionDemo]);
+    expect(find.text(messageRetrait), findsOneWidget);
+    expect(find.text('Dr Amina Benali'), findsNothing);
+    expect(find.text('Me retirer'), findsNothing);
+    expect(find.textContaining("Aucune inscription sur une liste d'attente."), findsOneWidget);
+  });
+
+  testWidgets("mes listes d'attente replient sur « Médecin » et l'identifiant abrege si la "
+      'fiche du praticien est indisponible', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesListesAttentePage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Médecin 00000000'), findsOneWidget);
+    expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
+    expect(find.text('Me retirer'), findsOneWidget);
   });
 
   testWidgets("l'accueil propose l'entree Mon profil", (tester) async {

@@ -19,8 +19,17 @@ const String messageConversationRefusee =
 /// Nombre de derniers avis affiches sur la fiche.
 const int nombreAvisAffiches = 5;
 
+/// Ce que promet la liste d'attente : une notification des qu'un creneau se libere.
+const String texteListeAttente = "Vous serez notifié dès qu'un créneau se libère.";
+
+/// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
+const String messageDejaInscrit = 'Vous êtes déjà inscrit sur cette liste.';
+
+/// Etat affiche a la place du bouton une fois le patient inscrit.
+const String texteInscrit = "Vous êtes inscrit sur la liste d'attente de ce médecin.";
+
 /// Fiche d'un praticien : informations, moyenne des avis, ouverture d'une conversation,
-/// creneaux reservables et derniers avis anonymes.
+/// creneaux reservables, inscription sur la liste d'attente et derniers avis anonymes.
 class FicheMedecinPage extends StatefulWidget {
   const FicheMedecinPage({
     super.key,
@@ -55,6 +64,12 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Vrai pendant l'ouverture de la conversation (bouton desactive).
   bool _conversationEnCours = false;
+
+  /// Vrai une fois le patient inscrit sur la liste d'attente (201, ou 409 deja inscrit).
+  bool _inscrit = false;
+
+  /// Vrai pendant l'inscription sur la liste d'attente (bouton desactive).
+  bool _inscriptionEnCours = false;
 
   @override
   void initState() {
@@ -187,6 +202,48 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     if (mounted) setState(() {}); // la session a pu expirer sur le fil
   }
 
+  /// Inscrit le patient sur la liste d'attente du praticien
+  /// (POST /api/medecins/{id}/liste-attente), connexion Keycloak a la volee si necessaire ;
+  /// 409 (deja inscrit) -> [messageDejaInscrit], l'etat passe a inscrit dans les deux cas.
+  Future<void> _inscrire() async {
+    if (!_auth.estConnecte) {
+      final ok = await _auth.seConnecter();
+      if (!mounted) return;
+      if (!ok) {
+        _message("Connexion nécessaire pour s'inscrire sur la liste d'attente");
+        return;
+      }
+    }
+    final token = _auth.accessToken;
+    if (token == null) return;
+    setState(() => _inscriptionEnCours = true);
+    var inscrit = false;
+    try {
+      await widget.api.inscrireListeAttente(widget.medecinId, token);
+      inscrit = true;
+      _message('Inscription enregistrée. $texteListeAttente');
+    } on ApiException catch (e) {
+      if (e.conflit) {
+        inscrit = true;
+        _message(messageDejaInscrit);
+      } else if (e.nonAutorise) {
+        _auth.seDeconnecter();
+        _message('Session expirée : reconnectez-vous puis réessayez');
+      } else {
+        _message(e.message);
+      }
+    } on Exception catch (e) {
+      _message(messageErreur(e));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _inscriptionEnCours = false; // rebatit aussi si la session a expire
+          if (inscrit) _inscrit = true;
+        });
+      }
+    }
+  }
+
   void _message(String texte) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
@@ -223,6 +280,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         const SizedBox(height: 8),
         if (_creneaux.isEmpty) const Text('Aucun creneau disponible pour le moment.'),
         for (final c in _creneaux) _creneauTile(c),
+        const SizedBox(height: 24),
+        _listeAttente(context),
         const SizedBox(height: 24),
         Text('Avis des patients', style: texte.titleMedium),
         const SizedBox(height: 8),
@@ -280,6 +339,39 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Liste d'attente, surtout utile quand aucun creneau n'est disponible : rappel de ce
+  /// qu'elle promet, puis bouton « M'inscrire sur la liste d'attente » ou, une fois inscrit,
+  /// texte d'etat ([texteInscrit]).
+  Widget _listeAttente(BuildContext context) {
+    final texte = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Liste d'attente", style: texte.titleMedium),
+        const SizedBox(height: 4),
+        Text(texteListeAttente, style: texte.bodySmall),
+        const SizedBox(height: 8),
+        if (_inscrit)
+          const Text(texteInscrit)
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _inscriptionEnCours ? null : _inscrire,
+              icon: _inscriptionEnCours
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.hourglass_top_outlined),
+              label: const Text("M'inscrire sur la liste d'attente"),
+            ),
+          ),
+      ],
     );
   }
 
