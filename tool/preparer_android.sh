@@ -70,5 +70,46 @@ if ! grep -q 'android:mimeType="application/pdf"' "$MANIFEST"; then
   perl -0pi -e 's#<queries>#<queries>\n'"$INTENT_PDF"'#' "$MANIFEST"
 fi
 
+# --- Force compileSdk 36 sur TOUS les sous-projets (plugins) ---
+# flutter_appauth fixe compileSdk 31 dans son propre build.gradle et n'herite pas du module app :
+# CheckAarMetadata echoue (ses dependances androidx exigent 34+). On force 36 sur chaque plugin
+# depuis le build.gradle racine, en afterEvaluate (par reflexion : aucun import AGP, donc pas de
+# risque de compilation KTS). Idempotent (marqueur tabibi-compilesdk-override).
+ROOT_KTS="android/build.gradle.kts"
+ROOT_GROOVY="android/build.gradle"
+if [ -f "$ROOT_KTS" ] && ! grep -q "tabibi-compilesdk-override" "$ROOT_KTS"; then
+  cat >> "$ROOT_KTS" <<'KTS'
+
+// tabibi-compilesdk-override : force compileSdk 36 sur tous les plugins (flutter_appauth fixe 31).
+subprojects {
+    afterEvaluate {
+        val androidExt = extensions.findByName("android")
+        if (androidExt != null) {
+            try {
+                androidExt.javaClass
+                    .getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
+                    .invoke(androidExt, 36)
+            } catch (e: Exception) {
+            }
+        }
+    }
+}
+KTS
+elif [ -f "$ROOT_GROOVY" ] && ! grep -q "tabibi-compilesdk-override" "$ROOT_GROOVY"; then
+  cat >> "$ROOT_GROOVY" <<'GROOVY'
+
+// tabibi-compilesdk-override : force compileSdk 36 sur tous les plugins (flutter_appauth fixe 31).
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileSdkVersion 36
+            }
+        }
+    }
+}
+GROOVY
+fi
+
 echo "Projet Android pret : $GRADLE (applicationId $ID_APPLICATION, appAuthRedirectScheme)"
 echo "et $MANIFEST (requetes https et PDF)."
