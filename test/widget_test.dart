@@ -3,11 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/models/conversation.dart';
 import 'package:tabibi_mobile/pages/conversation_page.dart';
+import 'package:tabibi_mobile/pages/deposer_avis_page.dart';
 import 'package:tabibi_mobile/pages/detail_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
+import 'package:tabibi_mobile/pages/mes_avis_page.dart';
 import 'package:tabibi_mobile/pages/mes_conversations_page.dart';
 import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
+import 'package:tabibi_mobile/pages/mes_rendez_vous_page.dart';
 import 'package:tabibi_mobile/pages/mes_teleconsultations_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
@@ -133,6 +136,68 @@ class FakeApiService extends ApiService {
   ) async =>
       _messageJson('m-3', sujetPatient, contenu, '2026-12-01T09:10:00');
 
+  /// Trois rendez-vous : 3 honore sans avis, 4 confirme (annulable), 5 honore deja evalue.
+  @override
+  Future<List<Map<String, dynamic>>> mesRendezVous(String token) async => [
+        _rendezVous(3, 'HONORE', '2026-09-01T09:00:00'),
+        _rendezVous(4, 'CONFIRME', '2026-12-03T09:00:00'),
+        _rendezVous(5, 'HONORE', '2026-08-10T14:30:00'),
+      ];
+
+  /// Un seul avis depose, sur le rendez-vous 5.
+  @override
+  Future<List<Map<String, dynamic>>> mesAvis(String token) async => [_avis('avis-5', 5)];
+
+  @override
+  Future<Map<String, dynamic>> deposerAvis(
+    int rendezVousId,
+    int note,
+    String? commentaire,
+    String token,
+  ) async =>
+      _avis('avis-$rendezVousId', rendezVousId, note: note, commentaire: commentaire);
+
+  /// Synthese publique du praticien : 12 avis, moyenne 4,5, deux derniers avis.
+  @override
+  Future<Map<String, dynamic>> avisDuMedecin(int medecinId) async => {
+        'moyenne': 4.5,
+        'nombre': 12,
+        'avis': [
+          {
+            'id': 'avis-a',
+            'note': 5,
+            'commentaire': "Très bon médecin, à l'écoute.",
+            'deposeLe': '2026-11-20T10:15:00',
+          },
+          {'id': 'avis-b', 'note': 4, 'commentaire': null, 'deposeLe': '2026-11-05T16:30:00'},
+        ],
+      };
+
+  static Map<String, dynamic> _rendezVous(int id, String statut, String debut) => {
+        'id': id,
+        'patientId': sujetPatient,
+        'medecinId': 1,
+        'creneauId': null,
+        'debut': debut,
+        'statut': statut,
+      };
+
+  static Map<String, dynamic> _avis(
+    String id,
+    int rendezVousId, {
+    int note = 4,
+    String? commentaire = 'Explications claires, merci.',
+  }) =>
+      {
+        'id': id,
+        'rendezVousId': rendezVousId,
+        'medecinId': 1,
+        'note': note,
+        'commentaire': commentaire,
+        'statut': 'PUBLIE',
+        'deposeLe': '2026-08-11T18:00:00',
+      };
+
   static Map<String, dynamic> _conversation(String id, {required int nonLus}) => {
         'id': id,
         'patientId': sujetPatient,
@@ -251,6 +316,52 @@ class FakeApiServiceSansRendezVous extends FakeApiService {
   @override
   Future<Map<String, dynamic>> ouvrirConversation(int medecinId, String token) async =>
       throw const ApiException(403, 'Aucun rendez-vous avec ce medecin');
+}
+
+/// Variante qui conserve les avis deposes : « Mes rendez-vous » les voit au rechargement.
+class FakeApiServiceAvis extends FakeApiService {
+  FakeApiServiceAvis();
+
+  final List<Map<String, dynamic>> deposes = [];
+
+  @override
+  Future<List<Map<String, dynamic>>> mesAvis(String token) async =>
+      [...await super.mesAvis(token), ...deposes];
+
+  @override
+  Future<Map<String, dynamic>> deposerAvis(
+    int rendezVousId,
+    int note,
+    String? commentaire,
+    String token,
+  ) async {
+    final depose = await super.deposerAvis(rendezVousId, note, commentaire, token);
+    deposes.add(depose);
+    return depose;
+  }
+}
+
+/// Variante ou l'avis existe deja cote serveur (409 au depot).
+class FakeApiServiceAvisDejaDonne extends FakeApiService {
+  const FakeApiServiceAvisDejaDonne();
+
+  @override
+  Future<Map<String, dynamic>> deposerAvis(
+    int rendezVousId,
+    int note,
+    String? commentaire,
+    String token,
+  ) async =>
+      throw const ApiException(409, 'Un avis existe deja pour ce rendez-vous');
+}
+
+/// Variante d'un praticien sans aucun avis publie.
+class FakeApiServiceSansAvis extends FakeApiService {
+  const FakeApiServiceSansAvis();
+
+  @override
+  Future<Map<String, dynamic>> avisDuMedecin(int medecinId) async =>
+      {'moyenne': null, 'nombre': 0, 'avis': []};
 }
 
 /// Session de test deja munie d'un jeton (JWT factice au sujet [FakeApiService.sujetPatient],
@@ -611,5 +722,116 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(messageConversationRefusee), findsOneWidget);
     expect(find.text('Envoyer'), findsNothing);
+  });
+
+  testWidgets("l'accueil propose l'entree Mes avis", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Mes avis'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin affiche la moyenne des avis et les derniers avis anonymes',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: FicheMedecinPage(medecinId: 1, api: FakeApiService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('4,5 / 5 (12 avis)'), findsOneWidget);
+    expect(find.text('Avis des patients'), findsOneWidget);
+    expect(find.text('5 / 5'), findsOneWidget);
+    expect(find.text("Très bon médecin, à l'écoute."), findsOneWidget);
+    expect(find.text('ven. 20 nov. 10:15'), findsOneWidget);
+    expect(find.text('4 / 5'), findsOneWidget);
+    expect(find.text('jeu. 5 nov. 16:30'), findsOneWidget);
+    // Les creneaux restent proposes au-dessus des avis.
+    expect(find.text('Reserver'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin sans avis publie le signale', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: FicheMedecinPage(medecinId: 1, api: FakeApiServiceSansAvis()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aucun avis'), findsOneWidget);
+    expect(find.text('Aucun avis pour le moment.'), findsOneWidget);
+    expect(find.textContaining('/ 5'), findsNothing);
+  });
+
+  testWidgets('mes rendez-vous propose de donner mon avis sur un rendez-vous honore, '
+      "exige une note, puis affiche l'avis comme donne", (tester) async {
+    final api = FakeApiServiceAvis();
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Honore sans avis -> bouton ; honore deja evalue -> « Avis donné » ; confirme -> Annuler.
+    expect(find.text('Donner mon avis'), findsOneWidget);
+    expect(find.text('Avis donné'), findsOneWidget);
+    expect(find.text('Annuler'), findsOneWidget);
+
+    await tester.tap(find.text('Donner mon avis'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mon avis'), findsOneWidget);
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+    expect(find.text('mar. 1 sept. 09:00'), findsOneWidget);
+    // Note obligatoire : le bouton reste inactif tant qu'aucune note n'est choisie.
+    FilledButton envoyer() =>
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Envoyer mon avis'));
+    expect(envoyer().onPressed, isNull);
+    await tester.enterText(find.byType(TextField), 'Explications claires, merci.');
+    await tester.pump();
+    expect(envoyer().onPressed, isNull);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '4'));
+    await tester.pump();
+    expect(envoyer().onPressed, isNotNull);
+    await tester.tap(find.text('Envoyer mon avis'));
+    await tester.pumpAndSettle();
+
+    // Avis envoye (note et commentaire), retour a la liste rechargee.
+    expect(api.deposes.single['rendezVousId'], 3);
+    expect(api.deposes.single['note'], 4);
+    expect(api.deposes.single['commentaire'], 'Explications claires, merci.');
+    expect(find.text('Merci pour votre avis.'), findsOneWidget);
+    expect(find.text('Mes rendez-vous'), findsOneWidget);
+    expect(find.text('Donner mon avis'), findsNothing);
+    expect(find.text('Avis donné'), findsNWidgets(2));
+  });
+
+  testWidgets("deposer un avis deja donne explique le conflit (409) sans fermer l'ecran",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: DeposerAvisPage(
+        rendezVousId: 5,
+        api: const FakeApiServiceAvisDejaDonne(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '5'));
+    await tester.pump();
+    await tester.tap(find.text('Envoyer mon avis'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageAvisDejaDonne), findsOneWidget);
+    expect(find.text('Mon avis'), findsOneWidget);
+  });
+
+  testWidgets('mes avis liste praticien, note, statut, commentaire et date', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesAvisPage(api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mes avis'), findsOneWidget);
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+    expect(find.text('4 / 5 · Publié'), findsOneWidget);
+    expect(find.text('Explications claires, merci.'), findsOneWidget);
+    expect(find.text('Déposé le mar. 11 aout 18:00'), findsOneWidget);
   });
 }

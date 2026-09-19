@@ -82,3 +82,25 @@
   libelles, tri, sujet du jeton) ; `test/widget_test.dart` (liste puis ouverture du fil, bulles alignees,
   « Envoyer » inactif a vide puis envoi et rafraichissement, fiche : ouverture et refus 403, entree d'accueil) ;
   `test/outils.dart` (jeton JWT factice porteur du sujet).
+
+## v0.8.0 — Avis
+- « Mes rendez-vous » : bouton « Donner mon avis » sur les rendez-vous HONORE (desormais non annulables), ou
+  « Avis donné » si un avis existe deja (`GET /api/avis/mes`, echec tolere) ; rechargement apres le depot.
+- Ecran « Mon avis » (`lib/pages/deposer_avis_page.dart`) : praticien et date en rappel, note obligatoire de 1
+  a 5 (cinq `ChoiceChip`), commentaire facultatif (500 caracteres), « Envoyer mon avis » inactif sans note ;
+  `POST /api/avis` puis « Merci pour votre avis. » et fermeture (`pop(true)`) ; 409 -> « Vous avez déjà donné
+  votre avis pour ce rendez-vous. », autres erreurs affichees, jeton expire (401) -> deconnexion.
+- Ecran « Mes avis » (`GET /api/avis/mes`) : praticien (nom via l'annuaire, repli « Médecin n° ... »),
+  « 4 / 5 · Publié », commentaire, « Déposé le ... » ; entree « Mes avis » sur l'accueil.
+- Fiche medecin : moyenne « 4,5 / 5 (12 avis) » (virgule francaise, « Aucun avis ») et section « Avis des
+  patients » (derniers avis anonymes : note, commentaire, date, cinq au plus) via `GET /api/medecins/{id}/avis`
+  (public) ; « Avis indisponibles pour le moment. » si l'appel echoue.
+- Modeles `Avis` (`lib/models/avis.dart`, `fromJson` tolerant, `aCommentaire`) et `SyntheseAvis`
+  (`lib/models/synthese_avis.dart`, `fromJson` tolerant, `aDesAvis`) ; utilitaires `lib/utils/avis.dart`
+  (`noteValide`, `formaterDecimal`, `formaterMoyenne`, `formaterNote`, `libelleStatutAvis`, `dateAvis`,
+  `estHonore`) ; `ApiService.deposerAvis` (corps JSON, commentaire omis s'il est vide), `mesAvis`,
+  `avisDuMedecin`.
+- Tests : `test/avis_test.dart` (fromJson complets et valeurs nulles, synthese, moyenne avec virgule et
+  « Aucun avis », note, statuts, date, `noteValide`, `estHonore`) ; `test/widget_test.dart` (fiche avec
+  synthese et derniers avis, fiche sans avis, parcours « Donner mon avis » avec note obligatoire puis
+  « Avis donné », refus 409, « Mes avis », entree d'accueil).

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../models/avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/libelles.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import 'deposer_avis_page.dart';
 
-/// Rendez-vous du patient connecte, avec annulation.
+/// Rendez-vous du patient connecte, avec annulation ; « Donner mon avis » sur les
+/// rendez-vous honores (ou « Avis donné » si l'avis existe deja).
 class MesRendezVousPage extends StatefulWidget {
   const MesRendezVousPage({super.key, this.api = const ApiService(), this.auth});
 
@@ -27,6 +31,9 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
 
   /// Noms des praticiens deja resolus, par identifiant.
   final Map<int, String> _nomsMedecins = {};
+
+  /// Identifiants (texte) des rendez-vous pour lesquels un avis a deja ete depose.
+  Set<String> _rendezVousEvalues = {};
   bool _charge = false;
   String? _erreur;
 
@@ -56,8 +63,12 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     try {
       final rdvs = await widget.api.mesRendezVous(token);
       await _chargerNomsMedecins(rdvs);
+      final evalues = await _chargerRendezVousEvalues(token);
       if (!mounted) return;
-      setState(() => _rdvs = rdvs);
+      setState(() {
+        _rdvs = rdvs;
+        _rendezVousEvalues = evalues;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
@@ -80,6 +91,42 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       } on Exception {
         // Nom indisponible : l'identifiant sera affiche a la place.
       }
+    }
+  }
+
+  /// Rendez-vous deja evalues (GET /api/avis/mes) ; en cas d'echec, le bouton « Donner mon
+  /// avis » reste propose et un eventuel 409 sera explique au depot.
+  Future<Set<String>> _chargerRendezVousEvalues(String token) async {
+    try {
+      final avis = await widget.api.mesAvis(token);
+      return avis.map(Avis.fromJson).map((a) => a.rendezVousId).toSet();
+    } on Exception {
+      return _rendezVousEvalues;
+    }
+  }
+
+  bool _aDonneSonAvis(Map<String, dynamic> rdv) => _rendezVousEvalues.contains('${rdv['id']}');
+
+  /// Ouvre le formulaire d'avis ; au retour, la liste est rechargee si un avis a ete depose.
+  Future<void> _donnerAvis(Map<String, dynamic> rdv) async {
+    final Object? id = rdv['id'];
+    if (id is! int) return;
+    final depose = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => DeposerAvisPage(
+          rendezVousId: id,
+          nomMedecin: _nomMedecin(rdv),
+          dateRendezVous: _dateRdv(rdv),
+          api: widget.api,
+          auth: _auth,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (depose == true && _auth.estConnecte) {
+      await _charger();
+    } else {
+      setState(() {}); // la session a pu expirer sur le formulaire
     }
   }
 
@@ -138,7 +185,22 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   /// « CONFIRME » -> « Confirme », « EN_ATTENTE » -> « En attente ».
   String _libelleStatut(Map<String, dynamic> rdv) => libelleStatut(rdv['statut']);
 
-  bool _annulable(Map<String, dynamic> rdv) => !_statut(rdv).toUpperCase().startsWith('ANNUL');
+  /// Annulable tant qu'il n'est ni annule ni honore (un rendez-vous honore est passe).
+  bool _annulable(Map<String, dynamic> rdv) =>
+      !_statut(rdv).toUpperCase().startsWith('ANNUL') && !estHonore(rdv['statut']);
+
+  /// Action d'un rendez-vous : « Donner mon avis » (ou « Avis donné ») s'il est honore,
+  /// « Annuler » s'il est encore annulable, rien sinon.
+  Widget? _action(Map<String, dynamic> rdv) {
+    if (estHonore(rdv['statut'])) {
+      if (_aDonneSonAvis(rdv)) return const Text('Avis donné');
+      return TextButton(onPressed: () => _donnerAvis(rdv), child: const Text('Donner mon avis'));
+    }
+    if (_annulable(rdv)) {
+      return TextButton(onPressed: () => _annuler(rdv), child: const Text('Annuler'));
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,9 +235,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
           leading: const Icon(Icons.event),
           title: Text(_dateRdv(rdv)),
           subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
-          trailing: _annulable(rdv)
-              ? TextButton(onPressed: () => _annuler(rdv), child: const Text('Annuler'))
-              : null,
+          trailing: _action(rdv),
         );
       },
     );

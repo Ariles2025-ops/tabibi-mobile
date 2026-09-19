@@ -229,6 +229,40 @@ class ApiService {
     return _objet(res, chemin);
   }
 
+  /// Depose un avis sur un rendez-vous honore (201) : {id, rendezVousId, medecinId, note,
+  /// commentaire, statut (PUBLIE, SIGNALE, MASQUE), deposeLe (ISO 8601)} ; 400 si la note sort
+  /// de 1..5, 409 si le rendez-vous n'est pas honore ou si un avis existe deja.
+  Future<Map<String, dynamic>> deposerAvis(
+    int rendezVousId,
+    int note,
+    String? commentaire,
+    String token,
+  ) async {
+    final res = await http.post(
+      Uri.parse('$_base/api/avis'),
+      headers: _bearerJson(token),
+      body: jsonEncode({
+        'rendezVousId': rendezVousId,
+        'note': note,
+        if (commentaire != null) 'commentaire': commentaire,
+      }),
+    );
+    return _objet(res, '/api/avis');
+  }
+
+  /// Avis deposes par le patient connecte, memes champs que [deposerAvis].
+  Future<List<Map<String, dynamic>>> mesAvis(String token) async {
+    final res = await http.get(Uri.parse('$_base/api/avis/mes'), headers: _bearer(token));
+    return _liste(res, '/api/avis/mes');
+  }
+
+  /// Synthese publique (sans jeton) des avis d'un praticien :
+  /// {moyenne (decimal ou null), nombre, avis: [{id, note, commentaire, deposeLe}]}.
+  Future<Map<String, dynamic>> avisDuMedecin(int medecinId) async {
+    final res = await http.get(Uri.parse('$_base/api/medecins/$medecinId/avis'));
+    return _objet(res, '/api/medecins/$medecinId/avis');
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(

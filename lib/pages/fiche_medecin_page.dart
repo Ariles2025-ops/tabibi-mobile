@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../models/avis.dart';
 import '../models/conversation.dart';
+import '../models/synthese_avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
@@ -12,7 +15,11 @@ import 'conversation_page.dart';
 const String messageConversationRefusee =
     'Vous devez avoir un rendez-vous avec ce médecin pour lui écrire.';
 
-/// Fiche d'un praticien : informations, ouverture d'une conversation et creneaux reservables.
+/// Nombre de derniers avis affiches sur la fiche.
+const int nombreAvisAffiches = 5;
+
+/// Fiche d'un praticien : informations, moyenne des avis, ouverture d'une conversation,
+/// creneaux reservables et derniers avis anonymes.
 class FicheMedecinPage extends StatefulWidget {
   const FicheMedecinPage({
     super.key,
@@ -35,6 +42,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   late final AuthService _auth = widget.auth ?? session;
   Map<String, dynamic>? _medecin;
   List<Map<String, dynamic>> _creneaux = [];
+
+  /// Synthese publique des avis ; null tant qu'elle est indisponible.
+  SyntheseAvis? _avis;
   bool _charge = true;
   String? _erreur;
 
@@ -58,15 +68,27 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     try {
       final medecin = await widget.api.medecin(widget.medecinId);
       final creneaux = await widget.api.creneaux(widget.medecinId);
+      final avis = await _chargerAvis();
       if (!mounted) return;
       setState(() {
         _medecin = medecin;
         _creneaux = creneaux.where((c) => c['disponible'] != false).toList();
+        _avis = avis;
       });
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  /// Synthese publique des avis (GET /api/medecins/{id}/avis) ; un echec n'empeche pas
+  /// l'affichage de la fiche, la section indique alors que les avis sont indisponibles.
+  Future<SyntheseAvis?> _chargerAvis() async {
+    try {
+      return SyntheseAvis.fromJson(await widget.api.avisDuMedecin(widget.medecinId));
+    } on Exception {
+      return null;
     }
   }
 
@@ -184,6 +206,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         Text(medecin['nomComplet'] as String, style: texte.titleLarge),
         const SizedBox(height: 4),
         Text('${medecin['specialiteFr']} · ${medecin['ville']} (${medecin['wilayaFr']})'),
+        const SizedBox(height: 8),
+        _ligneMoyenne(context),
         const SizedBox(height: 16),
         _boutonConversation(),
         const SizedBox(height: 24),
@@ -191,7 +215,63 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         const SizedBox(height: 8),
         if (_creneaux.isEmpty) const Text('Aucun creneau disponible pour le moment.'),
         for (final c in _creneaux) _creneauTile(c),
+        const SizedBox(height: 24),
+        Text('Avis des patients', style: texte.titleMedium),
+        const SizedBox(height: 8),
+        ..._derniersAvis(context),
       ],
+    );
+  }
+
+  /// « 4,5 / 5 (12 avis) » (ou « Aucun avis »), precede d'une etoile ; masquee si la
+  /// synthese est indisponible.
+  Widget _ligneMoyenne(BuildContext context) {
+    final avis = _avis;
+    if (avis == null) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Icon(Icons.star, size: 18, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 4),
+        Text(formaterMoyenne(avis), style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    );
+  }
+
+  /// Derniers avis anonymes (note, commentaire, date), ou un texte d'etat.
+  List<Widget> _derniersAvis(BuildContext context) {
+    final avis = _avis;
+    if (avis == null) return const [Text('Avis indisponibles pour le moment.')];
+    if (!avis.aDesAvis || avis.avis.isEmpty) return const [Text('Aucun avis pour le moment.')];
+    return [for (final a in avis.avis.take(nombreAvisAffiches)) _carteAvis(context, a)];
+  }
+
+  /// Un avis anonyme : « 4 / 5 », commentaire s'il existe, date de depot.
+  Widget _carteAvis(BuildContext context, Avis a) {
+    final texte = Theme.of(context).textTheme;
+    final commentaire = a.commentaire;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.star_outline, size: 18),
+                const SizedBox(width: 4),
+                Text(formaterNote(a.note), style: texte.titleSmall),
+              ],
+            ),
+            if (commentaire != null) ...[
+              const SizedBox(height: 4),
+              Text(commentaire),
+            ],
+            const SizedBox(height: 4),
+            Text(dateAvis(a), style: texte.bodySmall),
+          ],
+        ),
+      ),
     );
   }
 

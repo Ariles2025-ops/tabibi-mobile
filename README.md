@@ -133,3 +133,28 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
   sujet du jeton) ; `test/widget_test.dart` (liste et ouverture du fil, alignement des bulles,
   bouton « Envoyer » inactif a vide puis envoi et rafraichissement, fiche medecin : ouverture et
   refus 403, entree d'accueil) ; `test/outils.dart` (jeton JWT factice).
+
+## v0.8.0 — Avis (mobile)
+- « Mes rendez-vous » : sur un rendez-vous HONORE, bouton « Donner mon avis » (un rendez-vous honore
+  n'est plus annulable) ou mention « Avis donné » si un avis existe deja (`GET /api/avis/mes`,
+  tolerant en cas d'echec) ; la liste est rechargee apres le depot.
+- Ecran « Mon avis » (`deposer_avis_page.dart`) : rappel du praticien et de la date, note obligatoire
+  de 1 a 5 (cinq boutons « 1 » a « 5 », sans emoji), commentaire facultatif (500 caracteres au plus),
+  bouton « Envoyer mon avis » inactif tant qu'aucune note n'est choisie ; `POST /api/avis` puis
+  « Merci pour votre avis. » et fermeture ; 409 -> « Vous avez déjà donné votre avis pour ce
+  rendez-vous. », 400 (note hors bornes) affiche tel quel, bouton « Se connecter » sans jeton.
+- Ecran « Mes avis » (`GET /api/avis/mes`) : praticien (nom via `GET /api/medecins/{id}`, repli
+  « Médecin n° ... »), « 4 / 5 · Publié » (statuts Publié, Signalé, Masqué), commentaire et
+  « Déposé le ... » ; entree « Mes avis » sur l'accueil.
+- Fiche medecin : moyenne « 4,5 / 5 (12 avis) » (format francais, virgule ; « Aucun avis » sans avis)
+  sous la specialite et section « Avis des patients » avec les derniers avis anonymes (note « 4 / 5 »,
+  commentaire, date) via `GET /api/medecins/{id}/avis` (public) ; « Avis indisponibles pour le
+  moment. » si l'appel echoue, sans bloquer la fiche.
+- Modeles `lib/models/avis.dart` (`Avis.fromJson`, `aCommentaire`) et `lib/models/synthese_avis.dart`
+  (`SyntheseAvis.fromJson`, `aDesAvis`), utilitaires `lib/utils/avis.dart` (`noteValide`,
+  `formaterDecimal`, `formaterMoyenne`, `formaterNote`, `libelleStatutAvis`, `dateAvis`, `estHonore`) ;
+  `ApiService` : `deposerAvis`, `mesAvis`, `avisDuMedecin`.
+- Tests : `test/avis_test.dart` (modeles, moyenne avec virgule et « Aucun avis », note, statuts,
+  date, eligibilite) ; `test/widget_test.dart` (fiche avec synthese et derniers avis, fiche sans
+  avis, parcours « Donner mon avis » -> note obligatoire -> envoi -> « Avis donné », refus 409,
+  « Mes avis », entree d'accueil).

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pages/fiche_medecin_page.dart';
+import 'pages/mes_avis_page.dart';
 import 'pages/mes_conversations_page.dart';
 import 'pages/mes_notifications_page.dart';
 import 'pages/mes_ordonnances_page.dart';
@@ -30,7 +31,7 @@ class TabibiApp extends StatelessWidget {
 /// Ecran d'accueil : recherche de praticiens, acces a la fiche, aux rendez-vous,
 /// aux ordonnances (les miennes, ou la verification publique d'un code), aux
 /// notifications (entree « Notifications (n) » avec le nombre de non lues), aux
-/// teleconsultations et a la messagerie avec mes medecins.
+/// teleconsultations, a la messagerie avec mes medecins et a mes avis.
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -168,6 +169,15 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  Future<void> _ouvrirMesAvis() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MesAvisPage(api: widget.api, auth: _auth),
+      ),
+    );
+    await _apresRetour();
+  }
+
   /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
   void _ouvrirVerification() {
     Navigator.of(context).push(
@@ -277,7 +287,7 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
   /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
-  /// « Teleconsultations » et « Messagerie ».
+  /// « Teleconsultations », « Messagerie » et « Mes avis ».
   Widget _entrees() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -299,6 +309,11 @@ class _RecherchePageState extends State<RecherchePage> {
             avatar: const Icon(Icons.chat_bubble_outline, size: 18),
             label: const Text('Messagerie'),
             onPressed: _ouvrirMessagerie,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.star_outline, size: 18),
+            label: const Text('Mes avis'),
+            onPressed: _ouvrirMesAvis,
           ),
         ],
       ),
