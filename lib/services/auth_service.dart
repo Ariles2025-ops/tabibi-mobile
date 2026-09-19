@@ -1,5 +1,7 @@
 import 'package:flutter_appauth/flutter_appauth.dart';
 
+import '../utils/jetons.dart';
+
 /// Authentification OIDC contre le realm Keycloak « tabibi ».
 ///
 /// Une seule instance est partagee par toute l'application (voir `session.dart`)
@@ -16,6 +18,10 @@ class AuthService {
 
   /// Vrai si un jeton d'acces est disponible.
   bool get estConnecte => accessToken != null;
+
+  /// Identifiant de l'utilisateur connecte (sujet du jeton, voir [sujetDuJeton]) ;
+  /// null hors connexion ou si le jeton ne porte pas de sujet lisible.
+  String? get sujet => sujetDuJeton(accessToken);
 
   /// Ouvre la connexion Keycloak ; false si l'utilisateur annule ou en cas d'echec.
   Future<bool> seConnecter() async {

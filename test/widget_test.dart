@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/main.dart';
+import 'package:tabibi_mobile/models/conversation.dart';
+import 'package:tabibi_mobile/pages/conversation_page.dart';
 import 'package:tabibi_mobile/pages/detail_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
+import 'package:tabibi_mobile/pages/mes_conversations_page.dart';
 import 'package:tabibi_mobile/pages/mes_notifications_page.dart';
 import 'package:tabibi_mobile/pages/mes_ordonnances_page.dart';
 import 'package:tabibi_mobile/pages/mes_teleconsultations_page.dart';
@@ -10,12 +13,17 @@ import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
 
+import 'outils.dart';
+
 /// API factice : aucune requete reseau, donnees fixes.
 class FakeApiService extends ApiService {
   const FakeApiService();
 
   /// Code de verification de l'ordonnance factice (seul code reconnu par [verifierOrdonnance]).
   static const String codeValide = 'ABC123';
+
+  /// Identifiant (sujet du jeton) du patient de test : ses messages sont alignes a droite.
+  static const String sujetPatient = 'patient-7';
 
   @override
   Future<List<Map<String, dynamic>>> rechercherMedecins({
@@ -101,6 +109,54 @@ class FakeApiService extends ApiService {
   Future<Map<String, dynamic>> consentir(String teleconsultationId, String token) async =>
       _teleconsultation(teleconsultationId, 'PLANIFIEE', consentie: true);
 
+  /// Une conversation avec le praticien 1, deux messages non lus.
+  @override
+  Future<List<Map<String, dynamic>>> mesConversations(String token) async =>
+      [_conversation('conv-1', nonLus: 2)];
+
+  @override
+  Future<Map<String, dynamic>> ouvrirConversation(int medecinId, String token) async =>
+      _conversation('conv-1', nonLus: 0);
+
+  /// Deux messages : le premier du praticien, le second du patient de test.
+  @override
+  Future<List<Map<String, dynamic>>> messages(String conversationId, String token) async => [
+        _messageJson('m-1', 'medecin-1', 'Bonjour, comment allez-vous ?', '2026-12-01T09:00:00'),
+        _messageJson('m-2', sujetPatient, 'Bonjour docteur, mieux merci.', '2026-12-01T09:05:00'),
+      ];
+
+  @override
+  Future<Map<String, dynamic>> envoyerMessage(
+    String conversationId,
+    String contenu,
+    String token,
+  ) async =>
+      _messageJson('m-3', sujetPatient, contenu, '2026-12-01T09:10:00');
+
+  static Map<String, dynamic> _conversation(String id, {required int nonLus}) => {
+        'id': id,
+        'patientId': sujetPatient,
+        'medecinId': 1,
+        'creeLe': '2026-11-20T09:00:00',
+        'dernierMessageLe': '2026-12-01T09:05:00',
+        'nonLus': nonLus,
+      };
+
+  static Map<String, dynamic> _messageJson(
+    String id,
+    String auteurId,
+    String contenu,
+    String envoyeLe,
+  ) =>
+      {
+        'id': id,
+        'conversationId': 'conv-1',
+        'auteurId': auteurId,
+        'contenu': contenu,
+        'envoyeLe': envoyeLe,
+        'luLe': null,
+      };
+
   static Map<String, dynamic> _teleconsultation(
     String id,
     String statut, {
@@ -166,8 +222,41 @@ class FakeApiServiceSansNotification extends FakeApiService {
   Future<int> nombreNonLues(String token) async => 0;
 }
 
-/// Session de test deja munie d'un jeton (aucun appel a Keycloak).
-AuthService sessionConnectee() => AuthService()..accessToken = 'jeton-test';
+/// Variante qui conserve les messages envoyes : le fil les montre apres rafraichissement.
+class FakeApiServiceMessagerie extends FakeApiService {
+  FakeApiServiceMessagerie();
+
+  final List<Map<String, dynamic>> envoyes = [];
+
+  @override
+  Future<List<Map<String, dynamic>>> messages(String conversationId, String token) async =>
+      [...await super.messages(conversationId, token), ...envoyes];
+
+  @override
+  Future<Map<String, dynamic>> envoyerMessage(
+    String conversationId,
+    String contenu,
+    String token,
+  ) async {
+    final envoye = await super.envoyerMessage(conversationId, contenu, token);
+    envoyes.add(envoye);
+    return envoye;
+  }
+}
+
+/// Variante d'un patient sans rendez-vous avec le praticien : la messagerie est refusee (403).
+class FakeApiServiceSansRendezVous extends FakeApiService {
+  const FakeApiServiceSansRendezVous();
+
+  @override
+  Future<Map<String, dynamic>> ouvrirConversation(int medecinId, String token) async =>
+      throw const ApiException(403, 'Aucun rendez-vous avec ce medecin');
+}
+
+/// Session de test deja munie d'un jeton (JWT factice au sujet [FakeApiService.sujetPatient],
+/// aucun appel a Keycloak).
+AuthService sessionConnectee() =>
+    AuthService()..accessToken = jetonAvecSujet(FakeApiService.sujetPatient);
 
 void main() {
   testWidgets('affiche le champ de recherche et les acces aux ordonnances au demarrage',
@@ -402,5 +491,125 @@ void main() {
     await tester.tap(find.text('Rejoindre la teleconsultation'));
     await tester.pumpAndSettle();
     expect(ouvert, Uri.parse(FakeApiService.lienSalle));
+  });
+
+  testWidgets("l'accueil propose l'entree Messagerie", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Messagerie'), findsOneWidget);
+  });
+
+  testWidgets('mes conversations sans jeton propose de se connecter', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesConversationsPage(api: const FakeApiService(), auth: AuthService()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.text('Dr Amina Benali'), findsNothing);
+  });
+
+  testWidgets('mes conversations liste le praticien, la date du dernier message et les non lus, '
+      'puis ouvre le fil', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesConversationsPage(api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Messagerie'), findsOneWidget);
+    // Nom resolu via la fiche publique, en gras tant qu'il reste des non lus.
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('Dr Amina Benali')).style?.fontWeight,
+      FontWeight.bold,
+    );
+    expect(find.text('Dernier message le mar. 1 dec. 09:05'), findsOneWidget);
+    expect(find.text('2 non lus'), findsOneWidget);
+
+    await tester.tap(find.text('Dr Amina Benali'));
+    await tester.pumpAndSettle();
+    // Le fil porte le nom du praticien en titre et ses messages.
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+    expect(find.text('Bonjour, comment allez-vous ?'), findsOneWidget);
+    expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
+  });
+
+  testWidgets('le fil aligne mes messages a droite et ceux du medecin a gauche, '
+      "n'envoie pas un message vide et se rafraichit apres un envoi", (tester) async {
+    final api = FakeApiServiceMessagerie();
+    await tester.pumpWidget(MaterialApp(
+      home: ConversationPage(
+        conversation: Conversation.fromJson({
+          'id': 'conv-1',
+          'patientId': FakeApiService.sujetPatient,
+          'medecinId': 1,
+        }),
+        api: api,
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Sans nom de praticien, le titre est generique.
+    expect(find.text('Conversation'), findsOneWidget);
+    expect(find.text('mar. 1 dec. 09:00'), findsOneWidget);
+    expect(find.text('mar. 1 dec. 09:05'), findsOneWidget);
+    Alignment alignementDe(String contenu) => tester
+        .widget<Align>(find.ancestor(of: find.text(contenu), matching: find.byType(Align)).first)
+        .alignment as Alignment;
+    expect(alignementDe('Bonjour, comment allez-vous ?'), Alignment.centerLeft);
+    expect(alignementDe('Bonjour docteur, mieux merci.'), Alignment.centerRight);
+
+    // Bouton « Envoyer » desactive tant que la saisie est vide (ou blanche).
+    FilledButton envoyer() =>
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Envoyer'));
+    expect(envoyer().onPressed, isNull);
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.pump();
+    expect(envoyer().onPressed, isNull);
+
+    await tester.enterText(find.byType(TextField), 'Merci docteur, a bientot.');
+    await tester.pump();
+    expect(envoyer().onPressed, isNotNull);
+    await tester.tap(find.text('Envoyer'));
+    await tester.pumpAndSettle();
+    // Message envoye (contenu epure), fil recharge et champ vide.
+    expect(api.envoyes.single['contenu'], 'Merci docteur, a bientot.');
+    expect(find.text('Merci docteur, a bientot.'), findsOneWidget);
+    expect(alignementDe('Merci docteur, a bientot.'), Alignment.centerRight);
+    expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, isEmpty);
+    expect(envoyer().onPressed, isNull);
+  });
+
+  testWidgets('la fiche medecin ouvre une conversation avec le praticien', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(medecinId: 1, api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Ouvrir une conversation'), findsOneWidget);
+
+    await tester.tap(find.text('Ouvrir une conversation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
+    expect(find.text('Envoyer'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin explique le refus (403) sans rendez-vous avec le praticien',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+        medecinId: 1,
+        api: const FakeApiServiceSansRendezVous(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ouvrir une conversation'));
+    await tester.pumpAndSettle();
+    expect(find.text(messageConversationRefusee), findsOneWidget);
+    expect(find.text('Envoyer'), findsNothing);
   });
 }

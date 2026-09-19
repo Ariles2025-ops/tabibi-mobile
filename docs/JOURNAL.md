@@ -57,3 +57,28 @@
   et `estActive`, date selon l'avancement) ; `test/widget_test.dart` (carte de consentement quand le
   consentement est nul, bouton « Rejoindre » apres consentement et lien ouvert, texte d'etat d'une session
   terminee, sans jeton, entree d'accueil).
+
+## v0.7.0 — Messagerie
+- Ecran « Messagerie » (`GET /api/conversations`, jeton PATIENT) : praticien (nom via `GET /api/medecins/{id}`
+  quand l'identifiant est numerique, sinon « Médecin n° ... »), en gras s'il reste des non lus, « Dernier
+  message le ... » (ou « Ouverte le ... »), pastille « n non lus » ; tirer pour rafraichir, invitation
+  « Se connecter » sans jeton, erreurs `VueErreur`, jeton expire (401) -> deconnexion ; rechargement au retour
+  du fil.
+- Fil (`GET /api/conversations/{id}/messages`, marque lus les messages recus) : bulles a droite pour mes
+  messages, a gauche pour ceux du praticien, date sous chaque bulle, liste inversee (dernier message en bas) ;
+  saisie limitee a 2000 caracteres, bouton « Envoyer » desactive a vide, `POST /api/conversations/{id}/messages`
+  puis rechargement ; 400 (vide ou trop long) affiche tel quel.
+- Fiche medecin : « Ouvrir une conversation » (`POST /api/conversations`, 201 ou 200, connexion a la volee)
+  puis ouverture du fil ; 403 -> « Vous devez avoir un rendez-vous avec ce médecin pour lui écrire. ».
+- Accueil : entree « Messagerie ».
+- Identite : `AuthService.sujet` (sujet `sub` du jeton, `lib/utils/jetons.dart`, sans verification de
+  signature) pour reconnaitre mes messages (`auteurId == moi`) ; repli sur le `patientId` de la conversation.
+- Modeles `Conversation` (`lib/models/conversation.dart`, `fromJson` tolerant, `derniereActivite`) et `Message`
+  (`lib/models/message.dart`, `fromJson` tolerant, `estLu`) ; utilitaires `lib/utils/messagerie.dart`
+  (`estDeMoi`, `alignementMessage`, `dateMessage`, `libelleActivite`, `libelleNonLus`, `trierParActivite`) ;
+  `ApiService.mesConversations`, `ouvrirConversation`, `messages`, `envoyerMessage` (corps JSON UTF-8,
+  identifiants en texte).
+- Tests : `test/messagerie_test.dart` (fromJson complets et valeurs nulles, alignement selon l'auteur, dates,
+  libelles, tri, sujet du jeton) ; `test/widget_test.dart` (liste puis ouverture du fil, bulles alignees,
+  « Envoyer » inactif a vide puis envoi et rafraichissement, fiche : ouverture et refus 403, entree d'accueil) ;
+  `test/outils.dart` (jeton JWT factice porteur du sujet).

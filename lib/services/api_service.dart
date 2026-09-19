@@ -183,6 +183,52 @@ class ApiService {
     return _objet(res, chemin);
   }
 
+  /// Conversations du patient connecte, activite la plus recente d'abord :
+  /// {id, patientId, medecinId, creeLe, dernierMessageLe (ISO 8601), nonLus}.
+  Future<List<Map<String, dynamic>>> mesConversations(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/api/conversations'),
+      headers: _bearer(token),
+    );
+    return _liste(res, '/api/conversations');
+  }
+
+  /// Ouvre la conversation avec un praticien (201) ou retrouve celle qui existe (200) ;
+  /// 403 si le patient n'a aucun rendez-vous avec lui. Memes champs que [mesConversations].
+  Future<Map<String, dynamic>> ouvrirConversation(int medecinId, String token) async {
+    final res = await http.post(
+      Uri.parse('$_base/api/conversations'),
+      headers: _bearerJson(token),
+      body: jsonEncode({'medecinId': medecinId}),
+    );
+    return _objet(res, '/api/conversations');
+  }
+
+  /// Messages d'une conversation, du plus ancien au plus recent : {id, conversationId,
+  /// auteurId, contenu, envoyeLe, luLe (ISO 8601)} ; l'appel marque lus les messages recus
+  /// (403 si la conversation est a un autre patient, 404 si elle est inconnue).
+  Future<List<Map<String, dynamic>>> messages(String conversationId, String token) async {
+    final chemin = '/api/conversations/${Uri.encodeComponent(conversationId)}/messages';
+    final res = await http.get(Uri.parse('$_base$chemin'), headers: _bearer(token));
+    return _liste(res, chemin);
+  }
+
+  /// Envoie un message dans une conversation (201) et renvoie le message cree ;
+  /// 400 si le contenu est vide ou depasse 2000 caracteres.
+  Future<Map<String, dynamic>> envoyerMessage(
+    String conversationId,
+    String contenu,
+    String token,
+  ) async {
+    final chemin = '/api/conversations/${Uri.encodeComponent(conversationId)}/messages';
+    final res = await http.post(
+      Uri.parse('$_base$chemin'),
+      headers: _bearerJson(token),
+      body: jsonEncode({'contenu': contenu}),
+    );
+    return _objet(res, chemin);
+  }
+
   /// Identite de l'utilisateur connecte.
   Future<Map<String, dynamic>> moi(String token) async {
     final res = await http.get(
@@ -195,6 +241,12 @@ class ApiService {
   // --- Outils internes ---
 
   Map<String, String> _bearer(String token) => {'Authorization': 'Bearer $token'};
+
+  /// En-tetes d'un envoi JSON (corps encode en UTF-8) avec le jeton.
+  Map<String, String> _bearerJson(String token) => {
+        ..._bearer(token),
+        'Content-Type': 'application/json; charset=utf-8',
+      };
 
   /// Valeur du champ `nombre` d'un corps { "nombre": n } ; 0 s'il est absent.
   int _nombre(Map<String, dynamic> corps) {

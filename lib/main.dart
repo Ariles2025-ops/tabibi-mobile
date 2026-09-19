@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pages/fiche_medecin_page.dart';
+import 'pages/mes_conversations_page.dart';
 import 'pages/mes_notifications_page.dart';
 import 'pages/mes_ordonnances_page.dart';
 import 'pages/mes_rendez_vous_page.dart';
@@ -28,8 +29,8 @@ class TabibiApp extends StatelessWidget {
 
 /// Ecran d'accueil : recherche de praticiens, acces a la fiche, aux rendez-vous,
 /// aux ordonnances (les miennes, ou la verification publique d'un code), aux
-/// notifications (entree « Notifications (n) » avec le nombre de non lues) et aux
-/// teleconsultations.
+/// notifications (entree « Notifications (n) » avec le nombre de non lues), aux
+/// teleconsultations et a la messagerie avec mes medecins.
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -158,6 +159,15 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  Future<void> _ouvrirMessagerie() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MesConversationsPage(api: widget.api, auth: _auth),
+      ),
+    );
+    await _apresRetour();
+  }
+
   /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
   void _ouvrirVerification() {
     Navigator.of(context).push(
@@ -266,8 +276,8 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
-  /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran) et
-  /// « Teleconsultations ».
+  /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
+  /// « Teleconsultations » et « Messagerie ».
   Widget _entrees() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -284,6 +294,11 @@ class _RecherchePageState extends State<RecherchePage> {
             avatar: const Icon(Icons.videocam_outlined, size: 18),
             label: const Text('Teleconsultations'),
             onPressed: _ouvrirTeleconsultations,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.chat_bubble_outline, size: 18),
+            label: const Text('Messagerie'),
+            onPressed: _ouvrirMessagerie,
           ),
         ],
       ),

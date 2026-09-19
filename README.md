@@ -104,3 +104,32 @@ Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 - Tests : modele et utilitaires (`test/teleconsultations_test.dart`) ; page avec service factice
   (carte de consentement quand le consentement est nul, bouton « Rejoindre » apres consentement et
   lien ouvert via `ouvrirLien` injecte, texte d'etat d'une session terminee), entree d'accueil.
+
+## v0.7.0 — Messagerie (mobile)
+- Ecran « Messagerie » (`GET /api/conversations`, jeton PATIENT) : une ligne par conversation avec
+  le praticien (nom resolu via `GET /api/medecins/{id}` quand l'identifiant est numerique, sinon
+  « Médecin n° ... »), en gras s'il reste des non lus, « Dernier message le jeu. 4 dec. 09:00 »
+  (ou « Ouverte le ... » sans message) et pastille textuelle « n non lus » ; tirer pour rafraichir,
+  bouton « Se connecter » sans jeton, erreurs via `VueErreur` ; la liste est rechargee au retour du
+  fil (la lecture marque les messages lus).
+- Fil d'une conversation (`GET /api/conversations/{id}/messages`, du plus ancien au plus recent,
+  liste inversee pour garder le dernier message en bas) : bulles alignees a droite pour mes messages,
+  a gauche pour ceux du praticien, contenu puis date ; champ de saisie (2000 caracteres au plus) et
+  bouton « Envoyer » desactive tant que le texte est vide ; `POST /api/conversations/{id}/messages`
+  puis rechargement du fil, un 400 (contenu vide ou trop long) est affiche tel quel.
+- Fiche medecin : bouton « Ouvrir une conversation » (`POST /api/conversations`, connexion Keycloak a
+  la volee si necessaire) qui ouvre le fil ; en cas de 403, « Vous devez avoir un rendez-vous avec ce
+  médecin pour lui écrire. ».
+- Accueil : entree « Messagerie » a cote de « Notifications (n) » et « Teleconsultations ».
+- Mes propres messages sont reconnus par l'identifiant de la session : `AuthService.sujet` lit le
+  sujet (`sub`) du jeton (`lib/utils/jetons.dart`, sans verification de signature, affichage
+  seulement) ; a defaut, le `patientId` de la conversation.
+- Modeles `lib/models/conversation.dart` (`Conversation.fromJson`, `derniereActivite`) et
+  `lib/models/message.dart` (`Message.fromJson`, `estLu`), utilitaires `lib/utils/messagerie.dart`
+  (`estDeMoi`, `alignementMessage`, `dateMessage`, `libelleActivite`, `libelleNonLus`,
+  `trierParActivite`) ; `ApiService` : `mesConversations`, `ouvrirConversation`, `messages`,
+  `envoyerMessage` (corps JSON UTF-8). Identifiants conserves en texte.
+- Tests : `test/messagerie_test.dart` (modeles, alignement selon l'auteur, dates, libelles, tri,
+  sujet du jeton) ; `test/widget_test.dart` (liste et ouverture du fil, alignement des bulles,
+  bouton « Envoyer » inactif a vide puis envoi et rafraichissement, fiche medecin : ouverture et
+  refus 403, entree d'accueil) ; `test/outils.dart` (jeton JWT factice).
