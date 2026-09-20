@@ -352,7 +352,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   Widget _vueConnexion(BuildContext context) {
     return VueConnexion(
       icone: Icons.calendar_month_outlined,
-      titre: 'Planifiez vos rendez-vous',
+      titre: t(context, 'connexion.titreRdv'),
       message: _erreur ?? t(context, 'rdv.connectezVous'),
       onSeConnecter: _seConnecter,
     );

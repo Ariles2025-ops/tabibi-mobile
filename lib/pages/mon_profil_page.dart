@@ -190,7 +190,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
     if (!_auth.estConnecte) {
       return VueConnexion(
         icone: Icons.person_outline,
-        titre: 'Votre compte',
+        titre: t(context, 'connexion.titreCompte'),
         message: _erreur ?? t(context, 'profil.connectezVous'),
         onSeConnecter: _seConnecter,
       );

@@ -333,18 +333,18 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             .toList() ??
         const <String>[];
     final paiements = <String>[
-      if (m['accepteChifa'] == true) 'Chifa',
-      if (m['accepteCarte'] == true) 'Carte',
-      if (m['accepteEspeces'] == true) 'Espèces',
+      if (m['accepteChifa'] == true) t(context, 'fiche.chifa'),
+      if (m['accepteCarte'] == true) t(context, 'fiche.carte'),
+      if (m['accepteEspeces'] == true) t(context, 'fiche.especes'),
     ];
-    final type = _labelType(m['typeEntite']?.toString());
+    final type = _labelType(context, m['typeEntite']?.toString());
 
     final lignes = <Widget>[];
     if (note is num) {
-      final t = avis > 0
-          ? '${note.toStringAsFixed(1)} · $avis avis'
+      final noteTxt = avis > 0
+          ? '${note.toStringAsFixed(1)} · ${t(context, 'fiche.avisN', params: {'n': avis})}'
           : note.toStringAsFixed(1);
-      lignes.add(_ligneInfo(Icons.star_rounded, Tabibi.or, t));
+      lignes.add(_ligneInfo(Icons.star_rounded, Tabibi.or, noteTxt));
     }
     if (type != null) {
       lignes.add(_ligneInfo(Icons.local_hospital_outlined, Tabibi.vert, type));
@@ -357,7 +357,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     }
     if (m['teleconsultation'] == true) {
       lignes.add(_ligneInfo(
-          Icons.videocam_outlined, Tabibi.vert, 'Téléconsultation disponible'));
+          Icons.videocam_outlined, Tabibi.vert, t(context, 'fiche.teleDispo')));
     }
     if (lignes.isEmpty) return const SizedBox.shrink();
 
@@ -419,21 +419,22 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   }
 
   /// Type d'etablissement en francais ; null pour un medecin ordinaire (deja implicite).
-  String? _labelType(String? brut) {
+  String? _labelType(BuildContext context, String? brut) {
     if (brut == null || brut.trim().isEmpty) return null;
-    const map = {
-      'dentist': 'Dentiste',
-      'clinic': 'Clinique privée',
-      'hospital': 'Hôpital',
-      'optician': 'Opticien',
-      'pharmacy': 'Pharmacie',
-      'lab': "Laboratoire d'analyses",
-      'laboratory': "Laboratoire d'analyses",
-      'health_center': 'Centre de santé',
-      'midwife': 'Sage-femme',
-      'physiotherapist': 'Kinésithérapeute',
+    const cles = {
+      'dentist': 'fiche.typeDentiste',
+      'clinic': 'fiche.typeClinique',
+      'hospital': 'fiche.typeHopital',
+      'optician': 'fiche.typeOpticien',
+      'pharmacy': 'fiche.typePharmacie',
+      'lab': 'fiche.typeLabo',
+      'laboratory': 'fiche.typeLabo',
+      'health_center': 'fiche.typeCentre',
+      'midwife': 'fiche.typeSageFemme',
+      'physiotherapist': 'fiche.typeKine',
     };
-    return map[brut.toLowerCase()];
+    final cle = cles[brut.toLowerCase()];
+    return cle == null ? null : t(context, cle);
   }
 
   String _labelLangue(String code) {

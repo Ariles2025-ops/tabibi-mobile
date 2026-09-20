@@ -90,6 +90,7 @@ ThemeData themeTabibi() {
 
   return ThemeData(
     useMaterial3: true,
+    fontFamily: 'PlusJakartaSans',
     colorScheme: scheme,
     scaffoldBackgroundColor: Tabibi.bg,
     appBarTheme: const AppBarTheme(

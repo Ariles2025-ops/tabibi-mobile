@@ -145,7 +145,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     if (!_auth.estConnecte) {
       return VueConnexion(
         icone: Icons.mail_outline,
-        titre: 'Vos messages',
+        titre: t(context, 'connexion.titreMessages'),
         message: _erreur ?? t(context, 'messagerie.connectezVous'),
         onSeConnecter: _seConnecter,
       );

@@ -159,7 +159,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     if (!_auth.estConnecte) {
       return VueConnexion(
         icone: Icons.videocam_outlined,
-        titre: 'Teleconsultation',
+        titre: t(context, 'connexion.titreTele'),
         message: _erreur ?? t(context, 'tele.connectezVous'),
         onSeConnecter: _seConnecter,
       );

@@ -844,23 +844,22 @@ class _RecherchePageState extends State<RecherchePage> {
               color: Tabibi.vert, size: 26),
         ),
         const SizedBox(height: 14),
-        const Text('Vous êtes médecin ?',
-            style: TextStyle(
+        Text(t(context, 'accueil.medecinTitre'),
+            style: const TextStyle(
                 fontSize: 18, fontWeight: FontWeight.w800, color: Tabibi.ink)),
         const SizedBox(height: 8),
-        const Text(
-          'Rejoignez Tabibi et développez votre patientèle en ligne. Inscription gratuite pendant 30 jours.',
+        Text(
+          t(context, 'accueil.medecinTexte'),
           textAlign: TextAlign.center,
-          style: TextStyle(color: Tabibi.texteDoux, height: 1.4),
+          style: const TextStyle(color: Tabibi.texteDoux, height: 1.4),
         ),
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () =>
-                _message('Inscription médecin bientôt disponible'),
+            onPressed: () => _message(t(context, 'accueil.medecinBientot')),
             icon: const Icon(Icons.person_add_alt_1, size: 18),
-            label: const Text('Rejoindre Tabibi'),
+            label: Text(t(context, 'accueil.medecinBouton')),
           ),
         ),
       ]),
@@ -869,27 +868,15 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Foire aux questions (accordeon).
   Widget _faq(BuildContext context) {
-    const items = <List<String>>[
-      [
-        "L'application est-elle gratuite ?",
-        "Oui, Tabibi est 100 % gratuite pour les patients. Vous réglez uniquement la consultation, directement au cabinet — en espèces ou avec la carte Chifa."
-      ],
-      [
-        "Comment savez-vous qu'un médecin est fiable ?",
-        "Les fiches proviennent de sources publiques et chaque médecin peut revendiquer puis vérifier la sienne. Un badge « Vérifié » signale les praticiens confirmés."
-      ],
-      [
-        "Mes données de santé sont-elles protégées ?",
-        "Vos données sont hébergées de façon sécurisée et ne sont jamais partagées sans votre accord. Vous gardez le contrôle de votre compte à tout moment."
-      ],
-      [
-        "Je suis médecin, comment rejoindre Tabibi ?",
-        "Cliquez sur « Rejoindre Tabibi », revendiquez votre fiche et complétez votre profil. L'inscription est gratuite les 30 premiers jours."
-      ],
+    final items = <List<String>>[
+      [t(context, 'accueil.faqQ1'), t(context, 'accueil.faqR1')],
+      [t(context, 'accueil.faqQ2'), t(context, 'accueil.faqR2')],
+      [t(context, 'accueil.faqQ3'), t(context, 'accueil.faqR3')],
+      [t(context, 'accueil.faqQ4'), t(context, 'accueil.faqR4')],
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Questions fréquentes',
-          style: TextStyle(
+      Text(t(context, 'accueil.faqTitre'),
+          style: const TextStyle(
               fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
       const SizedBox(height: 12),
       Container(
@@ -947,7 +934,10 @@ class _RecherchePageState extends State<RecherchePage> {
       ]),
       const SizedBox(height: 8),
       Text(
-        'La 1re plateforme médicale algérienne.\n${_totalMedecins != null ? _formatMilliers(_totalMedecins!) : '75K'}+ médecins dans ${_wilayasRef.isNotEmpty ? _wilayasRef.length : 69} wilayas.',
+        t(context, 'accueil.footerTagline', params: {
+          'n': _totalMedecins != null ? _formatMilliers(_totalMedecins!) : '75K',
+          'w': _wilayasRef.isNotEmpty ? '${_wilayasRef.length}' : '69',
+        }),
         textAlign: TextAlign.center,
         style: const TextStyle(color: Tabibi.texte3, fontSize: 12, height: 1.5),
       ),
@@ -962,15 +952,15 @@ class _RecherchePageState extends State<RecherchePage> {
                 fontWeight: FontWeight.w600)),
       ]),
       const SizedBox(height: 12),
-      const Wrap(alignment: WrapAlignment.center, spacing: 16, runSpacing: 6, children: [
-        Text('À propos', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        Text('CGU', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        Text('Confidentialité', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        Text('Mentions légales', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
+      Wrap(alignment: WrapAlignment.center, spacing: 16, runSpacing: 6, children: [
+        Text(t(context, 'accueil.footerApropos'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
+        Text(t(context, 'accueil.footerCgu'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
+        Text(t(context, 'accueil.footerConfid'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
+        Text(t(context, 'accueil.footerMentions'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
       ]),
       const SizedBox(height: 12),
-      const Text('© 2026 Tabibi — Tous droits réservés',
-          style: TextStyle(color: Tabibi.texte4, fontSize: 11)),
+      Text(t(context, 'accueil.footerCopyright'),
+          style: const TextStyle(color: Tabibi.texte4, fontSize: 11)),
     ]);
   }
 
