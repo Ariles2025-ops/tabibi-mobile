@@ -96,6 +96,9 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Total reel de praticiens dans la base (null tant qu'inconnu).
   int? _totalMedecins;
+
+  /// Nombre de wilayas couvertes par la base (null tant qu'inconnu).
+  int? _wilayas;
   bool _charge = false;
 
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
@@ -121,7 +124,13 @@ class _RecherchePageState extends State<RecherchePage> {
     try {
       final s = await widget.api.statsAnnuaire();
       final t = s['total'];
-      if (mounted && t is num) setState(() => _totalMedecins = t.toInt());
+      final w = s['wilayas'];
+      if (mounted) {
+        setState(() {
+          if (t is num) _totalMedecins = t.toInt();
+          if (w is num) _wilayas = w.toInt();
+        });
+      }
     } on Exception {
       // total indisponible : la tuile garde son repli.
     }
@@ -545,7 +554,9 @@ class _RecherchePageState extends State<RecherchePage> {
                           : '…',
                       t(context, 'accueil.statMedecins'))),
               const SizedBox(width: 10),
-              Expanded(child: _statTile('58', t(context, 'accueil.statWilayas'))),
+              Expanded(
+                  child: _statTile(_wilayas != null ? '$_wilayas' : '58',
+                      t(context, 'accueil.statWilayas'))),
               const SizedBox(width: 10),
               Expanded(
                   child: _statTile('24/7', t(context, 'accueil.statReservation'))),
