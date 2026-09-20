@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'theme/theme_tabibi.dart';
+
 import 'i18n/langue.dart';
 import 'i18n/traductions.dart';
 import 'pages/dawini_page.dart';
@@ -59,7 +61,7 @@ class TabibiApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: ThemeData(colorSchemeSeed: const Color(0xFF0F7560), useMaterial3: true),
+          theme: themeTabibi(),
           home: RecherchePage(api: api, auth: auth),
         ),
       ),
@@ -288,7 +290,7 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'accueil.titre')),
+        title: const SizedBox.shrink(),
         actions: [
           IconButton(
             tooltip: t(context, 'accueil.verifierOrdonnance'),
@@ -316,6 +318,8 @@ class _RecherchePageState extends State<RecherchePage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            _heroBand(context),
+            const SizedBox(height: 16),
             Row(children: [
               Expanded(
                 child: TextField(
@@ -346,24 +350,79 @@ class _RecherchePageState extends State<RecherchePage> {
             Expanded(
               child: ListView.separated(
                 itemCount: _resultats.length,
-                separatorBuilder: (_, __) => const Divider(),
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (_, i) {
                   final m = _resultats[i];
-                  return ListTile(
-                    title: Text(m['nomComplet'] as String),
-                    subtitle: Text(t(context, 'accueil.sousTitreMedecin', params: {
-                      'specialite': m['specialiteFr'],
-                      'ville': m['ville'],
-                      'wilaya': m['wilayaFr'],
-                    })),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _ouvrirFiche(identifiant(m['id'])),
+                  return Card(
+                    child: ListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      leading: AvatarInitiales(m['nomComplet'] as String),
+                      title: Text(m['nomComplet'] as String,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, color: Tabibi.texte)),
+                      subtitle: Text(
+                        t(context, 'accueil.sousTitreMedecin', params: {
+                          'specialite': m['specialiteFr'],
+                          'ville': m['ville'],
+                          'wilaya': m['wilayaFr'],
+                        }),
+                        style: const TextStyle(color: Tabibi.texteDoux),
+                      ),
+                      trailing:
+                          const Icon(Icons.chevron_right, color: Tabibi.bordFort),
+                      onTap: () => _ouvrirFiche(identifiant(m['id'])),
+                    ),
                   );
                 },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Bandeau de marque (degrade vert) : logo Tabibi + titre d'accroche.
+  Widget _heroBand(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+      decoration: BoxDecoration(
+        gradient: Tabibi.gradBrand,
+        borderRadius: BorderRadius.circular(Tabibi.r20),
+        boxShadow: Tabibi.ombreCarte,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Tabibi',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3)),
+              const SizedBox(width: 6),
+              Text('طبيبي',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            t(context, 'accueil.titre'),
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+                letterSpacing: -0.4),
+          ),
+        ],
       ),
     );
   }
