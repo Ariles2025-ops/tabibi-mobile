@@ -342,7 +342,7 @@ class _RecherchePageState extends State<RecherchePage> {
       appBar: AppBar(
         titleSpacing: 16,
         title: Row(mainAxisSize: MainAxisSize.min, children: [
-          SvgPicture.asset('assets/logo-mark.svg', width: 28, height: 28),
+          SvgPicture.asset('assets/logo-mark-vert.svg', width: 28, height: 28),
           const SizedBox(width: 8),
           const Text('Tabibi',
               style: TextStyle(
@@ -939,7 +939,7 @@ class _RecherchePageState extends State<RecherchePage> {
       const Divider(color: Tabibi.bord, height: 1),
       const SizedBox(height: 18),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        SvgPicture.asset('assets/logo-mark.svg', width: 22, height: 22),
+        SvgPicture.asset('assets/logo-mark-vert.svg', width: 22, height: 22),
         const SizedBox(width: 8),
         const Text('Tabibi',
             style: TextStyle(

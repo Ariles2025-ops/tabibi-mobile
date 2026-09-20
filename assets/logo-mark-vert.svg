@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Tabibi">
+  <title>Tabibi mark</title>
+  <!-- Baton central -->
+  <rect x="56" y="28" width="8" height="70" fill="#0F7560" rx="2"/>
+  <!-- Ailes -->
+  <path d="M 42 35 Q 28 31 22 41 Q 30 38 42 41 Z" fill="#0F7560"/>
+  <path d="M 78 35 Q 92 31 98 41 Q 90 38 78 41 Z" fill="#0F7560"/>
+  <!-- Serpent stylise -->
+  <path d="M 60 38 Q 48 48 60 58 Q 72 68 60 78 Q 48 88 60 95" fill="none" stroke="#0F7560" stroke-width="3" stroke-linecap="round"/>
+  <!-- Etoile DZ -->
+  <g transform="translate(98, 22)">
+    <polygon points="0,-9 2.5,-2.5 9,-2.5 3.5,2 5.5,9 0,4.5 -5.5,9 -3.5,2 -9,-2.5 -2.5,-2.5" fill="#D4A437"/>
+  </g>
+</svg>
