@@ -158,6 +158,8 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
+        icone: Icons.videocam_outlined,
+        titre: 'Teleconsultation',
         message: _erreur ?? t(context, 'tele.connectezVous'),
         onSeConnecter: _seConnecter,
       );

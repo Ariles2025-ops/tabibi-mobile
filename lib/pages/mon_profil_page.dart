@@ -189,6 +189,8 @@ class _MonProfilPageState extends State<MonProfilPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
+        icone: Icons.person_outline,
+        titre: 'Votre compte',
         message: _erreur ?? t(context, 'profil.connectezVous'),
         onSeConnecter: _seConnecter,
       );

@@ -144,6 +144,8 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
+        icone: Icons.mail_outline,
+        titre: 'Vos messages',
         message: _erreur ?? t(context, 'messagerie.connectezVous'),
         onSeConnecter: _seConnecter,
       );

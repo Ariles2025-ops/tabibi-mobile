@@ -175,6 +175,8 @@ class _DawiniPageState extends State<DawiniPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
+        icone: Icons.local_pharmacy_outlined,
+        titre: 'Dawini',
         message: _erreur ?? t(context, 'dawini.connectezVous'),
         onSeConnecter: _seConnecter,
       );
