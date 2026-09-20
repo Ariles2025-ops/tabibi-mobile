@@ -25,6 +25,7 @@ import 'pages/mon_profil_page.dart';
 import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/praticiens_supabase.dart';
 import 'services/session.dart';
 import 'services/supabase_service.dart';
 import 'utils/dates.dart';
@@ -101,6 +102,9 @@ class _RecherchePageState extends State<RecherchePage> {
   String? _specialite;
   List<Map<String, dynamic>> _resultats = [];
 
+  /// Annuaire en direct via Supabase (aucun backend requis).
+  final PraticiensSupabase _prat = const PraticiensSupabase();
+
   /// Total reel de praticiens dans la base (null tant qu'inconnu).
   int? _totalMedecins;
 
@@ -127,40 +131,34 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await widget.api.rechercherMedecins(
-          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
+      final r = await _prat.rechercher(
+          specialite: _specialite, wilaya: _wilaya, q: _nom.text, limite: 30);
       if (mounted) setState(() => _resultats = r);
-    } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+    } catch (_) {
+      if (mounted) _message('Recherche momentanément indisponible.');
     } finally {
       if (mounted) setState(() => _charge = false);
     }
   }
 
-  /// Charge le total reel de praticiens (affiche dans la tuile « Medecins »).
+  /// Charge, en un seul appel Supabase, le total reel de praticiens (tuile
+  /// « Medecins ») et les listes de wilayas / specialites (filtres de recherche).
   Future<void> _chargerStats() async {
     try {
-      final s = await widget.api.statsAnnuaire();
-      final t = s['total'];
-      if (mounted && t is num) setState(() => _totalMedecins = t.toInt());
-    } on Exception {
-      // total indisponible : la tuile garde son repli.
-    }
-  }
-
-  /// Charge les wilayas et specialites reelles (filtres de recherche).
-  Future<void> _chargerReferentiel() async {
-    try {
-      final w = await widget.api.wilayas();
-      final sp = await widget.api.specialites();
-      if (mounted) {
-        setState(() {
-          _wilayasRef = w;
-          _specialitesRef = sp;
-        });
-      }
-    } on Exception {
-      // referentiel indisponible : la recherche reste en texte libre.
+      final s = await _prat.stats();
+      if (!mounted) return;
+      setState(() {
+        final t = s['total'];
+        if (t is num) _totalMedecins = t.toInt();
+        _wilayasRef = ((s['wilayas'] as List?) ?? const [])
+            .map((n) => <String, dynamic>{'code': n, 'nom': n})
+            .toList();
+        _specialitesRef = ((s['specialites'] as List?) ?? const [])
+            .map((n) => <String, dynamic>{'slug': n, 'nom': n})
+            .toList();
+      });
+    } catch (_) {
+      // annuaire momentanement indisponible : les tuiles gardent leur repli.
     }
   }
 
@@ -332,7 +330,6 @@ class _RecherchePageState extends State<RecherchePage> {
     super.initState();
     _rechercher();
     _chargerStats();
-    _chargerReferentiel();
     _chargerNonLues();
     _authSub = sb.auth.onAuthStateChange.listen((_) {
       if (mounted) setState(() {});
