@@ -15,6 +15,7 @@ import '../utils/dates.dart';
 import '../utils/identifiants.dart';
 import '../utils/libelles.dart';
 import '../widgets/vue_erreur.dart';
+import 'connexion_page.dart';
 import 'conversation_page.dart';
 
 /// Nombre de derniers avis affiches sur la fiche.
@@ -139,37 +140,35 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   Future<void> _reserver(Map<String, dynamic> creneau) async {
     final creneauId = identifiant(creneau['id']);
-    if (creneauId.isEmpty) return;
-    if (!_auth.estConnecte) {
-      final ok = await _auth.seConnecter();
+    final debut = creneau['debut']?.toString();
+    if (creneauId.isEmpty || debut == null || debut.isEmpty) return;
+    // Connexion Supabase requise pour reserver.
+    if (sb.auth.currentSession == null) {
+      await Navigator.of(context).push(
+          MaterialPageRoute<bool>(builder: (_) => const ConnexionPage()));
       if (!mounted) return;
-      if (!ok) {
+      if (sb.auth.currentSession == null) {
         _message(t(context, 'fiche.connexionReserver'));
         return;
       }
     }
-    final token = _auth.accessToken;
-    if (token == null) return;
     setState(() => _enCours = creneauId);
     try {
-      await widget.api.reserverCreneau(creneauId, token);
+      await sb.from('appointments').insert({
+        'patient_id': sb.auth.currentUser!.id,
+        'doctor_id': widget.medecinId,
+        'scheduled_at': debut,
+        'duration_minutes': creneau['dureeMinutes'] ?? 30,
+      });
       if (!mounted) return;
       setState(() => _retirerCreneau(creneauId));
       _message(t(context, 'fiche.rdvConfirme'));
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (e.conflit) {
-        // Pris entre-temps par un autre patient : il n'est plus reservable.
+    } catch (_) {
+      if (mounted) {
+        // Le creneau vient d'etre pris, ou reservation refusee : on le retire.
         setState(() => _retirerCreneau(creneauId));
-        _message(t(context, 'api.creneauPris'));
-      } else if (e.nonAutorise) {
-        _auth.seDeconnecter();
-        _message(t(context, 'commun.sessionExpiree'));
-      } else {
-        _message(messageApi(context, e));
+        _message('Réservation impossible (créneau déjà pris ou indisponible).');
       }
-    } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _enCours = null);
     }
