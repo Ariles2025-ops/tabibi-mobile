@@ -316,8 +316,8 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       bg = Tabibi.bg2;
       fg = Tabibi.texte3;
     } else if (st.contains('ATTENTE') || st.contains('PENDING')) {
-      bg = const Color(0xFFFEF3C7);
-      fg = const Color(0xFF92400E);
+      bg = Tabibi.orClair;
+      fg = Tabibi.orTexte;
     } else {
       bg = Tabibi.vertTresClair;
       fg = Tabibi.vert;
