@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'theme/theme_tabibi.dart';
@@ -7,6 +10,7 @@ import 'utils/libelles.dart';
 
 import 'i18n/langue.dart';
 import 'i18n/traductions.dart';
+import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/langue_page.dart';
@@ -22,6 +26,7 @@ import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/session.dart';
+import 'services/supabase_service.dart';
 import 'utils/dates.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
@@ -29,6 +34,7 @@ import 'utils/notifications.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await preparerDates(); // donnees de date de toutes les locales (intl)
+  await initialiserSupabase(); // auth + acces direct a la base
   await langues.initialiser(); // defaut francais (sauf choix memorise de l'utilisateur)
   runApp(const TabibiApp());
 }
@@ -104,6 +110,12 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Filtre wilaya selectionne (code officiel, ex. « 16 »).
   String? _wilaya;
+
+  /// Abonnement a l'etat d'authentification Supabase (met a jour l'icone profil).
+  StreamSubscription<AuthState>? _authSub;
+
+  /// Vrai si une session Supabase est ouverte.
+  bool get _connecteSb => sb.auth.currentSession != null;
   bool _charge = false;
 
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
@@ -322,12 +334,61 @@ class _RecherchePageState extends State<RecherchePage> {
     _chargerStats();
     _chargerReferentiel();
     _chargerNonLues();
+    _authSub = sb.auth.onAuthStateChange.listen((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _nom.dispose();
     super.dispose();
+  }
+
+  /// Icone profil : ouvre la connexion Supabase, ou le compte (+ deconnexion) si connecte.
+  Future<void> _ouvrirCompteSb() async {
+    if (sb.auth.currentSession == null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<bool>(builder: (_) => const ConnexionPage()),
+      );
+      if (mounted) setState(() {});
+      return;
+    }
+    final email = sb.auth.currentUser?.email ?? '';
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 18),
+          const Icon(Icons.account_circle, size: 52, color: Tabibi.vert),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(email,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, color: Tabibi.texte)),
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Tabibi.rouge),
+            title: Text(t(context, 'connexion.deconnexion'),
+                style: const TextStyle(
+                    color: Tabibi.rouge, fontWeight: FontWeight.w600)),
+            onTap: () async {
+              await sb.auth.signOut();
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   /// Puce de langue dans la barre (globe + code) ouvrant le selecteur.
@@ -430,7 +491,6 @@ class _RecherchePageState extends State<RecherchePage> {
 
   @override
   Widget build(BuildContext context) {
-    final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
@@ -456,9 +516,10 @@ class _RecherchePageState extends State<RecherchePage> {
             ),
           ),
           IconButton(
-            tooltip: t(context, connecte ? 'commun.connecte' : 'commun.seConnecter'),
-            onPressed: _seConnecter,
-            icon: Icon(connecte ? Icons.person : Icons.person_outline),
+            tooltip: t(context,
+                _connecteSb ? 'connexion.deconnexion' : 'commun.seConnecter'),
+            onPressed: _ouvrirCompteSb,
+            icon: Icon(_connecteSb ? Icons.person : Icons.person_outline),
           ),
           const SizedBox(width: 4),
         ],

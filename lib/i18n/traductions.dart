@@ -392,6 +392,17 @@ const Map<String, String> _fr = {
   'connexion.titreTele': 'Téléconsultation',
   'connexion.titreDawini': 'Dawini',
   'connexion.titreCompte': 'Votre compte',
+  'connexion.titre': 'Connexion',
+  'connexion.sousTitre': 'Accédez à vos rendez-vous, messages et ordonnances.',
+  'connexion.creer': 'Créer un compte',
+  'connexion.email': 'E-mail',
+  'connexion.motDePasse': 'Mot de passe',
+  'connexion.pasDeCompte': 'Pas encore de compte ? Créer un compte',
+  'connexion.dejaCompte': 'Déjà un compte ? Se connecter',
+  'connexion.verifEmail': 'Compte créé. Vérifiez votre e-mail pour le confirmer.',
+  'connexion.echec': 'Connexion impossible. Vérifiez vos identifiants.',
+  'connexion.deconnexion': 'Se déconnecter',
+  'connexion.connecteEn': 'Connecté : {email}',
 };
 
 const Map<String, String> _ar = {
@@ -726,6 +737,17 @@ const Map<String, String> _ar = {
   'connexion.titreTele': 'الاستشارة عن بُعد',
   'connexion.titreDawini': 'دويني',
   'connexion.titreCompte': 'حسابك',
+  'connexion.titre': 'تسجيل الدخول',
+  'connexion.sousTitre': 'ادخل إلى مواعيدك ورسائلك ووصفاتك.',
+  'connexion.creer': 'إنشاء حساب',
+  'connexion.email': 'البريد الإلكتروني',
+  'connexion.motDePasse': 'كلمة المرور',
+  'connexion.pasDeCompte': 'ليس لديك حساب؟ أنشئ حسابًا',
+  'connexion.dejaCompte': 'لديك حساب؟ سجّل الدخول',
+  'connexion.verifEmail': 'تم إنشاء الحساب. تحقق من بريدك لتأكيده.',
+  'connexion.echec': 'تعذّر تسجيل الدخول. تحقق من بياناتك.',
+  'connexion.deconnexion': 'تسجيل الخروج',
+  'connexion.connecteEn': 'متصل: {email}',
 };
 
 const Map<String, String> _en = {
@@ -1061,4 +1083,15 @@ const Map<String, String> _en = {
   'connexion.titreTele': 'Teleconsultation',
   'connexion.titreDawini': 'Dawini',
   'connexion.titreCompte': 'Your account',
+  'connexion.titre': 'Sign in',
+  'connexion.sousTitre': 'Access your appointments, messages and prescriptions.',
+  'connexion.creer': 'Create account',
+  'connexion.email': 'Email',
+  'connexion.motDePasse': 'Password',
+  'connexion.pasDeCompte': 'No account yet? Create one',
+  'connexion.dejaCompte': 'Already have an account? Sign in',
+  'connexion.verifEmail': 'Account created. Check your email to confirm it.',
+  'connexion.echec': 'Sign-in failed. Check your credentials.',
+  'connexion.deconnexion': 'Sign out',
+  'connexion.connecteEn': 'Signed in: {email}',
 };

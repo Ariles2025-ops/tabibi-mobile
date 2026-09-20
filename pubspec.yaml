@@ -12,6 +12,7 @@ dependencies:
   flutter_localizations:           # delegues Material / Cupertino pour fr, ar (RTL) et en
     sdk: flutter
   http: ^1.2.2
+  supabase_flutter: ^2.8.0        # auth + acces direct a la base (Supabase)
   intl: ^0.20.3                    # dates et mois selon la locale courante (DateFormat)
   shared_preferences: ^2.3.0       # memorisation de la langue choisie par l'utilisateur
   flutter_appauth: ^8.0.0        # OAuth2/OIDC (Keycloak) natif iOS + Android
