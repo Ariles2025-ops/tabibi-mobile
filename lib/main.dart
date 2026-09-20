@@ -530,7 +530,9 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
           const SizedBox(height: 10),
           Text(
-            t(context, 'accueil.sousTitre'),
+            t(context, 'accueil.sousTitre', params: {
+              'n': _wilayasRef.isNotEmpty ? '${_wilayasRef.length}' : '69',
+            }),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Tabibi.texteDoux, fontSize: 14, height: 1.5),
           ),
