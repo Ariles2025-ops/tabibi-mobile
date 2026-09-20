@@ -97,6 +97,18 @@ class ApiService {
     return d is Map<String, dynamic> ? d : const {};
   }
 
+  /// Liste publique des wilayas (filtres de recherche) : [{code, nom}].
+  Future<List<Map<String, dynamic>>> wilayas() async {
+    final res = await http.get(Uri.parse('$base/api/wilayas'));
+    return _liste(res, '/api/wilayas');
+  }
+
+  /// Liste publique des specialites (filtres de recherche) : [{slug, nom}].
+  Future<List<Map<String, dynamic>>> specialites() async {
+    final res = await http.get(Uri.parse('$base/api/specialites'));
+    return _liste(res, '/api/specialites');
+  }
+
   /// Fiche publique d'un praticien ([id] : UUID en texte) :
   /// {id, nomComplet, specialiteSlug, specialiteFr, wilayaCode, wilayaFr, ville}.
   Future<Map<String, dynamic>> medecin(String id) async {

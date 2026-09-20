@@ -97,8 +97,12 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Total reel de praticiens dans la base (null tant qu'inconnu).
   int? _totalMedecins;
 
-  /// Nombre de wilayas couvertes par la base (null tant qu'inconnu).
-  int? _wilayas;
+  /// Wilayas et specialites reelles (filtres de recherche), chargees au demarrage.
+  List<Map<String, dynamic>> _wilayasRef = [];
+  List<Map<String, dynamic>> _specialitesRef = [];
+
+  /// Filtre wilaya selectionne (code officiel, ex. « 16 »).
+  String? _wilaya;
   bool _charge = false;
 
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
@@ -110,7 +114,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await widget.api.rechercherMedecins(specialite: _specialite, q: _nom.text);
+      final r = await widget.api.rechercherMedecins(
+          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
       if (mounted) _message(messageApi(context, e));
@@ -124,15 +129,25 @@ class _RecherchePageState extends State<RecherchePage> {
     try {
       final s = await widget.api.statsAnnuaire();
       final t = s['total'];
-      final w = s['wilayas'];
+      if (mounted && t is num) setState(() => _totalMedecins = t.toInt());
+    } on Exception {
+      // total indisponible : la tuile garde son repli.
+    }
+  }
+
+  /// Charge les wilayas et specialites reelles (filtres de recherche).
+  Future<void> _chargerReferentiel() async {
+    try {
+      final w = await widget.api.wilayas();
+      final sp = await widget.api.specialites();
       if (mounted) {
         setState(() {
-          if (t is num) _totalMedecins = t.toInt();
-          if (w is num) _wilayas = w.toInt();
+          _wilayasRef = w;
+          _specialitesRef = sp;
         });
       }
     } on Exception {
-      // total indisponible : la tuile garde son repli.
+      // referentiel indisponible : la recherche reste en texte libre.
     }
   }
 
@@ -304,6 +319,7 @@ class _RecherchePageState extends State<RecherchePage> {
     super.initState();
     _rechercher();
     _chargerStats();
+    _chargerReferentiel();
     _chargerNonLues();
   }
 
@@ -530,6 +546,36 @@ class _RecherchePageState extends State<RecherchePage> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _menuFiltre(
+                  valeur: _wilaya,
+                  indice: t(context, 'accueil.toutesWilayas'),
+                  options: _wilayasRef,
+                  cleValeur: 'code',
+                  onChange: (v) {
+                    setState(() => _wilaya = v);
+                    _rechercher();
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _menuFiltre(
+                  valeur: _specialite,
+                  indice: t(context, 'accueil.toutesSpecialites'),
+                  options: _specialitesRef,
+                  cleValeur: 'slug',
+                  onChange: (v) {
+                    setState(() => _specialite = v);
+                    _rechercher();
+                  },
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -555,7 +601,8 @@ class _RecherchePageState extends State<RecherchePage> {
                       t(context, 'accueil.statMedecins'))),
               const SizedBox(width: 10),
               Expanded(
-                  child: _statTile(_wilayas != null ? '$_wilayas' : '58',
+                  child: _statTile(
+                      _wilayasRef.isNotEmpty ? '${_wilayasRef.length}' : '69',
                       t(context, 'accueil.statWilayas'))),
               const SizedBox(width: 10),
               Expanded(
@@ -565,6 +612,53 @@ class _RecherchePageState extends State<RecherchePage> {
         ],
       ),
       ),
+    );
+  }
+
+  /// Menu deroulant de filtre (wilaya / specialite), aligne sur la charte.
+  Widget _menuFiltre({
+    required String? valeur,
+    required String indice,
+    required List<Map<String, dynamic>> options,
+    required String cleValeur,
+    required ValueChanged<String?> onChange,
+  }) {
+    return DropdownButtonFormField<String?>(
+      value: valeur,
+      isExpanded: true,
+      icon: const Icon(Icons.expand_more, color: Tabibi.texte3),
+      style: const TextStyle(color: Tabibi.texte, fontSize: 14),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Tabibi.r16),
+          borderSide: const BorderSide(color: Tabibi.bord),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Tabibi.r16),
+          borderSide: const BorderSide(color: Tabibi.bord),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Tabibi.r16),
+          borderSide: const BorderSide(color: Tabibi.vert, width: 1.5),
+        ),
+      ),
+      hint: Text(indice,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Tabibi.texte3, fontSize: 14)),
+      items: [
+        DropdownMenuItem<String?>(
+            value: null,
+            child: Text(indice, overflow: TextOverflow.ellipsis)),
+        for (final o in options)
+          DropdownMenuItem<String?>(
+            value: o[cleValeur]?.toString(),
+            child: Text(o['nom']?.toString() ?? '', overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: onChange,
     );
   }
 
