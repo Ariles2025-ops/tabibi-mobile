@@ -6,7 +6,9 @@ import '../models/conversation.dart';
 import '../models/synthese_avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/praticiens_supabase.dart';
 import '../services/session.dart';
+import '../services/supabase_service.dart';
 import '../theme/theme_tabibi.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
@@ -41,6 +43,7 @@ class FicheMedecinPage extends StatefulWidget {
 
 class _FicheMedecinPageState extends State<FicheMedecinPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PraticiensSupabase _prat = const PraticiensSupabase();
   Map<String, dynamic>? _medecin;
   List<Map<String, dynamic>> _creneaux = [];
 
@@ -73,19 +76,54 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       _erreur = null;
     });
     try {
-      final medecin = await widget.api.medecin(widget.medecinId);
-      final creneaux = await widget.api.creneaux(widget.medecinId);
+      final medecin = await _prat.parId(widget.medecinId);
+      if (medecin == null) {
+        if (mounted) setState(() => _erreur = 'Praticien introuvable.');
+        return;
+      }
+      final creneaux = await _chargerCreneaux();
       final avis = await _chargerAvis();
       if (!mounted) return;
       setState(() {
         _medecin = medecin;
-        _creneaux = creneaux.where((c) => c['disponible'] != false).toList();
+        _creneaux = creneaux;
         _avis = avis;
       });
-    } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+    } catch (_) {
+      if (mounted) setState(() => _erreur = 'Fiche momentanément indisponible.');
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  /// Creneaux reservables du jour via Supabase (`get_available_slots`).
+  /// Vide tant que le praticien n'a pas de planning : la fiche reste consultable.
+  Future<List<Map<String, dynamic>>> _chargerCreneaux() async {
+    try {
+      final n = DateTime.now();
+      final d = '${n.year.toString().padLeft(4, '0')}-'
+          '${n.month.toString().padLeft(2, '0')}-'
+          '${n.day.toString().padLeft(2, '0')}';
+      final r = await sb.rpc('get_available_slots',
+          params: {'p_doctor_id': widget.medecinId, 'p_date': d});
+      final rows = (r as List?) ?? const [];
+      return rows.map((e) {
+        final m = e as Map;
+        final debut = m['slot_start']?.toString() ?? '';
+        final fin = m['slot_end']?.toString() ?? '';
+        int duree = 30;
+        try {
+          duree = DateTime.parse(fin).difference(DateTime.parse(debut)).inMinutes;
+        } catch (_) {}
+        return <String, dynamic>{
+          'id': debut,
+          'debut': debut,
+          'disponible': true,
+          'dureeMinutes': duree,
+        };
+      }).toList();
+    } catch (_) {
+      return [];
     }
   }
 
