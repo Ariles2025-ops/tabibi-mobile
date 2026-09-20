@@ -89,6 +89,14 @@ class ApiService {
     return _liste(res, '/api/medecins');
   }
 
+  /// Statistiques publiques de l'annuaire : {total, wilayas}. Total reel de la base.
+  Future<Map<String, dynamic>> statsAnnuaire() async {
+    final res = await http.get(Uri.parse('$base/api/medecins/stats'));
+    if (res.statusCode >= 300) return const {};
+    final d = jsonDecode(res.body);
+    return d is Map<String, dynamic> ? d : const {};
+  }
+
   /// Fiche publique d'un praticien ([id] : UUID en texte) :
   /// {id, nomComplet, specialiteSlug, specialiteFr, wilayaCode, wilayaFr, ville}.
   Future<Map<String, dynamic>> medecin(String id) async {

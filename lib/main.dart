@@ -93,6 +93,9 @@ class _RecherchePageState extends State<RecherchePage> {
   final _nom = TextEditingController();
   String? _specialite;
   List<Map<String, dynamic>> _resultats = [];
+
+  /// Total reel de praticiens dans la base (null tant qu'inconnu).
+  int? _totalMedecins;
   bool _charge = false;
 
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
@@ -110,6 +113,17 @@ class _RecherchePageState extends State<RecherchePage> {
       if (mounted) _message(messageApi(context, e));
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  /// Charge le total reel de praticiens (affiche dans la tuile « Medecins »).
+  Future<void> _chargerStats() async {
+    try {
+      final s = await widget.api.statsAnnuaire();
+      final t = s['total'];
+      if (mounted && t is num) setState(() => _totalMedecins = t.toInt());
+    } on Exception {
+      // total indisponible : la tuile garde son repli.
     }
   }
 
@@ -280,6 +294,7 @@ class _RecherchePageState extends State<RecherchePage> {
   void initState() {
     super.initState();
     _rechercher();
+    _chargerStats();
     _chargerNonLues();
   }
 
@@ -325,7 +340,7 @@ class _RecherchePageState extends State<RecherchePage> {
       ),
       body: RefreshIndicator(
         color: Tabibi.vert,
-        onRefresh: _rechercher,
+        onRefresh: () => Future.wait([_rechercher(), _chargerStats()]),
         child: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         physics: const AlwaysScrollableScrollPhysics(),
@@ -525,7 +540,10 @@ class _RecherchePageState extends State<RecherchePage> {
             children: [
               Expanded(
                   child: _statTile(
-                      '${_resultats.length}', t(context, 'accueil.statMedecins'))),
+                      _totalMedecins != null
+                          ? _formatMilliers(_totalMedecins!)
+                          : '…',
+                      t(context, 'accueil.statMedecins'))),
               const SizedBox(width: 10),
               Expanded(child: _statTile('58', t(context, 'accueil.statWilayas'))),
               const SizedBox(width: 10),
@@ -538,6 +556,9 @@ class _RecherchePageState extends State<RecherchePage> {
       ),
     );
   }
+
+  /// 75035 -> « 75K », 5 -> « 5 » : total lisible dans une petite tuile.
+  String _formatMilliers(int n) => n >= 1000 ? '${n ~/ 1000}K' : '$n';
 
   Widget _statTile(String valeur, String libelle) {
     return Container(
