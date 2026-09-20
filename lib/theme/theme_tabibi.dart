@@ -41,6 +41,13 @@ class Tabibi {
     colors: [Color(0xFF0F7560), Color(0xFF0A4D3E)],
   );
 
+  // Degrade hero CLAIR (fond blanc verdi tres doux) — copie exacte de tabibi.doctor
+  static const gradHero = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFFF0F7F4), Color(0xFFF8FAFC)],
+  );
+
   // Rayons
   static const r8 = 8.0;
   static const r12 = 12.0;

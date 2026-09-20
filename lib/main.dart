@@ -290,7 +290,18 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: const SizedBox.shrink(),
+        title: Row(mainAxisSize: MainAxisSize.min, children: const [
+          Text('Tabibi',
+              style: TextStyle(
+                  color: Tabibi.vert,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3)),
+          SizedBox(width: 6),
+          Text('طبيبي',
+              style: TextStyle(
+                  color: Tabibi.texte3, fontSize: 13, fontWeight: FontWeight.w600)),
+        ]),
         actions: [
           IconButton(
             tooltip: t(context, 'accueil.verifierOrdonnance'),
@@ -315,94 +326,109 @@ class _RecherchePageState extends State<RecherchePage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: const EdgeInsets.only(bottom: 28),
         children: [
           _heroClair(context),
-          const SizedBox(height: 22),
-          _entrees(context),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _entrees(context),
+          ),
           const SizedBox(height: 24),
-          Text(t(context, 'accueil.praticiens'),
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
-          const SizedBox(height: 12),
-          if (_charge)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t(context, 'accueil.praticiens'),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+                const SizedBox(height: 12),
+                if (_charge)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                for (final m in _resultats) _carteMedecin(context, m),
+              ],
             ),
-          for (final m in _resultats) _carteMedecin(context, m),
+          ),
         ],
       ),
     );
   }
 
-  /// Hero clair (fond blanc) facon tabibi.doctor : badge, accroche, recherche, paiement, stats.
+  /// Hero clair pleine largeur — copie fidele de tabibi.doctor (fond degrade doux).
   Widget _heroClair(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: Tabibi.pastille,
-            borderRadius: BorderRadius.circular(999),
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(gradient: Tabibi.gradHero),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+            decoration: BoxDecoration(
+              color: Tabibi.pastille,
+              border: Border.all(color: Tabibi.pastilleBd),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                    width: 7,
+                    height: 7,
+                    decoration:
+                        const BoxDecoration(color: Tabibi.or, shape: BoxShape.circle)),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(t(context, 'accueil.badge'),
+                      style: const TextStyle(
+                          color: Tabibi.ink,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3)),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                  width: 7,
-                  height: 7,
-                  decoration:
-                      const BoxDecoration(color: Tabibi.or, shape: BoxShape.circle)),
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(t(context, 'accueil.badge'),
-                    style: const TextStyle(
-                        color: Tabibi.vert, fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-            ],
+          const SizedBox(height: 14),
+          Text(
+            t(context, 'accueil.accroche'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Tabibi.ink,
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+                letterSpacing: -0.7),
           ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          t(context, 'accueil.accroche'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-              color: Tabibi.ink,
-              fontSize: 27,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
-              letterSpacing: -0.6),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          t(context, 'accueil.sousTitre'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Tabibi.texteDoux, fontSize: 14, height: 1.5),
-        ),
-        const SizedBox(height: 18),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(Tabibi.r16),
-            boxShadow: Tabibi.ombreRecherche,
+          const SizedBox(height: 10),
+          Text(
+            t(context, 'accueil.sousTitre'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Tabibi.texteDoux, fontSize: 14, height: 1.5),
           ),
-          child: TextField(
+          const SizedBox(height: 18),
+          TextField(
             controller: _nom,
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _rechercher(),
             decoration: InputDecoration(
               hintText: t(context, 'accueil.recherchePlaceholder'),
-              prefixIcon: const Icon(Icons.search, color: Tabibi.texte3),
+              prefixIcon: const Icon(Icons.search, color: Tabibi.vert),
               filled: true,
               fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(Tabibi.r16),
-                borderSide: BorderSide.none,
+                borderSide: const BorderSide(color: Tabibi.bord),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(Tabibi.r16),
-                borderSide: BorderSide.none,
+                borderSide: const BorderSide(color: Tabibi.bord),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(Tabibi.r16),
@@ -410,54 +436,65 @@ class _RecherchePageState extends State<RecherchePage> {
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.credit_card, size: 18, color: Tabibi.or),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(t(context, 'accueil.paiement'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Tabibi.texteDoux, fontSize: 13)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-                child: _statTile(
-                    '${_resultats.length}', t(context, 'accueil.statMedecins'))),
-            const SizedBox(width: 10),
-            Expanded(child: _statTile('58', t(context, 'accueil.statWilayas'))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _statTile('24/7', t(context, 'accueil.statReservation'))),
-          ],
-        ),
-      ],
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.credit_card, size: 16, color: Tabibi.or),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(t(context, 'accueil.paiement'),
+                    textAlign: TextAlign.center,
+                    style:
+                        const TextStyle(color: Tabibi.texteDoux, fontSize: 13)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                  child: _statTile(
+                      '${_resultats.length}', t(context, 'accueil.statMedecins'))),
+              const SizedBox(width: 10),
+              Expanded(child: _statTile('58', t(context, 'accueil.statWilayas'))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _statTile('24/7', t(context, 'accueil.statReservation'))),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _statTile(String valeur, String libelle) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(Tabibi.r16),
         border: Border.all(color: Tabibi.bord),
+        boxShadow: Tabibi.ombreCarte.isEmpty ? null : const [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 3, offset: Offset(0, 1)),
+        ],
       ),
       child: Column(
         children: [
           Text(valeur,
               style: const TextStyle(
-                  color: Tabibi.vert, fontSize: 22, fontWeight: FontWeight.w800)),
+                  color: Tabibi.vert,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3)),
           const SizedBox(height: 2),
           Text(libelle,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Tabibi.texteDoux, fontSize: 12)),
+              style: const TextStyle(
+                  color: Tabibi.texte3,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2)),
         ],
       ),
     );
