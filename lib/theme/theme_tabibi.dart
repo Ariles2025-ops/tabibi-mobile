@@ -54,6 +54,12 @@ class Tabibi {
   static const r16 = 16.0;
   static const r20 = 20.0;
 
+  // Ombre douce diffuse (design 2026 : effleure, pas de bordure dure)
+  static const ombreDouce = [
+    BoxShadow(color: Color(0x0F16281F), blurRadius: 24, offset: Offset(0, 10)),
+    BoxShadow(color: Color(0x0A16281F), blurRadius: 6, offset: Offset(0, 2)),
+  ];
+
   // Ombres
   static const ombreCarte = [
     BoxShadow(color: Color(0x0F102822), blurRadius: 8, offset: Offset(0, 2)),
@@ -158,6 +164,27 @@ ThemeData themeTabibi() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Tabibi.r12)),
     ),
     dividerTheme: const DividerThemeData(color: Tabibi.bord, thickness: 1),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      indicatorColor: Tabibi.pastille,
+      elevation: 0,
+      height: 66,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: states.contains(WidgetState.selected)
+                ? Tabibi.vert
+                : Tabibi.texte3,
+          )),
+      iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            size: 24,
+            color: states.contains(WidgetState.selected)
+                ? Tabibi.vert
+                : Tabibi.texte3,
+          )),
+    ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: Tabibi.ink,
       contentTextStyle: const TextStyle(color: Colors.white),

@@ -28,7 +28,7 @@ import 'utils/notifications.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await preparerDates(); // donnees de date de toutes les locales (intl)
-  await langues.initialiser(locale: localeDuTelephone());
+  await langues.initialiser(); // defaut francais (sauf choix memorise de l'utilisateur)
   runApp(const TabibiApp());
 }
 
@@ -519,14 +519,11 @@ class _RecherchePageState extends State<RecherchePage> {
 
   Widget _statTile(String valeur, String libelle) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(Tabibi.r16),
-        border: Border.all(color: Tabibi.bord),
-        boxShadow: Tabibi.ombreCarte.isEmpty ? null : const [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 3, offset: Offset(0, 1)),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
       ),
       child: Column(
         children: [
@@ -552,11 +549,11 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Carte medecin (resultat) facon Doctolib : avatar, nom, specialite/ville, chevron.
   Widget _carteMedecin(BuildContext context, Map<String, dynamic> m) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(Tabibi.r16),
-        border: Border.all(color: Tabibi.bord),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -587,11 +584,11 @@ class _RecherchePageState extends State<RecherchePage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(Tabibi.r16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(Tabibi.r16),
-          border: Border.all(color: Tabibi.bord),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: Tabibi.ombreDouce,
         ),
         child: Column(
           children: [
