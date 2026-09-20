@@ -149,10 +149,14 @@ class _ConnexionPageState extends State<ConnexionPage> {
           _msg('E-mail invalide.');
           return;
         }
-        await sb.auth.signUp(email: email, password: mdp, data: data);
+        final res = await sb.auth.signUp(email: email, password: mdp, data: data);
         if (!mounted) return;
-        if (sb.auth.currentSession != null) {
+        if (res.session != null) {
           Navigator.of(context).pop(true);
+        } else if ((res.user?.identities ?? const []).isEmpty) {
+          _identifiant.text = email;
+          setState(() => _mode = _Mode.connexion);
+          _msg('Ce compte existe déjà. Connectez-vous.');
         } else {
           _contactOtp = email;
           setState(() => _etapeOtp = true);
@@ -163,9 +167,18 @@ class _ConnexionPageState extends State<ConnexionPage> {
           _msg('Numéro invalide.');
           return;
         }
-        await sb.auth.signUp(phone: _telNorm, password: mdp, data: data);
-        _contactOtp = _telNorm;
-        if (mounted) setState(() => _etapeOtp = true);
+        final res = await sb.auth.signUp(phone: _telNorm, password: mdp, data: data);
+        if (!mounted) return;
+        if (res.session != null) {
+          Navigator.of(context).pop(true);
+        } else if ((res.user?.identities ?? const []).isEmpty) {
+          _identifiant.text = _telNorm;
+          setState(() => _mode = _Mode.connexion);
+          _msg('Ce compte existe déjà. Connectez-vous.');
+        } else {
+          _contactOtp = _telNorm;
+          setState(() => _etapeOtp = true);
+        }
       }
     } on AuthException catch (e) {
       if (mounted) {
