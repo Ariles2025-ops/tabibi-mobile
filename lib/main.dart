@@ -323,8 +323,12 @@ class _RecherchePageState extends State<RecherchePage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: ListView(
+      body: RefreshIndicator(
+        color: Tabibi.vert,
+        onRefresh: _rechercher,
+        child: ListView(
         padding: const EdgeInsets.only(bottom: 28),
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
           _heroClair(context),
           const SizedBox(height: 22),
@@ -366,6 +370,7 @@ class _RecherchePageState extends State<RecherchePage> {
             ),
           ),
         ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _ongletActif,
