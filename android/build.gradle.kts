@@ -23,18 +23,20 @@ tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
 
-// Force compileSdk 36 sur TOUS les modules de plugins (flutter_appauth compile
-// contre android-31 dans le cache pub ; androidx.window exige >= 33). Reflexion
-// pour rester compatible quelle que soit la version d'AGP du plugin.
+// tabibi-compilesdk-override : force compileSdk 36 sur tous les plugins (flutter_appauth fixe 31).
 subprojects {
-    afterEvaluate {
-        val androidExt = extensions.findByName("android")
-        if (androidExt != null) {
-            try {
-                val m = androidExt.javaClass.getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
-                m.invoke(androidExt, 36)
-            } catch (e: Exception) {
-                // module sans cette methode : ignore
+    // Le build.gradle racine de Flutter evalue deja :app (evaluationDependsOn) : on ne
+    // (re)planifie afterEvaluate que sur les sous-projets pas encore evalues (les plugins).
+    if (!state.executed) {
+        afterEvaluate {
+            val androidExt = extensions.findByName("android")
+            if (androidExt != null) {
+                try {
+                    androidExt.javaClass
+                        .getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
+                        .invoke(androidExt, 36)
+                } catch (e: Exception) {
+                }
             }
         }
     }

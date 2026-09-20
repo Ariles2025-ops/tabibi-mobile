@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.tabibi_mobile"
-    compileSdk = 36  // requis par androidx.core 1.17 (>= 36)
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.tabibi_mobile"
+        applicationId = "dz.tabibi.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
