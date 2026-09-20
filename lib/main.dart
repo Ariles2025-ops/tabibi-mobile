@@ -361,10 +361,7 @@ class _RecherchePageState extends State<RecherchePage> {
                         fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
                 const SizedBox(height: 12),
                 if (_charge)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  for (int i = 0; i < 3; i++) _squeletteMedecin(),
                 for (final m in _resultats) _carteMedecin(context, m),
                 if (!_charge && _resultats.isEmpty)
                   Container(
@@ -627,6 +624,45 @@ class _RecherchePageState extends State<RecherchePage> {
   /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
   /// « Téléconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
   /// « Liste d'attente », « Mon profil » et « Langue ».
+  /// Squelette de chargement (placeholder gris) pour une carte medecin.
+  Widget _squeletteMedecin() {
+    Widget bloc(double w, double h) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+              color: Tabibi.bg2, borderRadius: BorderRadius.circular(6)),
+        );
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
+      ),
+      child: Row(
+        children: [
+          Container(
+              width: 48,
+              height: 48,
+              decoration:
+                  const BoxDecoration(color: Tabibi.bg2, shape: BoxShape.circle)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                bloc(150, 12),
+                const SizedBox(height: 8),
+                bloc(90, 10),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Tuile service (accueil) : icone pastille + libelle, facon Doctolib.
   Widget _tuileService(IconData icone, String libelle, VoidCallback onTap) {
     return InkWell(
