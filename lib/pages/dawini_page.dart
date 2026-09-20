@@ -5,6 +5,7 @@ import '../models/besoin_medicament.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../theme/theme_tabibi.dart';
 import '../utils/dawini.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -184,7 +185,8 @@ class _DawiniPageState extends State<DawiniPage> {
       children: [
         _formulaire(context),
         const SizedBox(height: 24),
-        Text(t(context, 'dawini.mesDemandes'), style: texte.titleMedium),
+        Text(t(context, 'dawini.mesDemandes'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
         const SizedBox(height: 8),
         ..._listeDemandes(context),
       ],
@@ -194,13 +196,20 @@ class _DawiniPageState extends State<DawiniPage> {
   /// Formulaire de demande : medicament et wilaya obligatoires, commune et precision libres.
   Widget _formulaire(BuildContext context) {
     final texte = Theme.of(context).textTheme;
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t(context, 'dawini.demander'), style: texte.titleMedium),
+            Text(t(context, 'dawini.demander'),
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
             const SizedBox(height: 4),
             Text(t(context, 'dawini.explication'), style: texte.bodySmall),
             const SizedBox(height: 12),
@@ -276,21 +285,60 @@ class _DawiniPageState extends State<DawiniPage> {
 
   Widget _tuile(BuildContext context, BesoinMedicament b) {
     final langue = langueDe(context);
-    final texte = Theme.of(context).textTheme;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    final ouvert = estOuvert(b);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
+      ),
       child: ListTile(
-        leading: Icon(estOuvert(b) ? Icons.local_pharmacy_outlined : Icons.check_circle_outline),
-        title: Text(b.medicament),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        leading: Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration:
+              const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
+          child: Icon(
+              ouvert ? Icons.local_pharmacy_outlined : Icons.check_circle_outline,
+              color: Tabibi.vert,
+              size: 20),
+        ),
+        title: Text(b.medicament,
+            style:
+                const TextStyle(fontWeight: FontWeight.w700, color: Tabibi.texte)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t(context, 'dawini.lieuStatut', params: {
-              'lieu': lieuBesoin(langue, b),
-              'statut': libelleStatutBesoin(langue, b.statut),
-            })),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(lieuBesoin(langue, b),
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Tabibi.texteDoux, fontSize: 13)),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: ouvert ? Tabibi.vertTresClair : Tabibi.bg2,
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Text(libelleStatutBesoin(langue, b.statut),
+                      style: TextStyle(
+                          color: ouvert ? Tabibi.vert : Tabibi.texte3,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
             const SizedBox(height: 2),
-            Text(dateBesoin(langue, b), style: texte.bodySmall),
+            Text(dateBesoin(langue, b),
+                style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
           ],
         ),
         isThreeLine: true,
@@ -299,8 +347,12 @@ class _DawiniPageState extends State<DawiniPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(libelleReponses(langue, b.nombreReponses), style: texte.labelLarge),
-            const Icon(Icons.chevron_right),
+            Text(libelleReponses(langue, b.nombreReponses),
+                style: const TextStyle(
+                    color: Tabibi.vert,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700)),
+            const Icon(Icons.chevron_right, color: Tabibi.bordFort),
           ],
         ),
         onTap: () => _ouvrirReponses(b),

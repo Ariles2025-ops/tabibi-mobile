@@ -5,6 +5,7 @@ import '../models/avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../theme/theme_tabibi.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
@@ -234,23 +235,117 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_rdvs.isEmpty) return Center(child: Text(t(context, 'rdv.aucun')));
+    if (_rdvs.isEmpty) {
+      return _vueVide(Icons.event_busy_outlined, t(context, 'rdv.aucun'));
+    }
+    return RefreshIndicator(
+      color: Tabibi.vert,
+      onRefresh: _charger,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [for (final rdv in _rdvs) _carteRdv(context, rdv)],
+      ),
+    );
+  }
+
+  /// Une carte de rendez-vous : pastille, medecin, date, pilule de statut, action.
+  Widget _carteRdv(BuildContext context, Map<String, dynamic> rdv) {
     final langue = langueDe(context);
-    return ListView.separated(
-      itemCount: _rdvs.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (_, i) {
-        final rdv = _rdvs[i];
-        return ListTile(
-          leading: const Icon(Icons.event),
-          title: Text(_dateRdv(context, rdv)),
-          subtitle: Text(t(context, 'rdv.medecinStatut', params: {
-            'medecin': _nomMedecin(context, rdv),
-            'statut': libelleStatut(langue, rdv['statut']),
-          })),
-          trailing: _action(context, rdv),
-        );
-      },
+    final action = _action(context, rdv);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                    color: Tabibi.pastille, shape: BoxShape.circle),
+                child: const Icon(Icons.event, color: Tabibi.vert, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_nomMedecin(context, rdv),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Tabibi.texte,
+                            fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(_dateRdv(context, rdv),
+                        style: const TextStyle(
+                            color: Tabibi.texteDoux, fontSize: 13)),
+                  ],
+                ),
+              ),
+              _pileStatut(langue, rdv),
+            ],
+          ),
+          if (action != null) ...[
+            const SizedBox(height: 10),
+            Align(alignment: AlignmentDirectional.centerEnd, child: action),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Pilule de statut coloree (vert = confirme, ambre = en attente, rouge = annule,
+  /// gris = honore/passe).
+  Widget _pileStatut(String langue, Map<String, dynamic> rdv) {
+    final st = _statut(rdv).toUpperCase();
+    Color bg;
+    Color fg;
+    if (st.startsWith('ANNUL')) {
+      bg = Tabibi.rougeClair;
+      fg = Tabibi.rouge;
+    } else if (estHonore(rdv['statut'])) {
+      bg = Tabibi.bg2;
+      fg = Tabibi.texte3;
+    } else if (st.contains('ATTENTE') || st.contains('PENDING')) {
+      bg = const Color(0xFFFEF3C7);
+      fg = const Color(0xFF92400E);
+    } else {
+      bg = Tabibi.vertTresClair;
+      fg = Tabibi.vert;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(libelleStatut(langue, rdv['statut']),
+          style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  /// Etat vide soigne (icone + message centres).
+  Widget _vueVide(IconData icone, String texte) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icone, size: 44, color: Tabibi.texte4),
+            const SizedBox(height: 12),
+            Text(texte,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Tabibi.texteDoux)),
+          ],
+        ),
+      ),
     );
   }
 

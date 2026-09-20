@@ -6,6 +6,7 @@ import '../models/teleconsultation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../theme/theme_tabibi.dart';
 import '../utils/teleconsultations.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -165,10 +166,21 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_teleconsultations.isEmpty) {
-      return Center(child: Text(t(context, 'tele.aucune')));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.videocam_off_outlined, size: 44, color: Tabibi.texte4),
+            const SizedBox(height: 12),
+            Text(t(context, 'tele.aucune'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Tabibi.texteDoux)),
+          ]),
+        ),
+      );
     }
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [for (final tele in _teleconsultations) _carte(context, tele)],
     );
   }
@@ -177,23 +189,50 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   /// ou texte d'etat selon l'avancement.
   Widget _carte(BuildContext context, Teleconsultation tele) {
     final langue = langueDe(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.videocam_outlined),
-              title: Text(dateTeleconsultation(langue, tele)),
-              subtitle: Text(libelleStatutTeleconsultation(langue, tele.statut)),
-            ),
-            const SizedBox(height: 8),
-            _zoneAction(context, tele),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                    color: Tabibi.pastille, shape: BoxShape.circle),
+                child:
+                    const Icon(Icons.videocam_outlined, color: Tabibi.vert, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(dateTeleconsultation(langue, tele),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: Tabibi.texte)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: Tabibi.vertTresClair,
+                    borderRadius: BorderRadius.circular(999)),
+                child: Text(libelleStatutTeleconsultation(langue, tele.statut),
+                    style: const TextStyle(
+                        color: Tabibi.vert,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _zoneAction(context, tele),
+        ],
       ),
     );
   }
