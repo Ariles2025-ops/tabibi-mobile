@@ -98,6 +98,9 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
   int? _nonLues;
 
+  /// Onglet de la barre de navigation basse (0 = accueil).
+  int _ongletActif = 0;
+
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
@@ -293,57 +296,62 @@ class _RecherchePageState extends State<RecherchePage> {
       appBar: AppBar(
         titleSpacing: 16,
         title: Row(mainAxisSize: MainAxisSize.min, children: [
-          SvgPicture.asset('assets/logo-mark.svg', width: 30, height: 30),
-          const SizedBox(width: 9),
+          SvgPicture.asset('assets/logo-mark.svg', width: 28, height: 28),
+          const SizedBox(width: 8),
           const Text('Tabibi',
               style: TextStyle(
                   color: Tabibi.vert,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3)),
-          const SizedBox(width: 6),
-          const Text('طبيبي',
-              style: TextStyle(
-                  color: Tabibi.texte3, fontSize: 13, fontWeight: FontWeight.w600)),
         ]),
         actions: [
           IconButton(
-            tooltip: t(context, 'accueil.verifierOrdonnance'),
-            onPressed: _ouvrirVerification,
-            icon: const Icon(Icons.verified_outlined),
-          ),
-          IconButton(
-            tooltip: t(context, 'accueil.mesOrdonnances'),
-            onPressed: _ouvrirMesOrdonnances,
-            icon: const Icon(Icons.description_outlined),
-          ),
-          IconButton(
-            tooltip: t(context, 'accueil.mesRendezVous'),
-            onPressed: _ouvrirMesRendezVous,
-            icon: const Icon(Icons.calendar_month),
+            tooltip: t(context, 'accueil.notifications'),
+            onPressed: _ouvrirNotifications,
+            icon: Badge(
+              isLabelVisible: (_nonLues ?? 0) > 0,
+              label: Text('${_nonLues ?? 0}'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
           ),
           IconButton(
             tooltip: t(context, connecte ? 'commun.connecte' : 'commun.seConnecter'),
             onPressed: _seConnecter,
             icon: Icon(connecte ? Icons.person : Icons.person_outline),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         children: [
           _heroClair(context),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _entrees(context),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(t(context, 'accueil.services'),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                      child: _tuileService(Icons.calendar_month,
+                          t(context, 'accueil.mesRendezVous'), _ouvrirMesRendezVous)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: _tuileService(Icons.videocam_outlined,
+                          t(context, 'accueil.teleconsultations'),
+                          _ouvrirTeleconsultations)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: _tuileService(Icons.local_pharmacy_outlined,
+                          t(context, 'accueil.dawini'), _ouvrirDawini)),
+                ]),
+                const SizedBox(height: 26),
                 Text(t(context, 'accueil.praticiens'),
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
@@ -357,6 +365,38 @@ class _RecherchePageState extends State<RecherchePage> {
               ],
             ),
           ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _ongletActif,
+        onDestinationSelected: (i) {
+          if (i == 1) {
+            _ouvrirMesRendezVous();
+          } else if (i == 2) {
+            _ouvrirMessagerie();
+          } else if (i == 3) {
+            _ouvrirCompte();
+          } else {
+            setState(() => _ongletActif = 0);
+          }
+        },
+        destinations: [
+          NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: t(context, 'accueil.ongletAccueil')),
+          NavigationDestination(
+              icon: const Icon(Icons.calendar_month_outlined),
+              selectedIcon: const Icon(Icons.calendar_month),
+              label: t(context, 'accueil.mesRendezVous')),
+          NavigationDestination(
+              icon: const Icon(Icons.chat_bubble_outline),
+              selectedIcon: const Icon(Icons.chat_bubble),
+              label: t(context, 'accueil.messagerie')),
+          NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: t(context, 'accueil.compte')),
         ],
       ),
     );
@@ -536,38 +576,84 @@ class _RecherchePageState extends State<RecherchePage> {
   /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
   /// « Téléconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
   /// « Liste d'attente », « Mon profil » et « Langue ».
-  Widget _entrees(BuildContext context) {
-    final lignes = <Widget>[
-      _ligneMenu(Icons.notifications_outlined,
-          libelleNotifications(langueDe(context), _nonLues), _ouvrirNotifications),
-      _ligneMenu(Icons.videocam_outlined,
-          t(context, 'accueil.teleconsultations'), _ouvrirTeleconsultations),
-      _ligneMenu(Icons.chat_bubble_outline,
-          t(context, 'accueil.messagerie'), _ouvrirMessagerie),
-      _ligneMenu(Icons.star_outline, t(context, 'accueil.mesAvis'), _ouvrirMesAvis),
-      _ligneMenu(Icons.local_pharmacy_outlined,
-          t(context, 'accueil.dawini'), _ouvrirDawini),
-      _ligneMenu(Icons.hourglass_top_outlined,
-          t(context, 'accueil.listeAttente'), _ouvrirListesAttente),
-      _ligneMenu(Icons.badge_outlined,
-          t(context, 'accueil.monProfil'), _ouvrirMonProfil),
-      _ligneMenu(Icons.language_outlined, t(context, 'accueil.langue'), _ouvrirLangue),
-    ];
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Tabibi.r16),
-        border: Border.all(color: Tabibi.bord),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var k = 0; k < lignes.length; k++) ...[
-            lignes[k],
-            if (k < lignes.length - 1)
-              const Divider(height: 1, thickness: 1, indent: 62, color: Tabibi.bg2),
+  /// Tuile service (accueil) : icone pastille + libelle, facon Doctolib.
+  Widget _tuileService(IconData icone, String libelle, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Tabibi.r16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(Tabibi.r16),
+          border: Border.all(color: Tabibi.bord),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              alignment: Alignment.center,
+              decoration:
+                  const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
+              child: Icon(icone, color: Tabibi.vert, size: 22),
+            ),
+            const SizedBox(height: 8),
+            Text(libelle,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: Tabibi.texte)),
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  /// Panneau « Compte » (feuille du bas) : profil, ordonnances, avis, liste d'attente,
+  /// verification, langue — tout le secondaire, hors de l'accueil.
+  void _ouvrirCompte() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Tabibi.bord, borderRadius: BorderRadius.circular(2))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(t(context, 'accueil.compte'),
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Tabibi.ink)),
+              ),
+            ),
+            _ligneMenu(Icons.badge_outlined, t(context, 'accueil.monProfil'),
+                () { Navigator.pop(ctx); _ouvrirMonProfil(); }),
+            _ligneMenu(Icons.description_outlined, t(context, 'accueil.mesOrdonnances'),
+                () { Navigator.pop(ctx); _ouvrirMesOrdonnances(); }),
+            _ligneMenu(Icons.star_outline, t(context, 'accueil.mesAvis'),
+                () { Navigator.pop(ctx); _ouvrirMesAvis(); }),
+            _ligneMenu(Icons.hourglass_top_outlined, t(context, 'accueil.listeAttente'),
+                () { Navigator.pop(ctx); _ouvrirListesAttente(); }),
+            _ligneMenu(Icons.verified_outlined, t(context, 'accueil.verifierOrdonnance'),
+                () { Navigator.pop(ctx); _ouvrirVerification(); }),
+            _ligneMenu(Icons.language_outlined, t(context, 'accueil.langue'),
+                () { Navigator.pop(ctx); _ouvrirLangue(); }),
+            const SizedBox(height: 10),
+          ],
+        ),
       ),
     );
   }
