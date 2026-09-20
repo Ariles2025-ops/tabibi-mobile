@@ -329,6 +329,11 @@ class _RecherchePageState extends State<RecherchePage> {
     super.dispose();
   }
 
+  /// Vrai des qu'un critere est saisi (texte, wilaya ou specialite) : on replie
+  /// l'accueil et on montre les resultats directement.
+  bool get _rechercheActive =>
+      _nom.text.trim().isNotEmpty || _wilaya != null || _specialite != null;
+
   @override
   Widget build(BuildContext context) {
     final connecte = _auth.estConnecte;
@@ -377,6 +382,7 @@ class _RecherchePageState extends State<RecherchePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (!_rechercheActive) ...[
                 Text(t(context, 'accueil.services'),
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
@@ -396,13 +402,20 @@ class _RecherchePageState extends State<RecherchePage> {
                           t(context, 'accueil.dawini'), _ouvrirDawini)),
                 ]),
                 const SizedBox(height: 26),
-                Text(t(context, 'accueil.praticiens'),
+                ],
+                Text(
+                    _rechercheActive
+                        ? t(context, 'accueil.resultats')
+                        : t(context, 'accueil.praticiens'),
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
                 const SizedBox(height: 12),
                 if (_charge)
                   for (int i = 0; i < 3; i++) _squeletteMedecin(),
-                for (final m in _resultats) _carteMedecin(context, m),
+                for (final m in (_rechercheActive
+                    ? _resultats
+                    : _resultats.take(4).toList()))
+                  _carteMedecin(context, m),
                 if (!_charge && _resultats.isEmpty)
                   Container(
                     width: double.infinity,
@@ -476,6 +489,7 @@ class _RecherchePageState extends State<RecherchePage> {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
       child: Column(
         children: [
+          if (!_rechercheActive) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
             decoration: BoxDecoration(
@@ -520,6 +534,7 @@ class _RecherchePageState extends State<RecherchePage> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: Tabibi.texteDoux, fontSize: 14, height: 1.5),
           ),
+          ],
           const SizedBox(height: 18),
           TextField(
             controller: _nom,
@@ -550,32 +565,45 @@ class _RecherchePageState extends State<RecherchePage> {
           Row(
             children: [
               Expanded(
-                child: _menuFiltre(
-                  valeur: _wilaya,
-                  indice: t(context, 'accueil.toutesWilayas'),
-                  options: _wilayasRef,
-                  cleValeur: 'code',
-                  onChange: (v) {
-                    setState(() => _wilaya = v);
-                    _rechercher();
-                  },
+                child: _pillFiltre(
+                  icone: Icons.location_on_outlined,
+                  libelle: _nomWilaya() ?? t(context, 'accueil.wilaya'),
+                  actif: _wilaya != null,
+                  onTap: () => _ouvrirSelecteur(
+                    titre: t(context, 'accueil.wilaya'),
+                    options: _wilayasRef,
+                    cleValeur: 'code',
+                    valeur: _wilaya,
+                    recherche: true,
+                    onChoisir: (v) {
+                      setState(() => _wilaya = v);
+                      _rechercher();
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _menuFiltre(
-                  valeur: _specialite,
-                  indice: t(context, 'accueil.toutesSpecialites'),
-                  options: _specialitesRef,
-                  cleValeur: 'slug',
-                  onChange: (v) {
-                    setState(() => _specialite = v);
-                    _rechercher();
-                  },
+                child: _pillFiltre(
+                  icone: Icons.medical_services_outlined,
+                  libelle: _nomSpecialite() ?? t(context, 'accueil.specialite'),
+                  actif: _specialite != null,
+                  onTap: () => _ouvrirSelecteur(
+                    titre: t(context, 'accueil.specialite'),
+                    options: _specialitesRef,
+                    cleValeur: 'slug',
+                    valeur: _specialite,
+                    recherche: false,
+                    onChoisir: (v) {
+                      setState(() => _specialite = v);
+                      _rechercher();
+                    },
+                  ),
                 ),
               ),
             ],
           ),
+          if (!_rechercheActive) ...[
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -609,56 +637,167 @@ class _RecherchePageState extends State<RecherchePage> {
                   child: _statTile('24/7', t(context, 'accueil.statReservation'))),
             ],
           ),
+          ],
         ],
       ),
       ),
     );
   }
 
-  /// Menu deroulant de filtre (wilaya / specialite), aligne sur la charte.
-  Widget _menuFiltre({
-    required String? valeur,
-    required String indice,
+  /// Pastille de filtre (wilaya / specialite) ouvrant un selecteur en bas d'ecran.
+  Widget _pillFiltre({
+    required IconData icone,
+    required String libelle,
+    required bool actif,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(Tabibi.r16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: actif ? Tabibi.pastille : Colors.white,
+          borderRadius: BorderRadius.circular(Tabibi.r16),
+          border: Border.all(
+              color: actif ? Tabibi.vert : Tabibi.bord, width: actif ? 1.5 : 1),
+        ),
+        child: Row(children: [
+          Icon(icone, size: 18, color: actif ? Tabibi.vert : Tabibi.texte3),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(libelle,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: actif ? Tabibi.vert : Tabibi.texteDoux)),
+          ),
+          Icon(Icons.expand_more,
+              size: 18, color: actif ? Tabibi.vert : Tabibi.texte3),
+        ]),
+      ),
+    );
+  }
+
+  String? _nomWilaya() {
+    for (final w in _wilayasRef) {
+      if (w['code']?.toString() == _wilaya) return w['nom']?.toString();
+    }
+    return null;
+  }
+
+  String? _nomSpecialite() {
+    for (final s in _specialitesRef) {
+      if (s['slug']?.toString() == _specialite) return s['nom']?.toString();
+    }
+    return null;
+  }
+
+  /// Selecteur en bas d'ecran (liste + recherche) pour une wilaya ou une specialite.
+  Future<void> _ouvrirSelecteur({
+    required String titre,
     required List<Map<String, dynamic>> options,
     required String cleValeur,
-    required ValueChanged<String?> onChange,
-  }) {
-    return DropdownButtonFormField<String?>(
-      value: valeur,
-      isExpanded: true,
-      icon: const Icon(Icons.expand_more, color: Tabibi.texte3),
-      style: const TextStyle(color: Tabibi.texte, fontSize: 14),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Tabibi.r16),
-          borderSide: const BorderSide(color: Tabibi.bord),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Tabibi.r16),
-          borderSide: const BorderSide(color: Tabibi.bord),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Tabibi.r16),
-          borderSide: const BorderSide(color: Tabibi.vert, width: 1.5),
-        ),
+    required String? valeur,
+    required bool recherche,
+    required ValueChanged<String?> onChoisir,
+  }) async {
+    final ctrl = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      hint: Text(indice,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Tabibi.texte3, fontSize: 14)),
-      items: [
-        DropdownMenuItem<String?>(
-            value: null,
-            child: Text(indice, overflow: TextOverflow.ellipsis)),
-        for (final o in options)
-          DropdownMenuItem<String?>(
-            value: o[cleValeur]?.toString(),
-            child: Text(o['nom']?.toString() ?? '', overflow: TextOverflow.ellipsis),
-          ),
-      ],
-      onChanged: onChange,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setSheet) {
+          final q = ctrl.text.trim().toLowerCase();
+          final filtres = q.isEmpty
+              ? options
+              : options
+                  .where((o) =>
+                      (o['nom']?.toString().toLowerCase() ?? '').contains(q))
+                  .toList();
+          return Padding(
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.72,
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Tabibi.bord,
+                          borderRadius: BorderRadius.circular(2))),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 8, 6),
+                    child: Row(children: [
+                      Text(titre,
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Tabibi.ink)),
+                      const Spacer(),
+                      IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close, color: Tabibi.texte3)),
+                    ]),
+                  ),
+                  if (recherche)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: ctrl,
+                        onChanged: (_) => setSheet(() {}),
+                        decoration: InputDecoration(
+                          hintText: t(context, 'accueil.rechercheWilaya'),
+                          prefixIcon:
+                              const Icon(Icons.search, color: Tabibi.texte3),
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _ligneSelecteur(
+                            t(context, 'accueil.tout'), valeur == null, () {
+                          Navigator.pop(ctx);
+                          onChoisir(null);
+                        }),
+                        for (final o in filtres)
+                          _ligneSelecteur(
+                            o['nom']?.toString() ?? '',
+                            valeur == o[cleValeur]?.toString(),
+                            () {
+                              Navigator.pop(ctx);
+                              onChoisir(o[cleValeur]?.toString());
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _ligneSelecteur(String texte, bool choisi, VoidCallback onTap) {
+    return ListTile(
+      title: Text(texte,
+          style: TextStyle(
+              fontWeight: choisi ? FontWeight.w700 : FontWeight.w500,
+              color: choisi ? Tabibi.vert : Tabibi.texte)),
+      trailing: choisi ? const Icon(Icons.check, color: Tabibi.vert) : null,
+      onTap: onTap,
     );
   }
 
