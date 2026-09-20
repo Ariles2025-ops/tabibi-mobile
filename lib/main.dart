@@ -366,6 +366,22 @@ class _RecherchePageState extends State<RecherchePage> {
                     child: Center(child: CircularProgressIndicator()),
                   ),
                 for (final m in _resultats) _carteMedecin(context, m),
+                if (!_charge && _resultats.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: Tabibi.ombreDouce),
+                    child: Column(children: [
+                      const Icon(Icons.search_off, size: 32, color: Tabibi.texte4),
+                      const SizedBox(height: 8),
+                      Text(t(context, 'accueil.aucunMedecin'),
+                          style: const TextStyle(color: Tabibi.texteDoux)),
+                    ]),
+                  ),
               ],
             ),
           ),
@@ -409,7 +425,15 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Hero clair pleine largeur — copie fidele de tabibi.doctor (fond degrade doux).
   Widget _heroClair(BuildContext context) {
-    return Container(
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      builder: (context, v, child) => Opacity(
+        opacity: v.clamp(0.0, 1.0),
+        child: Transform.translate(offset: Offset(0, (1 - v) * 14), child: child),
+      ),
+      child: Container(
       width: double.infinity,
       decoration: const BoxDecoration(gradient: Tabibi.gradHero),
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
@@ -514,6 +538,7 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -558,8 +583,32 @@ class _RecherchePageState extends State<RecherchePage> {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         leading: AvatarInitiales(m['nomComplet'] as String),
-        title: Text(m['nomComplet'] as String,
-            style: const TextStyle(fontWeight: FontWeight.w700, color: Tabibi.texte)),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(m['nomComplet'] as String,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, color: Tabibi.texte)),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                  color: Tabibi.orClair,
+                  borderRadius: BorderRadius.circular(999)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.verified, size: 12, color: Tabibi.or),
+                const SizedBox(width: 3),
+                Text(t(context, 'accueil.verifie'),
+                    style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Tabibi.orTexte)),
+              ]),
+            ),
+          ],
+        ),
         subtitle: Text(
           t(context, 'accueil.sousTitreMedecin', params: {
             'specialite': m['specialiteFr'],
