@@ -320,28 +320,46 @@ class _RecherchePageState extends State<RecherchePage> {
           children: [
             _heroBand(context),
             const SizedBox(height: 16),
+            TextField(
+              controller: _nom,
+              decoration: InputDecoration(
+                hintText: t(context, 'accueil.nomMedecin'),
+                prefixIcon: const Icon(Icons.search, color: Tabibi.texte3),
+              ),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _rechercher(),
+            ),
+            const SizedBox(height: 10),
             Row(children: [
               Expanded(
-                child: TextField(
-                  controller: _nom,
-                  decoration: InputDecoration(labelText: t(context, 'accueil.nomMedecin')),
-                  onSubmitted: (_) => _rechercher(),
+                child: DropdownButtonFormField<String>(
+                  value: _specialite,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    hintText: t(context, 'accueil.specialite'),
+                  ),
+                  items: [
+                    for (final slug in specialites)
+                      DropdownMenuItem(
+                        value: slug,
+                        child: Text(t(context, 'specialite.$slug')),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _specialite = v),
                 ),
               ),
               const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _specialite,
-                hint: Text(t(context, 'accueil.specialite')),
-                items: [
-                  for (final slug in specialites)
-                    DropdownMenuItem(
-                      value: slug,
-                      child: Text(t(context, 'specialite.$slug')),
-                    ),
-                ],
-                onChanged: (v) => setState(() => _specialite = v),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _rechercher,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(56, 56),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.search),
+                ),
               ),
-              IconButton(onPressed: _rechercher, icon: const Icon(Icons.search)),
             ]),
             const SizedBox(height: 12),
             _entrees(context),
@@ -414,7 +432,7 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
           const SizedBox(height: 14),
           Text(
-            t(context, 'accueil.titre'),
+            t(context, 'accueil.accroche'),
             style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,

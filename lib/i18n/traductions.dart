@@ -81,6 +81,7 @@ const Map<String, String> _fr = {
   'api.echec': 'Échec {chemin} : {statut}',
   // Accueil
   'accueil.titre': 'Tabibi',
+  'accueil.accroche': 'Votre santé ne devrait jamais attendre',
   'accueil.verifierOrdonnance': 'Vérifier une ordonnance',
   'accueil.mesOrdonnances': 'Mes ordonnances',
   'accueil.mesRendezVous': 'Mes rendez-vous',
@@ -364,6 +365,7 @@ const Map<String, String> _ar = {
   'api.echec': 'فشل {chemin} : {statut}',
   // Accueil
   'accueil.titre': 'Tabibi',
+  'accueil.accroche': 'صحتك يجب ألا تنتظر',
   'accueil.verifierOrdonnance': 'التحقق من وصفة طبية',
   'accueil.mesOrdonnances': 'وصفاتي الطبية',
   'accueil.mesRendezVous': 'مواعيدي',
@@ -640,6 +642,7 @@ const Map<String, String> _en = {
   'api.echec': 'Failure {chemin}: {statut}',
   // Accueil
   'accueil.titre': 'Tabibi',
+  'accueil.accroche': 'Your health should never wait',
   'accueil.verifierOrdonnance': 'Verify a prescription',
   'accueil.mesOrdonnances': 'My prescriptions',
   'accueil.mesRendezVous': 'My appointments',
