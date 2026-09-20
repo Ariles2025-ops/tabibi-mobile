@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,7 +7,7 @@ import '../theme/theme_tabibi.dart';
 
 /// Connexion / creation de compte PATIENT via Supabase Auth.
 /// - Inscription par e-mail (confirmation e-mail) ou par telephone (SMS une fois).
-/// - Identifiant (pseudo) choisi par l'utilisateur, unique, utilisable pour se connecter.
+/// - Connexion avec l'e-mail ou le telephone (pas de pseudo).
 /// Renvoie `true` (Navigator.pop) quand une session est ouverte.
 class ConnexionPage extends StatefulWidget {
   const ConnexionPage({super.key});
@@ -30,24 +27,18 @@ class _ConnexionPageState extends State<ConnexionPage> {
   bool _voirMdp = false;
 
   // Connexion
-  final _identifiant = TextEditingController(); // pseudo, e-mail ou telephone
+  final _identifiant = TextEditingController(); // e-mail ou telephone
   final _mdpConnexion = TextEditingController();
 
   // Inscription
   final _prenom = TextEditingController();
   final _nom = TextEditingController();
-  final _pseudo = TextEditingController();
   final _email = TextEditingController();
   final _tel = TextEditingController();
   final _mdp = TextEditingController();
   int? _wilaya;
   List<Map<String, dynamic>> _wilayas = [];
   bool _cgu = false, _confid = false, _sante = false, _marketing = false;
-
-  // Verif pseudo
-  Timer? _debounce;
-  bool? _pseudoLibre;
-  bool _pseudoVerif = false;
 
   // Etape code SMS
   bool _etapeOtp = false;
@@ -63,8 +54,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    for (final c in [_identifiant, _mdpConnexion, _prenom, _nom, _pseudo, _email, _tel, _mdp, _otp]) {
+    for (final c in [_identifiant, _mdpConnexion, _prenom, _nom, _email, _tel, _mdp, _otp]) {
       c.dispose();
     }
     super.dispose();
@@ -88,25 +78,6 @@ class _ConnexionPageState extends State<ConnexionPage> {
   void _msg(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
-  void _onPseudoChange(String v) {
-    _pseudoLibre = null;
-    _debounce?.cancel();
-    final u = v.trim();
-    setState(() {});
-    if (u.length < 3) return;
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
-      if (!mounted) return;
-      setState(() => _pseudoVerif = true);
-      try {
-        final r = await sb.rpc('identifiant_disponible', params: {'p_username': u});
-        if (mounted) setState(() => _pseudoLibre = r == true);
-      } catch (_) {
-      } finally {
-        if (mounted) setState(() => _pseudoVerif = false);
-      }
-    });
-  }
-
   // ---------- CONNEXION ----------
   Future<void> _connexion() async {
     final id = _identifiant.text.trim();
@@ -119,21 +90,15 @@ class _ConnexionPageState extends State<ConnexionPage> {
       String? phone;
       if (id.contains('@')) {
         email = id;
-      } else if (RegExp(r'^[+0-9 ]{6,}$').hasMatch(id)) {
-        phone = _normTel(id);
       } else {
-        final r = await sb.rpc('identifiant_vers_contact', params: {'p_username': id});
-        if (r is Map) {
-          email = r['email'] as String?;
-          phone = r['phone'] as String?;
-        }
+        phone = _normTel(id);
       }
       if (email != null && email.isNotEmpty) {
         await sb.auth.signInWithPassword(email: email, password: mdp);
       } else if (phone != null && phone.isNotEmpty) {
         await sb.auth.signInWithPassword(phone: phone, password: mdp);
       } else {
-        _msg('Identifiant introuvable.');
+        _msg('Entrez votre e-mail ou votre téléphone.');
         return;
       }
       if (mounted && sb.auth.currentSession != null) Navigator.of(context).pop(true);
@@ -152,18 +117,9 @@ class _ConnexionPageState extends State<ConnexionPage> {
   Future<void> _inscription() async {
     final prenom = _prenom.text.trim();
     final nom = _nom.text.trim();
-    final pseudo = _pseudo.text.trim();
     final mdp = _mdp.text;
     if (prenom.isEmpty || nom.isEmpty) {
       _msg('Indiquez votre prénom et votre nom.');
-      return;
-    }
-    if (pseudo.length < 3) {
-      _msg('Choisissez un identifiant (3 caractères min.).');
-      return;
-    }
-    if (_pseudoLibre == false) {
-      _msg('Cet identifiant est déjà pris.');
       return;
     }
     if (mdp.length < 6) {
@@ -178,7 +134,6 @@ class _ConnexionPageState extends State<ConnexionPage> {
       'role': 'patient',
       'first_name': prenom,
       'last_name': nom,
-      'username': pseudo,
       if (_wilaya != null) 'wilaya_code': _wilaya,
       'consent_terms': _cgu,
       'consent_privacy': _confid,
@@ -188,12 +143,6 @@ class _ConnexionPageState extends State<ConnexionPage> {
     FocusScope.of(context).unfocus();
     setState(() => _charge = true);
     try {
-      // securite : pseudo encore libre ?
-      final libre = await sb.rpc('identifiant_disponible', params: {'p_username': pseudo});
-      if (libre != true) {
-        _msg('Cet identifiant est déjà pris.');
-        return;
-      }
       if (_methode == _Methode.email) {
         final email = _email.text.trim();
         if (!email.contains('@')) {
@@ -333,7 +282,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
           autocorrect: false,
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(
-            labelText: 'Identifiant, e-mail ou téléphone',
+            labelText: 'E-mail ou téléphone',
             prefixIcon: Icon(Icons.person_outline),
           ),
         ),
@@ -347,8 +296,6 @@ class _ConnexionPageState extends State<ConnexionPage> {
           const SizedBox(width: 12),
           Expanded(child: _champ(_nom, 'Nom', Icons.badge_outlined)),
         ]),
-        const SizedBox(height: 14),
-        _champPseudo(),
         const SizedBox(height: 18),
         _choixMethode(),
         const SizedBox(height: 14),
@@ -392,47 +339,6 @@ class _ConnexionPageState extends State<ConnexionPage> {
         ),
       ),
     );
-  }
-
-  Widget _champPseudo() {
-    Widget? suffixe;
-    if (_pseudoVerif) {
-      suffixe = const Padding(
-        padding: EdgeInsets.all(12),
-        child: SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    } else if (_pseudoLibre == true) {
-      suffixe = const Icon(Icons.check_circle, color: Tabibi.vert);
-    } else if (_pseudoLibre == false) {
-      suffixe = const Icon(Icons.cancel, color: Tabibi.rouge);
-    }
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      TextField(
-        controller: _pseudo,
-        autocorrect: false,
-        onChanged: _onPseudoChange,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._]')),
-        ],
-        decoration: InputDecoration(
-          labelText: 'Identifiant (ex. @amine.dz)',
-          prefixIcon: const Icon(Icons.alternate_email),
-          suffixIcon: suffixe,
-        ),
-      ),
-      if (_pseudoLibre == false)
-        const Padding(
-          padding: EdgeInsets.only(top: 6, left: 4),
-          child: Text('Cet identifiant est déjà pris.',
-              style: TextStyle(color: Tabibi.rouge, fontSize: 12)),
-        )
-      else
-        const Padding(
-          padding: EdgeInsets.only(top: 6, left: 4),
-          child: Text('Servira à te connecter. Lettres, chiffres, . et _',
-              style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        ),
-    ]);
   }
 
   Widget _choixMethode() {
