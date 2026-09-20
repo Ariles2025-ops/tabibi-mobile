@@ -838,11 +838,14 @@ class _RecherchePageState extends State<RecherchePage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: Tabibi.ombreDouce,
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         leading: AvatarInitiales(m['nomComplet'] as String),
         title: Row(
@@ -881,6 +884,7 @@ class _RecherchePageState extends State<RecherchePage> {
         ),
         trailing: const Icon(Icons.chevron_right, color: Tabibi.bordFort),
         onTap: () => _ouvrirFiche(identifiant(m['id'])),
+      ),
       ),
     );
   }
