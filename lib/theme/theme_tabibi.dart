@@ -12,10 +12,12 @@ class Tabibi {
   static const pastille = Color(0xFFE7F3EF); // fonds d'icones / avatars
   static const pastilleBd = Color(0xFFD4E9E1);
   static const vertClair = Color(0xFFF0FDF4);
+  static const vertTresClair = Color(0xFFF0FDF4); // alias fond vert tres pale
   static const or = Color(0xFFD4A437); // accent premium
   static const orClair = Color(0xFFFEF3C7);
   static const orTexte = Color(0xFFA17A1F);
   static const rouge = Color(0xFFD21010);
+  static const rougeClair = Color(0xFFFFF0F0);
   static const ambre = Color(0xFFF59E0B);
 
   // Neutres
