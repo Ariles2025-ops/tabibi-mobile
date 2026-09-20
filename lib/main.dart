@@ -332,19 +332,27 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Puce de langue dans la barre (globe + code) ouvrant le selecteur.
   Widget _boutonLangue(BuildContext context) {
-    return TextButton(
-      onPressed: () => _ouvrirLangues(context),
-      style: TextButton.styleFrom(
-        minimumSize: Size.zero,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        foregroundColor: Tabibi.texteDoux,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => _ouvrirLangues(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Tabibi.pastille,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Tabibi.pastilleBd),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.language, size: 16, color: Tabibi.vert),
+            const SizedBox(width: 5),
+            Text(langueDe(context).toUpperCase(),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 13, color: Tabibi.vert)),
+          ]),
+        ),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.language, size: 18, color: Tabibi.texteDoux),
-        const SizedBox(width: 4),
-        Text(langueDe(context).toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-      ]),
     );
   }
 
