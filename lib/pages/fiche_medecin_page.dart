@@ -11,6 +11,7 @@ import '../theme/theme_tabibi.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
+import '../utils/libelles.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 
@@ -306,11 +307,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                         fontWeight: FontWeight.w800, color: Tabibi.texte)),
                 const SizedBox(height: 4),
                 Text(
-                  t(context, 'accueil.sousTitreMedecin', params: {
-                    'specialite': medecin['specialiteFr'],
-                    'ville': medecin['ville'],
-                    'wilaya': medecin['wilayaFr'],
-                  }),
+                  medecinSousTitre(medecin),
                   style: const TextStyle(color: Tabibi.texteDoux),
                 ),
                 const SizedBox(height: 8),

@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'theme/theme_tabibi.dart';
+import 'utils/libelles.dart';
 
 import 'i18n/langue.dart';
 import 'i18n/traductions.dart';
@@ -877,11 +878,7 @@ class _RecherchePageState extends State<RecherchePage> {
           ],
         ),
         subtitle: Text(
-          t(context, 'accueil.sousTitreMedecin', params: {
-            'specialite': m['specialiteFr'],
-            'ville': m['ville'],
-            'wilaya': m['wilayaFr'],
-          }),
+          medecinSousTitre(m),
           style: const TextStyle(color: Tabibi.texteDoux),
         ),
         trailing: const Icon(Icons.chevron_right, color: Tabibi.bordFort),
