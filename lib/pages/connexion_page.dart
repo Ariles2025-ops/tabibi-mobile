@@ -53,6 +53,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   bool _etapeOtp = false;
   final _otp = TextEditingController();
   String _telNorm = '';
+  String _contactOtp = '';
 
   @override
   void initState() {
@@ -204,8 +205,8 @@ class _ConnexionPageState extends State<ConnexionPage> {
         if (sb.auth.currentSession != null) {
           Navigator.of(context).pop(true);
         } else {
-          _msg('Compte créé. Vérifiez votre e-mail pour le confirmer, puis connectez-vous.');
-          setState(() => _mode = _Mode.connexion);
+          _contactOtp = email;
+          setState(() => _etapeOtp = true);
         }
       } else {
         _telNorm = _normTel(_tel.text);
@@ -214,10 +215,21 @@ class _ConnexionPageState extends State<ConnexionPage> {
           return;
         }
         await sb.auth.signUp(phone: _telNorm, password: mdp, data: data);
+        _contactOtp = _telNorm;
         if (mounted) setState(() => _etapeOtp = true);
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(e.message);
+      if (mounted) {
+        final m = e.message.toLowerCase();
+        if (m.contains('already') || m.contains('registered') || m.contains('exist')) {
+          _identifiant.text =
+              _methode == _Methode.email ? _email.text.trim() : _normTel(_tel.text);
+          setState(() => _mode = _Mode.connexion);
+          _msg('Ce compte existe déjà. Connectez-vous avec votre mot de passe.');
+        } else {
+          _msg(e.message);
+        }
+      }
     } catch (_) {
       if (mounted) _msg('Création impossible. Réessayez.');
     } finally {
@@ -230,7 +242,11 @@ class _ConnexionPageState extends State<ConnexionPage> {
     if (code.isEmpty) return;
     setState(() => _charge = true);
     try {
-      await sb.auth.verifyOTP(type: OtpType.sms, phone: _telNorm, token: code);
+      if (_methode == _Methode.telephone) {
+        await sb.auth.verifyOTP(type: OtpType.sms, phone: _contactOtp, token: code);
+      } else {
+        await sb.auth.verifyOTP(type: OtpType.signup, email: _contactOtp, token: code);
+      }
       if (mounted && sb.auth.currentSession != null) Navigator.of(context).pop(true);
     } on AuthException catch (e) {
       if (mounted) _msg(e.message);
@@ -238,6 +254,21 @@ class _ConnexionPageState extends State<ConnexionPage> {
       if (mounted) _msg('Code incorrect ou expiré.');
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  Future<void> _renvoyerCode() async {
+    try {
+      if (_methode == _Methode.telephone) {
+        await sb.auth.resend(type: OtpType.sms, phone: _contactOtp);
+      } else {
+        await sb.auth.resend(type: OtpType.signup, email: _contactOtp);
+      }
+      if (mounted) _msg('Code renvoyé.');
+    } on AuthException catch (e) {
+      if (mounted) _msg(e.message);
+    } catch (_) {
+      if (mounted) _msg('Impossible de renvoyer le code.');
     }
   }
 
@@ -519,7 +550,10 @@ class _ConnexionPageState extends State<ConnexionPage> {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Tabibi.ink)),
       const SizedBox(height: 8),
-      Text('Un code vous a été envoyé par SMS au $_telNorm.',
+      Text(
+          _methode == _Methode.telephone
+              ? 'Un code à 6 chiffres vous a été envoyé par SMS au $_contactOtp.'
+              : 'Un code à 6 chiffres vous a été envoyé par e-mail à $_contactOtp.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Tabibi.texteDoux, height: 1.4)),
       const SizedBox(height: 22),
@@ -538,6 +572,10 @@ class _ConnexionPageState extends State<ConnexionPage> {
             : const Text('Vérifier'),
       ),
       const SizedBox(height: 10),
+      TextButton(
+        onPressed: _charge ? null : _renvoyerCode,
+        child: const Text('Renvoyer le code'),
+      ),
       TextButton(
         onPressed: _charge ? null : () => setState(() => _etapeOtp = false),
         child: const Text('Retour'),
