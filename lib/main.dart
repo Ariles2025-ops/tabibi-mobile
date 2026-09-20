@@ -330,6 +330,91 @@ class _RecherchePageState extends State<RecherchePage> {
     super.dispose();
   }
 
+  /// Puce de langue dans la barre (globe + code) ouvrant le selecteur.
+  Widget _boutonLangue(BuildContext context) {
+    return TextButton(
+      onPressed: () => _ouvrirLangues(context),
+      style: TextButton.styleFrom(
+        minimumSize: Size.zero,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        foregroundColor: Tabibi.texteDoux,
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.language, size: 18, color: Tabibi.texteDoux),
+        const SizedBox(width: 4),
+        Text(langueDe(context).toUpperCase(),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+      ]),
+    );
+  }
+
+  /// Selecteur de langue (FR / AR / EN) en bas d'ecran, applique et memorise le choix.
+  Future<void> _ouvrirLangues(BuildContext context) async {
+    const langs = [
+      ['fr', 'Français', 'FR'],
+      ['ar', 'العربية', 'DZ'],
+      ['en', 'English', 'GB'],
+    ];
+    final courant = langueDe(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Tabibi.bord, borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(t(context, 'langue.titre'),
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Tabibi.ink)),
+            ),
+          ),
+          for (final l in langs)
+            ListTile(
+              leading: Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: Tabibi.pastille,
+                    borderRadius: BorderRadius.circular(9)),
+                child: Text(l[2],
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        color: Tabibi.vert)),
+              ),
+              title: Text(l[1],
+                  style: TextStyle(
+                      fontWeight:
+                          courant == l[0] ? FontWeight.w700 : FontWeight.w500,
+                      color: courant == l[0] ? Tabibi.vert : Tabibi.texte)),
+              trailing: courant == l[0]
+                  ? const Icon(Icons.check, color: Tabibi.vert)
+                  : null,
+              onTap: () {
+                langues.choisir(l[0]);
+                Navigator.pop(ctx);
+              },
+            ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
   /// Vrai des qu'un critere est saisi (texte, wilaya ou specialite) : on replie
   /// l'accueil et on montre les resultats directement.
   bool get _rechercheActive =>
@@ -352,6 +437,7 @@ class _RecherchePageState extends State<RecherchePage> {
                   letterSpacing: -0.3)),
         ]),
         actions: [
+          _boutonLangue(context),
           IconButton(
             tooltip: t(context, 'accueil.notifications'),
             onPressed: _ouvrirNotifications,
