@@ -19,6 +19,7 @@ dependencies:
   url_launcher: ^6.3.0           # ouverture du lien de salle (teleconsultation) dans le navigateur
   path_provider: ^2.1.4          # dossier temporaire ou est ecrit le PDF d'une ordonnance
   open_filex: ^4.5.0             # ouverture du PDF avec l'application du telephone
+  flutter_svg: ^2.0.10           # logo SVG Tabibi
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +28,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/

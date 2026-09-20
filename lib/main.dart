@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'theme/theme_tabibi.dart';
@@ -290,15 +291,18 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: Row(mainAxisSize: MainAxisSize.min, children: const [
-          Text('Tabibi',
+        titleSpacing: 16,
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          SvgPicture.asset('assets/logo-mark.svg', width: 30, height: 30),
+          const SizedBox(width: 9),
+          const Text('Tabibi',
               style: TextStyle(
                   color: Tabibi.vert,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3)),
-          SizedBox(width: 6),
-          Text('طبيبي',
+          const SizedBox(width: 6),
+          const Text('طبيبي',
               style: TextStyle(
                   color: Tabibi.texte3, fontSize: 13, fontWeight: FontWeight.w600)),
         ]),
@@ -533,54 +537,70 @@ class _RecherchePageState extends State<RecherchePage> {
   /// « Téléconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
   /// « Liste d'attente », « Mon profil » et « Langue ».
   Widget _entrees(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
+    final lignes = <Widget>[
+      _ligneMenu(Icons.notifications_outlined,
+          libelleNotifications(langueDe(context), _nonLues), _ouvrirNotifications),
+      _ligneMenu(Icons.videocam_outlined,
+          t(context, 'accueil.teleconsultations'), _ouvrirTeleconsultations),
+      _ligneMenu(Icons.chat_bubble_outline,
+          t(context, 'accueil.messagerie'), _ouvrirMessagerie),
+      _ligneMenu(Icons.star_outline, t(context, 'accueil.mesAvis'), _ouvrirMesAvis),
+      _ligneMenu(Icons.local_pharmacy_outlined,
+          t(context, 'accueil.dawini'), _ouvrirDawini),
+      _ligneMenu(Icons.hourglass_top_outlined,
+          t(context, 'accueil.listeAttente'), _ouvrirListesAttente),
+      _ligneMenu(Icons.badge_outlined,
+          t(context, 'accueil.monProfil'), _ouvrirMonProfil),
+      _ligneMenu(Icons.language_outlined, t(context, 'accueil.langue'), _ouvrirLangue),
+    ];
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(Tabibi.r16),
+        border: Border.all(color: Tabibi.bord),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
         children: [
-          ActionChip(
-            avatar: const Icon(Icons.notifications_outlined, size: 18),
-            label: Text(libelleNotifications(langueDe(context), _nonLues)),
-            onPressed: _ouvrirNotifications,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.videocam_outlined, size: 18),
-            label: Text(t(context, 'accueil.teleconsultations')),
-            onPressed: _ouvrirTeleconsultations,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.chat_bubble_outline, size: 18),
-            label: Text(t(context, 'accueil.messagerie')),
-            onPressed: _ouvrirMessagerie,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.star_outline, size: 18),
-            label: Text(t(context, 'accueil.mesAvis')),
-            onPressed: _ouvrirMesAvis,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.local_pharmacy_outlined, size: 18),
-            label: Text(t(context, 'accueil.dawini')),
-            onPressed: _ouvrirDawini,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.hourglass_top_outlined, size: 18),
-            label: Text(t(context, 'accueil.listeAttente')),
-            onPressed: _ouvrirListesAttente,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.badge_outlined, size: 18),
-            label: Text(t(context, 'accueil.monProfil')),
-            onPressed: _ouvrirMonProfil,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.language_outlined, size: 18),
-            label: Text(t(context, 'accueil.langue')),
-            onPressed: _ouvrirLangue,
-          ),
+          for (var k = 0; k < lignes.length; k++) ...[
+            lignes[k],
+            if (k < lignes.length - 1)
+              const Divider(height: 1, thickness: 1, indent: 62, color: Tabibi.bg2),
+          ],
         ],
       ),
     );
   }
+
+  /// Une ligne de menu : pastille verte + icone, libelle, chevron.
+  Widget _ligneMenu(IconData icone, String libelle, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                  color: Tabibi.pastille, shape: BoxShape.circle),
+              child: Icon(icone, size: 18, color: Tabibi.vert),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(libelle,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Tabibi.texte)),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: Tabibi.bordFort),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
