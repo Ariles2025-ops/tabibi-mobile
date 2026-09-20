@@ -433,6 +433,14 @@ class _RecherchePageState extends State<RecherchePage> {
                           style: const TextStyle(color: Tabibi.texteDoux)),
                     ]),
                   ),
+                if (!_rechercheActive) ...[
+                  const SizedBox(height: 28),
+                  _blocMedecin(context),
+                  const SizedBox(height: 28),
+                  _faq(context),
+                  const SizedBox(height: 28),
+                  _miniFooter(context),
+                ],
               ],
             ),
           ),
@@ -806,6 +814,157 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// 75035 -> « 75K », 5 -> « 5 » : total lisible dans une petite tuile.
   String _formatMilliers(int n) => n >= 1000 ? '${n ~/ 1000}K' : '$n';
+
+  /// Bloc recrutement medecin (comme le site).
+  Widget _blocMedecin(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Tabibi.ombreDouce,
+      ),
+      child: Column(children: [
+        Container(
+          width: 52,
+          height: 52,
+          alignment: Alignment.center,
+          decoration:
+              const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
+          child: const Icon(Icons.medical_information_outlined,
+              color: Tabibi.vert, size: 26),
+        ),
+        const SizedBox(height: 14),
+        const Text('Vous êtes médecin ?',
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+        const SizedBox(height: 8),
+        const Text(
+          'Rejoignez Tabibi et développez votre patientèle en ligne. Inscription gratuite pendant 30 jours.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Tabibi.texteDoux, height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () =>
+                _message('Inscription médecin bientôt disponible'),
+            icon: const Icon(Icons.person_add_alt_1, size: 18),
+            label: const Text('Rejoindre Tabibi'),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  /// Foire aux questions (accordeon).
+  Widget _faq(BuildContext context) {
+    const items = <List<String>>[
+      [
+        "L'application est-elle gratuite ?",
+        "Oui, Tabibi est 100 % gratuite pour les patients. Vous réglez uniquement la consultation, directement au cabinet — en espèces ou avec la carte Chifa."
+      ],
+      [
+        "Comment savez-vous qu'un médecin est fiable ?",
+        "Les fiches proviennent de sources publiques et chaque médecin peut revendiquer puis vérifier la sienne. Un badge « Vérifié » signale les praticiens confirmés."
+      ],
+      [
+        "Mes données de santé sont-elles protégées ?",
+        "Vos données sont hébergées de façon sécurisée et ne sont jamais partagées sans votre accord. Vous gardez le contrôle de votre compte à tout moment."
+      ],
+      [
+        "Je suis médecin, comment rejoindre Tabibi ?",
+        "Cliquez sur « Rejoindre Tabibi », revendiquez votre fiche et complétez votre profil. L'inscription est gratuite les 30 premiers jours."
+      ],
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Questions fréquentes',
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+      const SizedBox(height: 12),
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Tabibi.bord),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context)
+              .copyWith(dividerColor: Tabibi.bord, splashColor: Colors.transparent),
+          child: Column(children: [
+            for (int i = 0; i < items.length; i++) ...[
+              if (i > 0) const Divider(height: 1, color: Tabibi.bord),
+              ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
+                iconColor: Tabibi.vert,
+                collapsedIconColor: Tabibi.texte3,
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                title: Text(items[i][0],
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Tabibi.texte,
+                        fontSize: 14)),
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(items[i][1],
+                        style: const TextStyle(
+                            color: Tabibi.texteDoux, height: 1.5, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ],
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  /// Mini pied de page.
+  Widget _miniFooter(BuildContext context) {
+    return Column(children: [
+      const Divider(color: Tabibi.bord, height: 1),
+      const SizedBox(height: 18),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SvgPicture.asset('assets/logo-mark.svg', width: 22, height: 22),
+        const SizedBox(width: 8),
+        const Text('Tabibi',
+            style: TextStyle(
+                color: Tabibi.vert, fontWeight: FontWeight.w800, fontSize: 16)),
+      ]),
+      const SizedBox(height: 8),
+      Text(
+        'La 1re plateforme médicale algérienne.\n${_totalMedecins != null ? _formatMilliers(_totalMedecins!) : '75K'}+ médecins dans ${_wilayasRef.isNotEmpty ? _wilayasRef.length : 69} wilayas.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Tabibi.texte3, fontSize: 12, height: 1.5),
+      ),
+      const SizedBox(height: 12),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+        Icon(Icons.mail_outline, size: 14, color: Tabibi.texte3),
+        SizedBox(width: 6),
+        Text('contact@tabibi.doctor',
+            style: TextStyle(
+                color: Tabibi.texteDoux,
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
+      ]),
+      const SizedBox(height: 12),
+      const Wrap(alignment: WrapAlignment.center, spacing: 16, runSpacing: 6, children: [
+        Text('À propos', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
+        Text('CGU', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
+        Text('Confidentialité', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
+        Text('Mentions légales', style: TextStyle(color: Tabibi.texte3, fontSize: 12)),
+      ]),
+      const SizedBox(height: 12),
+      const Text('© 2026 Tabibi — Tous droits réservés',
+          style: TextStyle(color: Tabibi.texte4, fontSize: 11)),
+    ]);
+  }
 
   Widget _statTile(String valeur, String libelle) {
     return Container(

@@ -267,6 +267,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       children: [
         _enteteMedecin(context, medecin),
         const SizedBox(height: 16),
+        _infosPratiques(context, medecin),
         _boutonConversation(context),
         const SizedBox(height: 24),
         _titreSection(t(context, 'fiche.creneaux')),
@@ -318,6 +319,133 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         ],
       ),
     );
+  }
+
+  /// Carte « Infos pratiques » : note, type, langues, paiement, teleconsultation
+  /// (masquee si rien a afficher). Alimentee par les vraies donnees Supabase.
+  Widget _infosPratiques(BuildContext context, Map<String, dynamic> m) {
+    final note = m['note'];
+    final avis = (m['nombreAvis'] as num?)?.toInt() ?? 0;
+    final langues = (m['langues'] as List?)
+            ?.whereType<String>()
+            .map(_labelLangue)
+            .where((v) => v.isNotEmpty)
+            .toList() ??
+        const <String>[];
+    final paiements = <String>[
+      if (m['accepteChifa'] == true) 'Chifa',
+      if (m['accepteCarte'] == true) 'Carte',
+      if (m['accepteEspeces'] == true) 'Espèces',
+    ];
+    final type = _labelType(m['typeEntite']?.toString());
+
+    final lignes = <Widget>[];
+    if (note is num) {
+      final t = avis > 0
+          ? '${note.toStringAsFixed(1)} · $avis avis'
+          : note.toStringAsFixed(1);
+      lignes.add(_ligneInfo(Icons.star_rounded, Tabibi.or, t));
+    }
+    if (type != null) {
+      lignes.add(_ligneInfo(Icons.local_hospital_outlined, Tabibi.vert, type));
+    }
+    if (langues.isNotEmpty) {
+      lignes.add(_ligneChips(Icons.translate, langues));
+    }
+    if (paiements.isNotEmpty) {
+      lignes.add(_ligneChips(Icons.payments_outlined, paiements));
+    }
+    if (m['teleconsultation'] == true) {
+      lignes.add(_ligneInfo(
+          Icons.videocam_outlined, Tabibi.vert, 'Téléconsultation disponible'));
+    }
+    if (lignes.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Tabibi.surface,
+          borderRadius: BorderRadius.circular(Tabibi.r16),
+          border: Border.all(color: Tabibi.bord),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (int i = 0; i < lignes.length; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              lignes[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _ligneInfo(IconData icone, Color couleur, String texte) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icone, size: 18, color: couleur),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(texte,
+            style: const TextStyle(
+                color: Tabibi.texte, fontWeight: FontWeight.w600)),
+      ),
+    ]);
+  }
+
+  Widget _ligneChips(IconData icone, List<String> valeurs) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icone, size: 18, color: Tabibi.texte3),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Wrap(spacing: 6, runSpacing: 6, children: [
+          for (final v in valeurs)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                  color: Tabibi.pastille,
+                  borderRadius: BorderRadius.circular(999)),
+              child: Text(v,
+                  style: const TextStyle(
+                      color: Tabibi.vertFonce,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ),
+        ]),
+      ),
+    ]);
+  }
+
+  /// Type d'etablissement en francais ; null pour un medecin ordinaire (deja implicite).
+  String? _labelType(String? brut) {
+    if (brut == null || brut.trim().isEmpty) return null;
+    const map = {
+      'dentist': 'Dentiste',
+      'clinic': 'Clinique privée',
+      'hospital': 'Hôpital',
+      'optician': 'Opticien',
+      'pharmacy': 'Pharmacie',
+      'lab': "Laboratoire d'analyses",
+      'laboratory': "Laboratoire d'analyses",
+      'health_center': 'Centre de santé',
+      'midwife': 'Sage-femme',
+      'physiotherapist': 'Kinésithérapeute',
+    };
+    return map[brut.toLowerCase()];
+  }
+
+  String _labelLangue(String code) {
+    const map = {
+      'fr': 'Français',
+      'ar': 'العربية',
+      'en': 'English',
+      'ber': 'Tamazight',
+      'kab': 'Tamazight',
+      'es': 'Español',
+    };
+    return map[code.toLowerCase()] ?? code;
   }
 
   Widget _titreSection(String titre) {
