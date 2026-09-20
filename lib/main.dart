@@ -494,8 +494,15 @@ class _RecherchePageState extends State<RecherchePage> {
       ),
       child: Container(
       width: double.infinity,
-      decoration: const BoxDecoration(gradient: Tabibi.gradHero),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+      color: Tabibi.bg,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: Tabibi.ombreDouce,
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
       child: Column(
         children: [
           if (!_rechercheActive) ...[
@@ -648,8 +655,11 @@ class _RecherchePageState extends State<RecherchePage> {
                   child: _statTile('24/7', t(context, 'accueil.statReservation'))),
             ],
           ),
+          const SizedBox(height: 18),
+          _showcaseMedecin(context),
           ],
         ],
+      ),
       ),
       ),
     );
@@ -964,6 +974,125 @@ class _RecherchePageState extends State<RecherchePage> {
       const Text('© 2026 Tabibi — Tous droits réservés',
           style: TextStyle(color: Tabibi.texte4, fontSize: 11)),
     ]);
+  }
+
+  /// Carte medecin de demonstration (comme le site) : avatar, nom, specialite,
+  /// badge Verifie, creneaux du jour, et badge flottant « RDV confirme ». Decoratif.
+  Widget _showcaseMedecin(BuildContext context) {
+    return Stack(clipBehavior: Clip.none, children: [
+      Container(
+        margin: const EdgeInsets.only(top: 20),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Tabibi.bord),
+          boxShadow: Tabibi.ombreDouce,
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const AvatarInitiales('Karim B', taille: 46),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Dr. Karim B.',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: Tabibi.texte,
+                          fontSize: 15)),
+                  SizedBox(height: 2),
+                  Text('Généraliste · Constantine',
+                      style: TextStyle(color: Tabibi.texteDoux, fontSize: 13)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                  color: Tabibi.orClair, borderRadius: BorderRadius.circular(999)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                Icon(Icons.verified, size: 12, color: Tabibi.or),
+                SizedBox(width: 3),
+                Text('Vérifié',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Tabibi.orTexte)),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Tabibi.bord),
+          const SizedBox(height: 12),
+          const Text("AUJOURD'HUI · 12 CRÉNEAUX DISPONIBLES",
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Tabibi.vert,
+                  letterSpacing: 0.3)),
+          const SizedBox(height: 10),
+          Row(children: [
+            _slotDemo('09:00', false),
+            const SizedBox(width: 8),
+            _slotDemo('09:30', false),
+            const SizedBox(width: 8),
+            _slotDemo('10:30', true),
+          ]),
+        ]),
+      ),
+      Positioned(
+        top: 0,
+        left: 4,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: Tabibi.ombreDouce,
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: const [
+            CircleAvatar(
+                radius: 12,
+                backgroundColor: Tabibi.vert,
+                child: Icon(Icons.check, size: 14, color: Colors.white)),
+            SizedBox(width: 8),
+            Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('RDV confirmé',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Tabibi.texte)),
+                  Text('Rappel SMS envoyé',
+                      style: TextStyle(fontSize: 10, color: Tabibi.texte3)),
+                ]),
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _slotDemo(String heure, bool actif) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: actif ? Tabibi.vert : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: actif ? Tabibi.vert : Tabibi.bord),
+        ),
+        child: Text(heure,
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: actif ? Colors.white : Tabibi.texte)),
+      ),
+    );
   }
 
   Widget _statTile(String valeur, String libelle) {
