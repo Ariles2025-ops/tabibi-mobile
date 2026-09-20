@@ -314,133 +314,179 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _heroBand(context),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nom,
-              decoration: InputDecoration(
-                hintText: t(context, 'accueil.nomMedecin'),
-                prefixIcon: const Icon(Icons.search, color: Tabibi.texte3),
-              ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _rechercher(),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        children: [
+          _heroClair(context),
+          const SizedBox(height: 22),
+          _entrees(context),
+          const SizedBox(height: 24),
+          Text(t(context, 'accueil.praticiens'),
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+          const SizedBox(height: 12),
+          if (_charge)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
             ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _specialite,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    hintText: t(context, 'accueil.specialite'),
-                  ),
-                  items: [
-                    for (final slug in specialites)
-                      DropdownMenuItem(
-                        value: slug,
-                        child: Text(t(context, 'specialite.$slug')),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _specialite = v),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _rechercher,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(56, 56),
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: const Icon(Icons.search),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            _entrees(context),
-            const SizedBox(height: 12),
-            if (_charge) const CircularProgressIndicator(),
-            Expanded(
-              child: ListView.separated(
-                itemCount: _resultats.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) {
-                  final m = _resultats[i];
-                  return Card(
-                    child: ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      leading: AvatarInitiales(m['nomComplet'] as String),
-                      title: Text(m['nomComplet'] as String,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, color: Tabibi.texte)),
-                      subtitle: Text(
-                        t(context, 'accueil.sousTitreMedecin', params: {
-                          'specialite': m['specialiteFr'],
-                          'ville': m['ville'],
-                          'wilaya': m['wilayaFr'],
-                        }),
-                        style: const TextStyle(color: Tabibi.texteDoux),
-                      ),
-                      trailing:
-                          const Icon(Icons.chevron_right, color: Tabibi.bordFort),
-                      onTap: () => _ouvrirFiche(identifiant(m['id'])),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          for (final m in _resultats) _carteMedecin(context, m),
+        ],
       ),
     );
   }
 
-  /// Bandeau de marque (degrade vert) : logo Tabibi + titre d'accroche.
-  Widget _heroBand(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-      decoration: BoxDecoration(
-        gradient: Tabibi.gradBrand,
-        borderRadius: BorderRadius.circular(Tabibi.r20),
-        boxShadow: Tabibi.ombreCarte,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  /// Hero clair (fond blanc) facon tabibi.doctor : badge, accroche, recherche, paiement, stats.
+  Widget _heroClair(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: Tabibi.pastille,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Tabibi',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3)),
-              const SizedBox(width: 6),
-              Text('طبيبي',
-                  style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600)),
+              Container(
+                  width: 7,
+                  height: 7,
+                  decoration:
+                      const BoxDecoration(color: Tabibi.or, shape: BoxShape.circle)),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(t(context, 'accueil.badge'),
+                    style: const TextStyle(
+                        color: Tabibi.vert, fontSize: 12, fontWeight: FontWeight.w700)),
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            t(context, 'accueil.accroche'),
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-                letterSpacing: -0.4),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          t(context, 'accueil.accroche'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              color: Tabibi.ink,
+              fontSize: 27,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
+              letterSpacing: -0.6),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          t(context, 'accueil.sousTitre'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Tabibi.texteDoux, fontSize: 14, height: 1.5),
+        ),
+        const SizedBox(height: 18),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(Tabibi.r16),
+            boxShadow: Tabibi.ombreRecherche,
           ),
+          child: TextField(
+            controller: _nom,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _rechercher(),
+            decoration: InputDecoration(
+              hintText: t(context, 'accueil.recherchePlaceholder'),
+              prefixIcon: const Icon(Icons.search, color: Tabibi.texte3),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Tabibi.r16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Tabibi.r16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Tabibi.r16),
+                borderSide: const BorderSide(color: Tabibi.vert, width: 1.5),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.credit_card, size: 18, color: Tabibi.or),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(t(context, 'accueil.paiement'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Tabibi.texteDoux, fontSize: 13)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+                child: _statTile(
+                    '${_resultats.length}', t(context, 'accueil.statMedecins'))),
+            const SizedBox(width: 10),
+            Expanded(child: _statTile('58', t(context, 'accueil.statWilayas'))),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _statTile('24/7', t(context, 'accueil.statReservation'))),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _statTile(String valeur, String libelle) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(Tabibi.r16),
+        border: Border.all(color: Tabibi.bord),
+      ),
+      child: Column(
+        children: [
+          Text(valeur,
+              style: const TextStyle(
+                  color: Tabibi.vert, fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(libelle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Tabibi.texteDoux, fontSize: 12)),
         ],
+      ),
+    );
+  }
+
+  /// Carte medecin (resultat) facon Doctolib : avatar, nom, specialite/ville, chevron.
+  Widget _carteMedecin(BuildContext context, Map<String, dynamic> m) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(Tabibi.r16),
+        border: Border.all(color: Tabibi.bord),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        leading: AvatarInitiales(m['nomComplet'] as String),
+        title: Text(m['nomComplet'] as String,
+            style: const TextStyle(fontWeight: FontWeight.w700, color: Tabibi.texte)),
+        subtitle: Text(
+          t(context, 'accueil.sousTitreMedecin', params: {
+            'specialite': m['specialiteFr'],
+            'ville': m['ville'],
+            'wilaya': m['wilayaFr'],
+          }),
+          style: const TextStyle(color: Tabibi.texteDoux),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Tabibi.bordFort),
+        onTap: () => _ouvrirFiche(identifiant(m['id'])),
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../models/synthese_avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../theme/theme_tabibi.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
@@ -260,33 +261,83 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         onReessayer: _charger,
       );
     }
-    final texte = Theme.of(context).textTheme;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(medecin['nomComplet'] as String, style: texte.titleLarge),
-        const SizedBox(height: 4),
-        Text(t(context, 'accueil.sousTitreMedecin', params: {
-          'specialite': medecin['specialiteFr'],
-          'ville': medecin['ville'],
-          'wilaya': medecin['wilayaFr'],
-        })),
-        const SizedBox(height: 8),
-        _ligneMoyenne(context),
+        _enteteMedecin(context, medecin),
         const SizedBox(height: 16),
         _boutonConversation(context),
         const SizedBox(height: 24),
-        Text(t(context, 'fiche.creneaux'), style: texte.titleMedium),
-        const SizedBox(height: 8),
-        if (_creneaux.isEmpty) Text(t(context, 'fiche.aucunCreneau')),
+        _titreSection(t(context, 'fiche.creneaux')),
+        const SizedBox(height: 10),
+        if (_creneaux.isEmpty) _infoVide(t(context, 'fiche.aucunCreneau')),
         for (final c in _creneaux) _creneauTile(context, c),
         const SizedBox(height: 24),
         _listeAttente(context),
         const SizedBox(height: 24),
-        Text(t(context, 'fiche.avisPatients'), style: texte.titleMedium),
-        const SizedBox(height: 8),
+        _titreSection(t(context, 'fiche.avisPatients')),
+        const SizedBox(height: 10),
         ..._derniersAvis(context),
       ],
+    );
+  }
+
+  /// En-tete praticien facon Doctolib : avatar, nom, specialite/ville, note.
+  Widget _enteteMedecin(BuildContext context, Map<String, dynamic> medecin) {
+    final texte = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Tabibi.surface,
+        borderRadius: BorderRadius.circular(Tabibi.r16),
+        border: Border.all(color: Tabibi.bord),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AvatarInitiales(medecin['nomComplet'] as String, taille: 60),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(medecin['nomComplet'] as String,
+                    style: texte.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800, color: Tabibi.texte)),
+                const SizedBox(height: 4),
+                Text(
+                  t(context, 'accueil.sousTitreMedecin', params: {
+                    'specialite': medecin['specialiteFr'],
+                    'ville': medecin['ville'],
+                    'wilaya': medecin['wilayaFr'],
+                  }),
+                  style: const TextStyle(color: Tabibi.texteDoux),
+                ),
+                const SizedBox(height: 8),
+                _ligneMoyenne(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _titreSection(String titre) {
+    return Text(titre,
+        style: const TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink));
+  }
+
+  Widget _infoVide(String texte) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Tabibi.bg2,
+        borderRadius: BorderRadius.circular(Tabibi.r12),
+      ),
+      child: Text(texte, style: const TextStyle(color: Tabibi.texteDoux)),
     );
   }
 
@@ -399,20 +450,49 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   Widget _creneauTile(BuildContext context, Map<String, dynamic> creneau) {
     final enCours = _enCours == identifiant(creneau['id']);
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.schedule),
-      title: Text(formaterDateIso(langueDe(context), creneau['debut'] as String)),
-      subtitle: Text(t(context, 'fiche.duree', params: {'n': creneau['dureeMinutes']})),
-      trailing: FilledButton(
-        onPressed: _enCours == null ? () => _reserver(creneau) : null,
-        child: enCours
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(t(context, 'fiche.reserver')),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Tabibi.surface,
+        borderRadius: BorderRadius.circular(Tabibi.r12),
+        border: Border.all(color: Tabibi.bord),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration:
+                const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
+            child: const Icon(Icons.schedule, size: 20, color: Tabibi.vert),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(formaterDateIso(langueDe(context), creneau['debut'] as String),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: Tabibi.texte)),
+                Text(t(context, 'fiche.duree', params: {'n': creneau['dureeMinutes']}),
+                    style: const TextStyle(color: Tabibi.texte3, fontSize: 13)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: _enCours == null ? () => _reserver(creneau) : null,
+            child: enCours
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(t(context, 'fiche.reserver')),
+          ),
+        ],
       ),
     );
   }
