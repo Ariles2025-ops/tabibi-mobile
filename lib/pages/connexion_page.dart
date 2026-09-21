@@ -100,6 +100,27 @@ class _ConnexionPageState extends State<ConnexionPage> {
     return t;
   }
 
+  /// Traduit en francais les messages d'erreur d'authentification les plus courants.
+  String _libelleAuth(AuthException e) {
+    final m = e.message.toLowerCase();
+    if (m.contains('weak') || m.contains('known to be') || m.contains('pwned') || m.contains('compromised')) {
+      return 'Mot de passe trop faible ou trop courant. Choisissez-en un plus robuste : au moins 8 caractères, avec majuscule, chiffre et symbole.';
+    }
+    if (m.contains('should be at least') || m.contains('at least 6')) {
+      return 'Mot de passe trop court (6 caractères minimum).';
+    }
+    if (m.contains('invalid login') || m.contains('invalid credentials')) {
+      return 'E-mail ou mot de passe incorrect.';
+    }
+    if (m.contains('email not confirmed')) {
+      return 'E-mail non confirmé. Vérifiez votre boîte mail (et les spams).';
+    }
+    if (m.contains('rate limit') || m.contains('too many')) {
+      return 'Trop de tentatives. Réessayez dans quelques minutes.';
+    }
+    return e.message;
+  }
+
   void _msg(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
@@ -128,7 +149,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
       }
       if (mounted && sb.auth.currentSession != null) Navigator.of(context).pop(true);
     } on AuthException catch (e) {
-      if (mounted) _msg(e.message);
+      if (mounted) _msg(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Connexion impossible. Vérifiez vos identifiants.');
     } finally {
@@ -214,7 +235,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
           setState(() => _mode = _Mode.connexion);
           _msg('Ce compte existe déjà. Connectez-vous avec votre mot de passe.');
         } else {
-          _msg(e.message);
+          _msg(_libelleAuth(e));
         }
       }
     } catch (_) {
@@ -245,7 +266,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         }
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(e.message);
+      if (mounted) _msg(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Code incorrect ou expiré.');
     } finally {
@@ -262,7 +283,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
       }
       if (mounted) _msg('Code renvoyé.');
     } on AuthException catch (e) {
-      if (mounted) _msg(e.message);
+      if (mounted) _msg(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Impossible de renvoyer le code.');
     }
@@ -290,7 +311,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         _msg('Code envoyé par e-mail à $_resetEmail.');
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(e.message);
+      if (mounted) _msg(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Envoi impossible. Réessayez.');
     } finally {
@@ -320,7 +341,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         Navigator.of(context).pop(true);
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(e.message);
+      if (mounted) _msg(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Code incorrect ou expiré.');
     } finally {
@@ -470,7 +491,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
           });
           _msg('Ce compte existe déjà. Connectez-vous.');
         } else {
-          _msg(e.message);
+          _msg(_libelleAuth(e));
         }
       }
     } catch (_) {
