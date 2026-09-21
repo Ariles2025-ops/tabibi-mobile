@@ -352,6 +352,18 @@ class _RecherchePageState extends State<RecherchePage> {
     if (mounted) setState(() => _estMedecin = est);
   }
 
+  Future<void> _verifierAdmin() async {
+    final est = await _adm.estAdmin();
+    if (mounted) setState(() => _estAdmin = est);
+  }
+
+  Future<void> _ouvrirEspaceAdmin() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => EspaceAdminPage(auth: _auth)),
+    );
+    if (mounted) setState(() {});
+  }
+
   Future<void> _ouvrirEspaceMedecin() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => EspaceMedecinPage(auth: _auth)),
