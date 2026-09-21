@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../i18n/langue.dart';
 import '../services/admin_supabase.dart';
+import 'medecins_validation_page.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../theme/theme_tabibi.dart';
@@ -263,7 +264,16 @@ class _EspaceAdminPageState extends State<EspaceAdminPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
-          Text('En attente de validation (${_attente.length})',
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Tabibi.vert),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => MedecinsValidationPage(auth: _auth)),
+            ),
+            icon: const Icon(Icons.verified_outlined),
+            label: const Text('Valider les fiches réclamées (75k)'),
+          ),
+          const SizedBox(height: 16),
+          Text('Nouveaux comptes en attente (${_attente.length})',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.texte)),
           const SizedBox(height: 8),
           if (_attente.isEmpty)

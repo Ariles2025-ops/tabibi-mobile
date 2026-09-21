@@ -230,6 +230,55 @@ class AdminSupabase {
       _rpcVide('admin_retirer_membre_cabinet', {'p_membre_id': membreId});
 
   // ---------------------------------------------------------------------------
+  // Validation des fiches medecins (75k importees / reclamees)
+  // ---------------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> fichesAValider(
+      {String tab = 'pending', String? q, String? wilaya, int limite = 30, int offset = 0}) async {
+    try {
+      final r = await sb.rpc('admin_validation_list', params: {
+        'p_tab': tab,
+        'p_search': q,
+        'p_wilaya': wilaya,
+        'p_limit': limite,
+        'p_offset': offset,
+      });
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'nom': m['full_name'],
+          'specialite': m['specialty_raw'],
+          'wilayaCode': m['wilaya_code']?.toString(),
+          'phone': m['phone'],
+          'email': m['email'],
+          'ordre': m['ordre_number'],
+          'statut': m['validation_status'],
+        };
+      }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  Future<void> validerFiche(String doctorId) => _validerFiche(doctorId, 'validate', null);
+  Future<void> rejeterFiche(String doctorId, String motif) => _validerFiche(doctorId, 'reject', motif);
+
+  Future<void> _validerFiche(String doctorId, String action, String? notes) async {
+    try {
+      final r = await sb.rpc('admin_validate_doctor', params: {
+        'p_doctor_id': doctorId,
+        'p_action': action,
+        if (notes != null) 'p_notes': notes,
+      });
+      if (r is Map && r['ok'] == true) return;
+      final err = r is Map ? '${r['error'] ?? 'echec'}' : 'echec';
+      throw ApiException(400, err);
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   Future<void> _rpcVide(String fn, Map<String, dynamic> params) async {
     try {
       await sb.rpc(fn, params: params);
