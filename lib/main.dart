@@ -70,6 +70,7 @@ class TabibiApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          navigatorKey: navigatorCle,
           theme: themeTabibi(),
           home: RecherchePage(api: api, auth: auth),
         ),

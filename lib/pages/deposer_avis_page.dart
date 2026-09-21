@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../i18n/langue.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
@@ -40,6 +41,7 @@ class DeposerAvisPage extends StatefulWidget {
 
 class _DeposerAvisPageState extends State<DeposerAvisPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   final _commentaire = TextEditingController();
 
   /// Note choisie ; null tant que le patient n'a rien selectionne.
@@ -71,11 +73,10 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
     var depose = false;
     try {
       final commentaire = _commentaire.text.trim();
-      await widget.api.deposerAvis(
+      await _patient.deposerAvis(
         widget.rendezVousId,
         note!,
         commentaire.isEmpty ? null : commentaire,
-        token,
       );
       depose = true;
     } on ApiException catch (e) {

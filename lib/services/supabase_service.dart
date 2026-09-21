@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Configuration Supabase. La cle « anon » est PUBLIQUE (protegee par les regles RLS
@@ -8,6 +9,10 @@ const String supabaseAnonKey =
 
 /// Client Supabase partage par toute l'application.
 SupabaseClient get sb => Supabase.instance.client;
+
+/// Cle de navigation globale : permet aux services (ex. AuthService) d'ouvrir un
+/// ecran (connexion) sans disposer d'un BuildContext.
+final GlobalKey<NavigatorState> navigatorCle = GlobalKey<NavigatorState>();
 
 /// A appeler une fois au demarrage (avant runApp).
 Future<void> initialiserSupabase() =>

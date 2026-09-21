@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
+import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../theme/theme_tabibi.dart';
@@ -30,6 +32,8 @@ class MesRendezVousPage extends StatefulWidget {
 
 class _MesRendezVousPageState extends State<MesRendezVousPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
+  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<Map<String, dynamic>> _rdvs = [];
 
   /// Noms des praticiens deja resolus, par identifiant (UUID en texte).
@@ -64,7 +68,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       _erreur = null;
     });
     try {
-      final rdvs = await widget.api.mesRendezVous(token);
+      final rdvs = await _patient.mesRendezVous();
       await _chargerNomsMedecins(rdvs);
       final evalues = await _chargerRendezVousEvalues(token);
       if (!mounted) return;
@@ -90,7 +94,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     for (final id in rdvs.map((r) => identifiant(r['medecinId'])).toSet()) {
       if (id.isEmpty || _nomsMedecins.containsKey(id)) continue;
       try {
-        final Object? nom = (await widget.api.medecin(id))['nomComplet'];
+        final Object? nom = (await _prat.parId(id))?['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[id] = nom;
       } on Exception {
         // Nom indisponible : « Médecin » et l'identifiant abrege seront affiches a la place.
@@ -102,7 +106,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   /// avis » reste propose et un eventuel 409 sera explique au depot.
   Future<Set<String>> _chargerRendezVousEvalues(String token) async {
     try {
-      final avis = await widget.api.mesAvis(token);
+      final avis = await _patient.mesAvis();
       return avis.map(Avis.fromJson).map((a) => a.rendezVousId).toSet();
     } on Exception {
       return _rendezVousEvalues;
@@ -157,7 +161,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final token = _auth.accessToken;
     if (token == null) return;
     try {
-      await widget.api.annuler(identifiant(rdv['id']), token);
+      await _patient.annuler(identifiant(rdv['id']));
       if (mounted) _message(t(context, 'rdv.annule'));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
