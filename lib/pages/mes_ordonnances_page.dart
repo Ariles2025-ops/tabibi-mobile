@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../i18n/langue.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
@@ -26,6 +27,7 @@ class MesOrdonnancesPage extends StatefulWidget {
 
 class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   List<Map<String, dynamic>> _ordonnances = [];
   bool _charge = false;
   String? _erreur;
@@ -54,7 +56,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
       _erreur = null;
     });
     try {
-      final ordonnances = await widget.api.mesOrdonnances(token);
+      final ordonnances = await _patient.mesOrdonnances();
       if (!mounted) return;
       setState(() => _ordonnances = trierParEmission(ordonnances));
     } on ApiException catch (e) {

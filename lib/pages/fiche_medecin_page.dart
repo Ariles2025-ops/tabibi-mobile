@@ -6,6 +6,7 @@ import '../models/conversation.dart';
 import '../models/synthese_avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/praticiens_supabase.dart';
 import '../services/session.dart';
 import '../services/supabase_service.dart';
@@ -45,6 +46,7 @@ class FicheMedecinPage extends StatefulWidget {
 class _FicheMedecinPageState extends State<FicheMedecinPage> {
   late final AuthService _auth = widget.auth ?? session;
   final PraticiensSupabase _prat = const PraticiensSupabase();
+  final PatientSupabase _patient = const PatientSupabase();
   Map<String, dynamic>? _medecin;
   List<Map<String, dynamic>> _creneaux = [];
 
@@ -132,7 +134,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// l'affichage de la fiche, la section indique alors que les avis sont indisponibles.
   Future<SyntheseAvis?> _chargerAvis() async {
     try {
-      return SyntheseAvis.fromJson(await widget.api.avisDuMedecin(widget.medecinId));
+      return SyntheseAvis.fromJson(await _patient.avisDuMedecin(widget.medecinId));
     } on Exception {
       return null;
     }
@@ -197,7 +199,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     Conversation? conversation;
     try {
       conversation = Conversation.fromJson(
-        await widget.api.ouvrirConversation(widget.medecinId, token),
+        await _patient.ouvrirConversation(widget.medecinId),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -247,7 +249,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     setState(() => _inscriptionEnCours = true);
     var inscrit = false;
     try {
-      await widget.api.inscrireListeAttente(widget.medecinId, token);
+      await _patient.inscrireListeAttente(widget.medecinId);
       inscrit = true;
       if (!mounted) return;
       _message(t(context, 'fiche.inscriptionEnregistree', params: {

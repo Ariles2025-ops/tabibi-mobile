@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../i18n/langue.dart';
 import '../models/notification.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/notifications.dart';
@@ -25,6 +26,7 @@ class MesNotificationsPage extends StatefulWidget {
 
 class _MesNotificationsPageState extends State<MesNotificationsPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   List<NotificationUtilisateur> _notifications = [];
   bool _charge = false;
   String? _erreur;
@@ -58,7 +60,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       _erreur = null;
     });
     try {
-      final notifications = await widget.api.mesNotifications(token);
+      final notifications = await _patient.mesNotifications();
       if (!mounted) return;
       setState(() {
         _notifications = trierParCreation(
@@ -88,7 +90,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     setState(() => _enCours = notification.id);
     try {
       final lue = NotificationUtilisateur.fromJson(
-        await widget.api.marquerLue(notification.id, token),
+        await _patient.marquerLue(notification.id),
       );
       if (!mounted) return;
       setState(() {
@@ -111,7 +113,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     final token = _auth.accessToken;
     if (token == null) return;
     try {
-      final nombre = await widget.api.toutMarquerLu(token);
+      final nombre = await _patient.toutMarquerLu();
       if (!mounted) return;
       setState(() {
         _notifications = [for (final n in _notifications) n.marquerLue()];

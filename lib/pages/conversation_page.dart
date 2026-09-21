@@ -4,6 +4,7 @@ import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/messagerie.dart';
@@ -41,6 +42,7 @@ class ConversationPage extends StatefulWidget {
 
 class _ConversationPageState extends State<ConversationPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   final _saisie = TextEditingController();
   List<Message> _messages = [];
   bool _charge = false;
@@ -82,7 +84,7 @@ class _ConversationPageState extends State<ConversationPage> {
       _erreur = null;
     });
     try {
-      final messages = await widget.api.messages(widget.conversation.id, token);
+      final messages = await _patient.messages(widget.conversation.id);
       if (!mounted) return;
       setState(() => _messages = messages.map(Message.fromJson).toList());
     } on ApiException catch (e) {
@@ -106,7 +108,7 @@ class _ConversationPageState extends State<ConversationPage> {
     if (token == null) return;
     setState(() => _envoi = true);
     try {
-      await widget.api.envoyerMessage(widget.conversation.id, contenu, token);
+      await _patient.envoyerMessage(widget.conversation.id, contenu);
       if (!mounted) return;
       _saisie.clear();
       await _charger(discret: true);

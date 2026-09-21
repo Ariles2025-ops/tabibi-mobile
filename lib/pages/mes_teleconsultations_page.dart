@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../i18n/langue.dart';
 import '../models/teleconsultation.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../theme/theme_tabibi.dart';
@@ -38,6 +39,7 @@ class MesTeleconsultationsPage extends StatefulWidget {
 
 class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   List<Teleconsultation> _teleconsultations = [];
   bool _charge = false;
   String? _erreur;
@@ -69,7 +71,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
       _erreur = null;
     });
     try {
-      final teleconsultations = await widget.api.mesTeleconsultations(token);
+      final teleconsultations = await _patient.mesTeleconsultations();
       if (!mounted) return;
       setState(() {
         _teleconsultations = teleconsultations.map(Teleconsultation.fromJson).toList();
@@ -94,7 +96,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     if (token == null) return;
     setState(() => _enCours = tele.id);
     try {
-      final consentie = Teleconsultation.fromJson(await widget.api.consentir(tele.id, token));
+      final consentie = Teleconsultation.fromJson(await _patient.consentir(tele.id));
       if (!mounted) return;
       setState(() {
         _teleconsultations = [

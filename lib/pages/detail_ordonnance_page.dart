@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import '../i18n/langue.dart';
 import '../i18n/traductions.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
+import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
@@ -59,6 +61,8 @@ class DetailOrdonnancePage extends StatefulWidget {
 
 class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
+  final PraticiensSupabase _prat = const PraticiensSupabase();
   Map<String, dynamic>? _ordonnance;
 
   /// Nom du praticien resolu via la fiche publique ; « Médecin » et l'identifiant abrege a defaut.
@@ -93,7 +97,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
       _erreur = null;
     });
     try {
-      final ordonnance = await widget.api.ordonnance(widget.ordonnanceId, token);
+      final ordonnance = await _patient.ordonnance(widget.ordonnanceId);
       final nomMedecin = await _resoudreNomMedecin(ordonnance);
       if (!mounted) return;
       setState(() {
@@ -119,7 +123,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     final id = identifiant(ordonnance['medecinId']);
     if (id.isEmpty) return libelleMedecin(langue, id);
     try {
-      final Object? nom = (await widget.api.medecin(id))['nomComplet'];
+      final Object? nom = (await _prat.parId(id))?['nomComplet'];
       if (nom is String && nom.isNotEmpty) return nom;
     } on Exception {
       // Fiche indisponible : libelle de repli ci-dessous.
@@ -142,7 +146,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     if (ordonnance == null || token == null || _pdfEnCours) return;
     setState(() => _pdfEnCours = true);
     try {
-      final octets = await widget.api.ordonnancePdf(widget.ordonnanceId, token);
+      final octets = await _patient.ordonnancePdf(widget.ordonnanceId);
       final ouvrir = widget.enregistrerEtOuvrir ?? enregistrerEtOuvrirFichier;
       var ouvert = false;
       try {

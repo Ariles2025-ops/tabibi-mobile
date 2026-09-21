@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
+import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
@@ -28,6 +30,8 @@ class MesConversationsPage extends StatefulWidget {
 
 class _MesConversationsPageState extends State<MesConversationsPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
+  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<Conversation> _conversations = [];
 
   /// Noms des praticiens deja resolus, par identifiant (texte).
@@ -61,7 +65,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
       _erreur = null;
     });
     try {
-      final conversations = await widget.api.mesConversations(token);
+      final conversations = await _patient.mesConversations();
       final triees = trierParActivite(conversations.map(Conversation.fromJson).toList());
       await _chargerNomsMedecins(triees);
       if (!mounted) return;
@@ -87,7 +91,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     for (final medecinId in conversations.map((c) => c.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
+        final Object? nom = (await _prat.parId(medecinId))?['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
         // Fiche indisponible : libelle de repli ([libelleMedecin]).

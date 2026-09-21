@@ -4,6 +4,7 @@ import '../i18n/langue.dart';
 import '../models/besoin_medicament.dart';
 import '../models/reponse_pharmacie.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/dawini.dart';
@@ -33,6 +34,7 @@ class ReponsesBesoinPage extends StatefulWidget {
 
 class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
 
   /// Demande affichee ; remplacee par sa copie cloturee apres la cloture.
   late BesoinMedicament _besoin = widget.besoin;
@@ -65,7 +67,7 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
       _erreur = null;
     });
     try {
-      final reponses = await widget.api.reponsesBesoin(_besoin.id, token);
+      final reponses = await _patient.reponsesBesoin(_besoin.id);
       if (!mounted) return;
       setState(() => _reponses = reponses.map(ReponsePharmacie.fromJson).toList());
     } on ApiException catch (e) {
@@ -109,7 +111,7 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
     setState(() => _cloture = true);
     var cloturee = false;
     try {
-      await widget.api.cloturerBesoin(_besoin.id, token);
+      await _patient.cloturerBesoin(_besoin.id);
       cloturee = true;
       if (mounted) _message(t(context, 'reponses.cloturee'));
     } on ApiException catch (e) {

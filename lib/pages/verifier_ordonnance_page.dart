@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../i18n/langue.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../utils/dates.dart';
 import '../utils/libelles.dart';
 import '../widgets/vue_erreur.dart';
@@ -18,6 +19,7 @@ class VerifierOrdonnancePage extends StatefulWidget {
 }
 
 class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
+  final PatientSupabase _patient = const PatientSupabase();
   final _code = TextEditingController();
   bool _charge = false;
   String? _erreur;
@@ -38,7 +40,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
       _resultat = null;
     });
     try {
-      final resultat = await widget.api.verifierOrdonnance(code);
+      final resultat = await _patient.verifierOrdonnance(code);
       if (mounted) setState(() => _resultat = resultat);
     } on ApiException catch (e) {
       if (!mounted) return;

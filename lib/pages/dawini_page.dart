@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../i18n/langue.dart';
 import '../models/besoin_medicament.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../theme/theme_tabibi.dart';
@@ -28,6 +29,7 @@ class DawiniPage extends StatefulWidget {
 
 class _DawiniPageState extends State<DawiniPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   final _medicament = TextEditingController();
   final _wilaya = TextEditingController();
   final _commune = TextEditingController();
@@ -71,7 +73,7 @@ class _DawiniPageState extends State<DawiniPage> {
       _erreur = null;
     });
     try {
-      final besoins = await widget.api.mesBesoins(token);
+      final besoins = await _patient.mesBesoins();
       if (!mounted) return;
       setState(() {
         _besoins = trierParPublication(besoins.map(BesoinMedicament.fromJson).toList());
@@ -110,11 +112,9 @@ class _DawiniPageState extends State<DawiniPage> {
     try {
       final commune = _commune.text.trim();
       final precision = _precision.text.trim();
-      await widget.api.publierBesoin(
+      await _patient.publierBesoin(
         medicament,
         wilayaCode,
-        token,
-        commune: commune.isEmpty ? null : commune,
         precision: precision.isEmpty ? null : precision,
       );
       publie = true;

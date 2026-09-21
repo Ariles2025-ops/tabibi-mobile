@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../i18n/langue.dart';
 import '../models/inscription_attente.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
+import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
@@ -27,6 +29,8 @@ class MesListesAttentePage extends StatefulWidget {
 
 class _MesListesAttentePageState extends State<MesListesAttentePage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
+  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<InscriptionAttente> _inscriptions = [];
 
   /// Noms des praticiens deja resolus, par identifiant (texte).
@@ -61,7 +65,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
       _erreur = null;
     });
     try {
-      final inscriptions = await widget.api.mesInscriptionsAttente(token);
+      final inscriptions = await _patient.mesInscriptionsAttente();
       final triees = trierParInscription(inscriptions.map(InscriptionAttente.fromJson).toList());
       await _chargerNomsMedecins(triees);
       if (!mounted) return;
@@ -85,7 +89,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     for (final medecinId in inscriptions.map((i) => i.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
+        final Object? nom = (await _prat.parId(medecinId))?['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
         // Fiche indisponible : libelle de repli ([libelleMedecin]).
@@ -124,7 +128,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     setState(() => _enCours = i.id);
     var retiree = false;
     try {
-      await widget.api.retirerListeAttente(i.id, token);
+      await _patient.retirerListeAttente(i.id);
       retiree = true;
       if (mounted) _message(t(context, 'attente.retrait'));
     } on ApiException catch (e) {

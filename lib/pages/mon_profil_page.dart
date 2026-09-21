@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../i18n/langue.dart';
 import '../models/profil.dart';
 import '../services/api_service.dart';
+import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/profil.dart';
@@ -36,6 +37,7 @@ class MonProfilPage extends StatefulWidget {
 
 class _MonProfilPageState extends State<MonProfilPage> {
   late final AuthService _auth = widget.auth ?? session;
+  final PatientSupabase _patient = const PatientSupabase();
   final _nomComplet = TextEditingController();
   final _telephone = TextEditingController();
   final _wilaya = TextEditingController();
@@ -84,7 +86,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
       _erreur = null;
     });
     try {
-      final profil = Profil.fromJson(await widget.api.monProfil(token));
+      final profil = Profil.fromJson(await _patient.monProfil());
       if (!mounted) return;
       // Sans choix explicite de l'utilisateur, l'interface suit la langue du profil.
       LangueScope.de(context).suivreLeProfil(profil.langue);
@@ -159,7 +161,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
         wilayaCode: wilayaCode.isEmpty ? null : wilayaCode,
         langue: _langue,
       );
-      enregistre = Profil.fromJson(await widget.api.enregistrerProfil(profil.toJson(), token));
+      enregistre = Profil.fromJson(await _patient.enregistrerProfil(profil.toJson()));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       if (mounted) _message(messageApi(context, e));

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'api_service.dart';
@@ -176,13 +178,26 @@ class PatientSupabase {
     }
   }
 
-  /// Marque une notification lue.
-  Future<void> marquerLue(String notificationId) async {
+  /// Marque une notification lue et renvoie la notification mise a jour (memes cles que
+  /// [mesNotifications]).
+  Future<Map<String, dynamic>> marquerLue(String notificationId) async {
     try {
-      await sb
+      final row = await sb
           .from('notifications')
           .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-          .eq('id', notificationId);
+          .eq('id', notificationId)
+          .select('id, user_id, type, title, message, read_at, created_at')
+          .single();
+      final m = row as Map;
+      return <String, dynamic>{
+        'id': m['id'],
+        'destinataireId': m['user_id'],
+        'canal': m['type'],
+        'sujet': m['title'],
+        'message': m['message'],
+        'lue': m['read_at'] != null,
+        'creeLe': m['created_at'],
+      };
     } on PostgrestException catch (e) {
       throw _erreur(e);
     }
@@ -463,6 +478,244 @@ class PatientSupabase {
           'repondueLe': m['created_at'],
         };
       }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Ordonnances
+  // ---------------------------------------------------------------------------
+
+  Map<String, dynamic> _mapOrdonnance(Map m) {
+    final meds = (m['medications'] as List?) ?? const [];
+    return <String, dynamic>{
+      'id': m['id'],
+      'medecinId': m['doctor_id'],
+      'patientId': m['patient_id'],
+      'rendezVousId': m['appointment_id'],
+      'codeVerification': m['prescription_number'],
+      'statut': (m['status']?.toString() ?? '').toUpperCase(),
+      'emiseLe': m['issue_date'] ?? m['created_at'],
+      'lignes': meds.map<Map<String, dynamic>>((e) {
+        final x = e as Map;
+        return <String, dynamic>{
+          'medicament': x['name'] ?? x['medicament'] ?? x['nom'],
+          'posologie': x['posology'] ?? x['posologie'] ?? x['dosage'],
+          'duree': x['duration'] ?? x['duree'],
+        };
+      }).toList(),
+    };
+  }
+
+  /// Ordonnances du patient, les plus recentes d'abord (memes cles que l'API).
+  Future<List<Map<String, dynamic>>> mesOrdonnances() async {
+    try {
+      final r = await sb
+          .from('prescriptions')
+          .select('id, doctor_id, patient_id, appointment_id, prescription_number, status, issue_date, created_at, medications')
+          .eq('patient_id', _uid)
+          .order('created_at', ascending: false);
+      return (r as List).map((e) => _mapOrdonnance(e as Map)).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  /// Une ordonnance du patient par identifiant.
+  Future<Map<String, dynamic>> ordonnance(String id) async {
+    try {
+      final row = await sb
+          .from('prescriptions')
+          .select('id, doctor_id, patient_id, appointment_id, prescription_number, status, issue_date, created_at, medications')
+          .eq('id', id)
+          .single();
+      return _mapOrdonnance(row as Map);
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  /// Version imprimable (PDF) d'une ordonnance, telechargee depuis le stockage Supabase.
+  Future<Uint8List> ordonnancePdf(String id) async {
+    try {
+      final row = await sb
+          .from('prescriptions')
+          .select('pdf_storage_path')
+          .eq('id', id)
+          .single();
+      final chemin = (row as Map)['pdf_storage_path'] as String?;
+      if (chemin == null || chemin.isEmpty) {
+        throw const ApiException(404, 'PDF indisponible', cle: 'api.pasUnPdf');
+      }
+      return await sb.storage.from('prescriptions').download(chemin);
+    } on StorageException catch (e) {
+      throw ApiException(404, e.message, cle: 'api.pasUnPdf');
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  /// Verification publique (sans session) d'un code d'ordonnance : {valide, emiseLe, statut}.
+  Future<Map<String, dynamic>> verifierOrdonnance(String code) async {
+    try {
+      final r = await sb.rpc('verifier_ordonnance', params: {'p_code': code});
+      final liste = (r as List?) ?? const [];
+      if (liste.isEmpty) return <String, dynamic>{'valide': false};
+      final m = liste.first as Map;
+      return <String, dynamic>{
+        'valide': true,
+        'emiseLe': m['emise_le'],
+        'statut': (m['statut']?.toString() ?? '').toUpperCase(),
+      };
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Avis publics d'un praticien
+  // ---------------------------------------------------------------------------
+
+  /// Synthese publique des avis d'un praticien : {moyenne, nombre, avis:[{id, note,
+  /// commentaire, deposeLe}]} (avis publies uniquement).
+  Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async {
+    try {
+      final r = await sb
+          .from('reviews')
+          .select('id, rating_overall, comment, created_at')
+          .eq('doctor_id', medecinId)
+          .eq('status', 'published')
+          .order('created_at', ascending: false);
+      final rows = (r as List).cast<Map>();
+      final notes = rows
+          .map((e) => e['rating_overall'])
+          .whereType<num>()
+          .map((n) => n.toInt())
+          .toList();
+      final moyenne =
+          notes.isEmpty ? null : notes.reduce((a, b) => a + b) / notes.length;
+      return <String, dynamic>{
+        'moyenne': moyenne,
+        'nombre': rows.length,
+        'avis': rows
+            .map((m) => <String, dynamic>{
+                  'id': m['id'],
+                  'note': m['rating_overall'],
+                  'commentaire': m['comment'],
+                  'deposeLe': m['created_at'],
+                })
+            .toList(),
+      };
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Listes d'attente (file patient<->medecin)
+  // ---------------------------------------------------------------------------
+
+  /// Inscrit le patient sur la liste d'attente d'un praticien (une par praticien).
+  Future<void> inscrireListeAttente(String medecinId) async {
+    try {
+      await sb.from('appointment_waitlist').insert({
+        'patient_id': _uid,
+        'doctor_id': medecinId,
+      });
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  /// Inscriptions du patient en liste d'attente : {id, patientId, medecinId, inscritLe}.
+  Future<List<Map<String, dynamic>>> mesInscriptionsAttente() async {
+    try {
+      final r = await sb
+          .from('appointment_waitlist')
+          .select('id, patient_id, doctor_id, created_at')
+          .eq('patient_id', _uid)
+          .order('created_at', ascending: true);
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'patientId': m['patient_id'],
+          'medecinId': m['doctor_id'],
+          'inscritLe': m['created_at'],
+        };
+      }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  /// Retire une inscription de la liste d'attente.
+  Future<void> retirerListeAttente(String inscriptionId) async {
+    try {
+      await sb.from('appointment_waitlist').delete().eq('id', inscriptionId);
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Teleconsultations
+  // ---------------------------------------------------------------------------
+
+  static String statutTele(Object? s) => switch (s?.toString()) {
+        'scheduled' || 'created' || 'pending' => 'PLANIFIEE',
+        'started' || 'in_progress' || 'live' => 'EN_COURS',
+        'ended' || 'completed' => 'TERMINEE',
+        'cancelled' => 'ANNULEE',
+        _ => (s?.toString() ?? '').toUpperCase(),
+      };
+
+  Map<String, dynamic> _mapTele(Map m) {
+    final app = (m['appointments'] as Map?) ?? const {};
+    final consenti = m['consent_patient_recording_at'] != null;
+    return <String, dynamic>{
+      'id': m['id'],
+      'rendezVousId': m['appointment_id'],
+      'patientId': app['patient_id'],
+      'medecinId': app['doctor_id'],
+      'statut': statutTele(m['status']),
+      'consentementPatientLe': m['consent_patient_recording_at'],
+      'lienSalle': consenti ? m['daily_room_url'] : null,
+      'creeLe': m['created_at'],
+      'demarreeLe': m['started_at'],
+      'termineeLe': m['ended_at'],
+    };
+  }
+
+  /// Teleconsultations du patient (video_sessions liees a ses rendez-vous).
+  Future<List<Map<String, dynamic>>> mesTeleconsultations() async {
+    try {
+      final r = await sb
+          .from('video_sessions')
+          .select('id, appointment_id, status, daily_room_url, started_at, ended_at, consent_patient_recording_at, created_at, appointments!inner(patient_id, doctor_id)')
+          .eq('appointments.patient_id', _uid)
+          .order('created_at', ascending: false);
+      return (r as List).map((e) => _mapTele(e as Map)).toList();
+    } on PostgrestException catch (_) {
+      return const [];
+    }
+  }
+
+  /// Consentement du patient : enregistre le consentement et renvoie la session mise a jour
+  /// (avec le lien de salle).
+  Future<Map<String, dynamic>> consentir(String teleconsultationId) async {
+    try {
+      await sb.rpc('set_video_recording_consent',
+          params: {'p_session_id': teleconsultationId, 'p_consent': true});
+      final row = await sb
+          .from('video_sessions')
+          .select('id, appointment_id, status, daily_room_url, started_at, ended_at, consent_patient_recording_at, created_at, appointments!inner(patient_id, doctor_id)')
+          .eq('id', teleconsultationId)
+          .single();
+      return _mapTele(row as Map);
     } on PostgrestException catch (e) {
       throw _erreur(e);
     }
