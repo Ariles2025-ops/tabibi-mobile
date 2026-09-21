@@ -46,6 +46,12 @@ class _ConnexionPageState extends State<ConnexionPage> {
   String _telNorm = '';
   String _contactOtp = '';
 
+  // Etape reinitialisation du mot de passe
+  bool _etapeReset = false;
+  final _resetCode = TextEditingController();
+  final _resetMdp = TextEditingController();
+  String _resetEmail = '';
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +60,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
 
   @override
   void dispose() {
-    for (final c in [_identifiant, _mdpConnexion, _prenom, _nom, _email, _tel, _mdp, _otp]) {
+    for (final c in [_identifiant, _mdpConnexion, _prenom, _nom, _email, _tel, _mdp, _otp, _resetCode, _resetMdp]) {
       c.dispose();
     }
     super.dispose();
@@ -234,18 +240,131 @@ class _ConnexionPageState extends State<ConnexionPage> {
     }
   }
 
+  // ---------- MOT DE PASSE OUBLIE ----------
+  Future<void> _ouvrirReset() async {
+    final id = _identifiant.text.trim();
+    if (!id.contains('@')) {
+      _msg('Entrez votre e-mail ci-dessus, puis « Mot de passe oublié ? ».');
+      return;
+    }
+    _resetEmail = id;
+    await _envoyerReset();
+  }
+
+  Future<void> _envoyerReset() async {
+    if (_resetEmail.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _charge = true);
+    try {
+      await sb.auth.resetPasswordForEmail(_resetEmail);
+      if (mounted) {
+        setState(() => _etapeReset = true);
+        _msg('Code envoyé par e-mail à $_resetEmail.');
+      }
+    } on AuthException catch (e) {
+      if (mounted) _msg(e.message);
+    } catch (_) {
+      if (mounted) _msg('Envoi impossible. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  Future<void> _confirmerReset() async {
+    final code = _resetCode.text.trim();
+    final mdp = _resetMdp.text;
+    if (code.isEmpty) {
+      _msg('Entrez le code reçu par e-mail.');
+      return;
+    }
+    if (mdp.length < 6) {
+      _msg('Nouveau mot de passe : 6 caractères minimum.');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _charge = true);
+    try {
+      await sb.auth.verifyOTP(type: OtpType.recovery, email: _resetEmail, token: code);
+      await sb.auth.updateUser(UserAttributes(password: mdp));
+      if (!mounted) return;
+      if (sb.auth.currentSession != null) {
+        _msg('Mot de passe réinitialisé.');
+        Navigator.of(context).pop(true);
+      }
+    } on AuthException catch (e) {
+      if (mounted) _msg(e.message);
+    } catch (_) {
+      if (mounted) _msg('Code incorrect ou expiré.');
+    } finally {
+      if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  Widget _vueReset() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SizedBox(height: 12),
+      const Icon(Icons.lock_reset_outlined, size: 48, color: Tabibi.vert),
+      const SizedBox(height: 16),
+      const Text('Nouveau mot de passe',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+      const SizedBox(height: 8),
+      Text(
+          'Un code à 6 chiffres a été envoyé par e-mail à $_resetEmail. Entrez-le, puis choisissez un nouveau mot de passe.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Tabibi.texteDoux, height: 1.4)),
+      const SizedBox(height: 22),
+      TextField(
+        controller: _resetCode,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 6),
+        decoration: const InputDecoration(hintText: '••••••'),
+      ),
+      const SizedBox(height: 14),
+      TextField(
+        controller: _resetMdp,
+        obscureText: !_voirMdp,
+        decoration: InputDecoration(
+          labelText: 'Nouveau mot de passe',
+          prefixIcon: const Icon(Icons.lock_outline),
+          suffixIcon: IconButton(
+            icon: Icon(_voirMdp ? Icons.visibility_off : Icons.visibility, color: Tabibi.texte3),
+            onPressed: () => setState(() => _voirMdp = !_voirMdp),
+          ),
+        ),
+      ),
+      const SizedBox(height: 20),
+      ElevatedButton(
+        onPressed: _charge ? null : _confirmerReset,
+        child: _charge
+            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Text('Valider'),
+      ),
+      const SizedBox(height: 10),
+      TextButton(onPressed: _charge ? null : _envoyerReset, child: const Text('Renvoyer le code')),
+      TextButton(
+          onPressed: _charge ? null : () => setState(() => _etapeReset = false),
+          child: const Text('Retour')),
+    ]);
+  }
+
   // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
-    final titre = _etapeOtp
-        ? 'Vérification'
-        : (_mode == _Mode.connexion ? 'Connexion' : 'Créer un compte');
+    final titre = _etapeReset
+        ? 'Mot de passe oublié'
+        : _etapeOtp
+            ? 'Vérification'
+            : (_mode == _Mode.connexion ? 'Connexion' : 'Créer un compte');
     return Scaffold(
       appBar: AppBar(title: Text(titre)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: _etapeOtp ? _vueOtp() : _vueFormulaire(),
+          child: _etapeReset
+              ? _vueReset()
+              : (_etapeOtp ? _vueOtp() : _vueFormulaire()),
         ),
       ),
     );
@@ -301,6 +420,13 @@ class _ConnexionPageState extends State<ConnexionPage> {
         ),
         const SizedBox(height: 14),
         _champMdp(_mdpConnexion, onSubmit: _connexion),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _charge ? null : _ouvrirReset,
+            child: const Text('Mot de passe oublié ?'),
+          ),
+        ),
       ];
 
   List<Widget> _champsInscription() => [
