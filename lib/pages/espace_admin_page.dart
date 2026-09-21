@@ -204,7 +204,7 @@ class _EspaceAdminPageState extends State<EspaceAdminPage> {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.6,
+            childAspectRatio: 1.15,
             children: [
               _kpi('Patients', _stats['patients'], Icons.people_outline),
               _kpi('Médecins actifs', _stats['medecinsActifs'], Icons.medical_services_outlined),
