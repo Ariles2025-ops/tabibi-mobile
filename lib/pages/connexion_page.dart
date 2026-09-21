@@ -20,9 +20,12 @@ enum _Mode { connexion, inscription }
 
 enum _Methode { email, telephone }
 
+enum _Profil { patient, medecin }
+
 class _ConnexionPageState extends State<ConnexionPage> {
   _Mode _mode = _Mode.connexion;
   _Methode _methode = _Methode.email;
+  _Profil _profil = _Profil.patient;
   bool _charge = false;
   bool _voirMdp = false;
 
@@ -40,6 +43,13 @@ class _ConnexionPageState extends State<ConnexionPage> {
   List<Map<String, dynamic>> _wilayas = [];
   bool _cgu = false, _confid = false, _sante = false, _marketing = false;
 
+  // Candidature medecin (professionnel)
+  final _ordre = TextEditingController();
+  final _cabinet = TextEditingController();
+  List<Map<String, dynamic>> _specialites = [];
+  String? _specialite;
+  bool _candidatureEnvoyee = false;
+
   // Etape code SMS
   bool _etapeOtp = false;
   final _otp = TextEditingController();
@@ -56,14 +66,22 @@ class _ConnexionPageState extends State<ConnexionPage> {
   void initState() {
     super.initState();
     _chargerWilayas();
+    _chargerSpecialites();
   }
 
   @override
   void dispose() {
-    for (final c in [_identifiant, _mdpConnexion, _prenom, _nom, _email, _tel, _mdp, _otp, _resetCode, _resetMdp]) {
+    for (final c in [_identifiant, _mdpConnexion, _prenom, _nom, _email, _tel, _mdp, _otp, _resetCode, _resetMdp, _ordre, _cabinet]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _chargerSpecialites() async {
+    try {
+      final r = await sb.from('specialties').select('slug,name_fr').order('name_fr');
+      if (mounted) setState(() => _specialites = List<Map<String, dynamic>>.from(r as List));
+    } catch (_) {}
   }
 
   Future<void> _chargerWilayas() async {
@@ -349,22 +367,187 @@ class _ConnexionPageState extends State<ConnexionPage> {
     ]);
   }
 
+  // ---------- CANDIDATURE MEDECIN ----------
+  Future<void> _candidatureMedecin() async {
+    final prenom = _prenom.text.trim();
+    final nom = _nom.text.trim();
+    final email = _email.text.trim();
+    final tel = _tel.text.trim();
+    if (prenom.isEmpty || nom.isEmpty) {
+      _msg('Indiquez votre prénom et votre nom.');
+      return;
+    }
+    if (!email.contains('@')) {
+      _msg('E-mail invalide.');
+      return;
+    }
+    if (tel.isEmpty) {
+      _msg('Indiquez votre téléphone.');
+      return;
+    }
+    if (_specialite == null) {
+      _msg('Choisissez votre spécialité.');
+      return;
+    }
+    if (!(_cgu && _confid)) {
+      _msg('Merci d\'accepter les conditions.');
+      return;
+    }
+    final wilayaNom = _wilaya == null
+        ? null
+        : _wilayas
+            .firstWhere((w) => (w['code'] as num).toInt() == _wilaya,
+                orElse: () => const {})['name_fr']
+            ?.toString();
+    FocusScope.of(context).unfocus();
+    setState(() => _charge = true);
+    try {
+      await sb.rpc('soumettre_candidature_medecin', params: {
+        'p': {
+          'firstname': prenom,
+          'lastname': nom,
+          'email': email,
+          'phone': _normTel(tel),
+          'ordre_num': _ordre.text.trim(),
+          'specialty': _specialite,
+          'wilaya': wilayaNom,
+          'cabinet': _cabinet.text.trim(),
+          'languages': <String>[],
+          'consents': {'terms': _cgu, 'privacy': _confid},
+          'lang': 'fr',
+        }
+      });
+      if (mounted) setState(() => _candidatureEnvoyee = true);
+    } on PostgrestException catch (e) {
+      if (mounted) _msg(e.message);
+    } catch (_) {
+      if (mounted) _msg('Envoi impossible. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  Widget _choixProfil() {
+    Widget seg(String label, IconData ic, _Profil p) {
+      final actif = _profil == p;
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Tabibi.r12),
+          onTap: () => setState(() => _profil = p),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: actif ? Tabibi.pastille : Colors.white,
+              borderRadius: BorderRadius.circular(Tabibi.r12),
+              border: Border.all(
+                  color: actif ? Tabibi.vert : Tabibi.bord, width: actif ? 1.5 : 1),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(ic, size: 18, color: actif ? Tabibi.vert : Tabibi.texte3),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: actif ? Tabibi.vert : Tabibi.texteDoux)),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    return Row(children: [
+      seg('Patient', Icons.person_outline, _Profil.patient),
+      const SizedBox(width: 10),
+      seg('Médecin', Icons.medical_services_outlined, _Profil.medecin),
+    ]);
+  }
+
+  List<Widget> _champsInscriptionMedecin() => [
+        Row(children: [
+          Expanded(child: _champ(_prenom, 'Prénom', Icons.badge_outlined)),
+          const SizedBox(width: 12),
+          Expanded(child: _champ(_nom, 'Nom', Icons.badge_outlined)),
+        ]),
+        const SizedBox(height: 14),
+        _champ(_email, 'E-mail professionnel', Icons.mail_outline,
+            clavier: TextInputType.emailAddress),
+        const SizedBox(height: 14),
+        _champ(_tel, 'Téléphone', Icons.phone_outlined, clavier: TextInputType.phone),
+        const SizedBox(height: 14),
+        _champSpecialite(),
+        const SizedBox(height: 14),
+        _champWilaya(),
+        const SizedBox(height: 14),
+        _champ(_ordre, 'N° d\'inscription à l\'Ordre (facultatif)',
+            Icons.verified_outlined),
+        const SizedBox(height: 14),
+        _champ(_cabinet, 'Nom du cabinet (facultatif)', Icons.local_hospital_outlined),
+        const SizedBox(height: 18),
+        _consentements(),
+      ];
+
+  Widget _champSpecialite() {
+    return DropdownButtonFormField<String?>(
+      value: _specialite,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Spécialité',
+        prefixIcon: Icon(Icons.medical_information_outlined),
+      ),
+      items: [
+        const DropdownMenuItem<String?>(value: null, child: Text('— Sélectionnez —')),
+        for (final sp in _specialites)
+          DropdownMenuItem<String?>(
+            value: sp['slug']?.toString(),
+            child: Text(sp['name_fr']?.toString() ?? '', overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: (v) => setState(() => _specialite = v),
+    );
+  }
+
+  Widget _vueCandidatureEnvoyee() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SizedBox(height: 24),
+      const Icon(Icons.verified_outlined, size: 56, color: Tabibi.vert),
+      const SizedBox(height: 16),
+      const Text('Demande envoyée',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Tabibi.ink)),
+      const SizedBox(height: 10),
+      const Text(
+          'Merci ! Votre demande d\'inscription en tant que praticien a bien été reçue. Notre équipe vérifie vos informations et vous recontacte pour activer votre espace médecin.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Tabibi.texteDoux, height: 1.4)),
+      const SizedBox(height: 24),
+      ElevatedButton(
+        onPressed: () => Navigator.of(context).pop(false),
+        child: const Text('Terminer'),
+      ),
+    ]);
+  }
+
   // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
-    final titre = _etapeReset
-        ? 'Mot de passe oublié'
-        : _etapeOtp
-            ? 'Vérification'
-            : (_mode == _Mode.connexion ? 'Connexion' : 'Créer un compte');
+    final titre = _candidatureEnvoyee
+        ? 'Demande envoyée'
+        : _etapeReset
+            ? 'Mot de passe oublié'
+            : _etapeOtp
+                ? 'Vérification'
+                : (_mode == _Mode.connexion ? 'Connexion' : 'Créer un compte');
     return Scaffold(
       appBar: AppBar(title: Text(titre)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: _etapeReset
-              ? _vueReset()
-              : (_etapeOtp ? _vueOtp() : _vueFormulaire()),
+          child: _candidatureEnvoyee
+              ? _vueCandidatureEnvoyee()
+              : _etapeReset
+                  ? _vueReset()
+                  : (_etapeOtp ? _vueOtp() : _vueFormulaire()),
         ),
       ),
     );
@@ -384,17 +567,38 @@ class _ConnexionPageState extends State<ConnexionPage> {
       ]);
 
   Widget _vueFormulaire() {
+    final estInscription = _mode == _Mode.inscription;
+    final estMedecin = estInscription && _profil == _Profil.medecin;
+    final List<Widget> champs;
+    if (!estInscription) {
+      champs = _champsConnexion();
+    } else if (estMedecin) {
+      champs = _champsInscriptionMedecin();
+    } else {
+      champs = _champsInscription();
+    }
+    final String libelleBouton;
+    final VoidCallback actionBouton;
+    if (!estInscription) {
+      libelleBouton = 'Se connecter';
+      actionBouton = _connexion;
+    } else if (estMedecin) {
+      libelleBouton = 'Envoyer ma demande';
+      actionBouton = _candidatureMedecin;
+    } else {
+      libelleBouton = _methode == _Methode.telephone ? 'Recevoir le code' : 'Créer un compte';
+      actionBouton = _inscription;
+    }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _entete(),
-      if (_mode == _Mode.connexion) ..._champsConnexion() else ..._champsInscription(),
+      if (estInscription) ...[_choixProfil(), const SizedBox(height: 18)],
+      ...champs,
       const SizedBox(height: 20),
       ElevatedButton(
-        onPressed: _charge ? null : (_mode == _Mode.connexion ? _connexion : _inscription),
+        onPressed: _charge ? null : actionBouton,
         child: _charge
             ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : Text(_mode == _Mode.connexion
-                ? 'Se connecter'
-                : (_methode == _Methode.telephone ? 'Recevoir le code' : 'Créer un compte')),
+            : Text(libelleBouton),
       ),
       const SizedBox(height: 10),
       TextButton(
