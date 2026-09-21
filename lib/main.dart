@@ -76,7 +76,7 @@ class TabibiApp extends StatelessWidget {
           ],
           navigatorKey: navigatorCle,
           theme: themeTabibi(),
-          home: RecherchePage(api: api, auth: auth),
+          home: AccueilGate(api: api, auth: auth),
         ),
       ),
     );
@@ -89,6 +89,49 @@ class TabibiApp extends StatelessWidget {
 /// teleconsultations, a la messagerie avec mes medecins, a mes avis, a Dawini
 /// (demander un medicament aux pharmacies), a mes listes d'attente, a mon profil
 /// et au choix de la langue de l'interface.
+/// Porte d'entree : un compte administrateur ouvre la console d'admin ;
+/// tout le monde (anonyme, patient, medecin) voit l'accueil patient.
+class AccueilGate extends StatefulWidget {
+  const AccueilGate({super.key, this.api = const ApiService(), this.auth});
+
+  final ApiService api;
+  final AuthService? auth;
+
+  @override
+  State<AccueilGate> createState() => _AccueilGateState();
+}
+
+class _AccueilGateState extends State<AccueilGate> {
+  final AdminSupabase _adm = const AdminSupabase();
+  bool _admin = false;
+  StreamSubscription<AuthState>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _verifier();
+    _sub = sb.auth.onAuthStateChange.listen((_) => _verifier());
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _verifier() async {
+    final a = sb.auth.currentSession == null ? false : await _adm.estAdmin();
+    if (mounted && a != _admin) setState(() => _admin = a);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _admin
+        ? EspaceAdminPage(auth: widget.auth)
+        : RecherchePage(api: widget.api, auth: widget.auth);
+  }
+}
+
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
