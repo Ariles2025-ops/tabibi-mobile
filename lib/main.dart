@@ -13,6 +13,7 @@ import 'i18n/traductions.dart';
 import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
 import 'pages/espace_admin_page.dart';
+import 'pages/accueil_medecin_page.dart';
 import 'pages/espace_medecin_page.dart';
 import 'pages/medecin_attente_page.dart';
 import 'pages/fiche_medecin_page.dart';
@@ -127,12 +128,14 @@ class _AccueilGateState extends State<AccueilGate> {
     if (uid != null) {
       if (await _adm.estAdmin()) {
         etat = 'admin';
-      } else if (!await _medc.estMedecin()) {
-        // Medecin sans fiche validee -> en attente de validation.
+      } else {
+        final aFiche = await _medc.estMedecin();
+        String? role;
         try {
           final r = await sb.from('users').select('role').eq('id', uid).maybeSingle();
-          if ((r as Map?)?['role'] == 'medecin') etat = 'attente';
+          role = (r as Map?)?['role'] as String?;
         } catch (_) {}
+        if (role == 'medecin') etat = aFiche ? 'medecin' : 'attente';
       }
     }
     if (mounted && etat != _etat) setState(() => _etat = etat);
@@ -145,6 +148,8 @@ class _AccueilGateState extends State<AccueilGate> {
         return EspaceAdminPage(auth: widget.auth);
       case 'attente':
         return MedecinAttentePage(auth: widget.auth);
+      case 'medecin':
+        return AccueilMedecinPage(auth: widget.auth);
       default:
         return RecherchePage(api: widget.api, auth: widget.auth);
     }

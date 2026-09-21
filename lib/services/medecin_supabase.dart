@@ -63,6 +63,7 @@ class MedecinSupabase {
         'note': v['rating'],
         'nombreAvis': v['review_count'],
         'verifie': v['is_verified'],
+        'horaires': v['working_hours'],
       };
 
   /// Met a jour la fiche du praticien (RPC `update_my_doctor_profile`) et renvoie la fiche
@@ -97,6 +98,15 @@ class MedecinSupabase {
         'p_address': address,
       });
       return monProfil();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  /// Enregistre uniquement les horaires (working_hours), sans toucher au reste.
+  Future<void> enregistrerHoraires(Map<String, dynamic> horaires) async {
+    try {
+      await sb.rpc('update_my_doctor_profile', params: {'p_working_hours': horaires});
     } on PostgrestException catch (e) {
       throw _erreur(e);
     }
