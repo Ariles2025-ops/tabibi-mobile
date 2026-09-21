@@ -50,6 +50,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   String? _specialite;
   bool _candidatureEnvoyee = false;
   bool _medecinEnAttente = false;
+  String? _erreurForm;
 
   // Etape code SMS
   bool _etapeOtp = false;
@@ -121,6 +122,12 @@ class _ConnexionPageState extends State<ConnexionPage> {
     return e.message;
   }
 
+  void _afficherErreur(String m) {
+    if (!mounted) return;
+    setState(() => _erreurForm = m);
+    _msg(m);
+  }
+
   void _msg(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
@@ -130,7 +137,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
     final mdp = _mdpConnexion.text;
     if (id.isEmpty || mdp.isEmpty) return;
     FocusScope.of(context).unfocus();
-    setState(() => _charge = true);
+    setState(() { _charge = true; _erreurForm = null; });
     try {
       String? email;
       String? phone;
@@ -149,7 +156,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
       }
       if (mounted && sb.auth.currentSession != null) Navigator.of(context).pop(true);
     } on AuthException catch (e) {
-      if (mounted) _msg(_libelleAuth(e));
+      if (mounted) _afficherErreur(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Connexion impossible. Vérifiez vos identifiants.');
     } finally {
@@ -187,7 +194,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
       'consent_marketing': _marketing,
     };
     FocusScope.of(context).unfocus();
-    setState(() => _charge = true);
+    setState(() { _charge = true; _erreurForm = null; });
     try {
       if (_methode == _Methode.email) {
         final email = _email.text.trim();
@@ -235,7 +242,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
           setState(() => _mode = _Mode.connexion);
           _msg('Ce compte existe déjà. Connectez-vous avec votre mot de passe.');
         } else {
-          _msg(_libelleAuth(e));
+          _afficherErreur(_libelleAuth(e));
         }
       }
     } catch (_) {
@@ -248,7 +255,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   Future<void> _verifierOtp() async {
     final code = _otp.text.trim();
     if (code.isEmpty) return;
-    setState(() => _charge = true);
+    setState(() { _charge = true; _erreurForm = null; });
     try {
       if (_methode == _Methode.telephone) {
         await sb.auth.verifyOTP(type: OtpType.sms, phone: _contactOtp, token: code);
@@ -266,7 +273,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         }
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(_libelleAuth(e));
+      if (mounted) _afficherErreur(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Code incorrect ou expiré.');
     } finally {
@@ -283,7 +290,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
       }
       if (mounted) _msg('Code renvoyé.');
     } on AuthException catch (e) {
-      if (mounted) _msg(_libelleAuth(e));
+      if (mounted) _afficherErreur(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Impossible de renvoyer le code.');
     }
@@ -303,7 +310,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   Future<void> _envoyerReset() async {
     if (_resetEmail.isEmpty) return;
     FocusScope.of(context).unfocus();
-    setState(() => _charge = true);
+    setState(() { _charge = true; _erreurForm = null; });
     try {
       await sb.auth.resetPasswordForEmail(_resetEmail);
       if (mounted) {
@@ -311,7 +318,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         _msg('Code envoyé par e-mail à $_resetEmail.');
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(_libelleAuth(e));
+      if (mounted) _afficherErreur(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Envoi impossible. Réessayez.');
     } finally {
@@ -331,7 +338,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
       return;
     }
     FocusScope.of(context).unfocus();
-    setState(() => _charge = true);
+    setState(() { _charge = true; _erreurForm = null; });
     try {
       await sb.auth.verifyOTP(type: OtpType.recovery, email: _resetEmail, token: code);
       await sb.auth.updateUser(UserAttributes(password: mdp));
@@ -341,7 +348,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         Navigator.of(context).pop(true);
       }
     } on AuthException catch (e) {
-      if (mounted) _msg(_libelleAuth(e));
+      if (mounted) _afficherErreur(_libelleAuth(e));
     } catch (_) {
       if (mounted) _msg('Code incorrect ou expiré.');
     } finally {
@@ -434,7 +441,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
             orElse: () => const {})['name_fr']
         ?.toString();
     FocusScope.of(context).unfocus();
-    setState(() => _charge = true);
+    setState(() { _charge = true; _erreurForm = null; });
     try {
       final res = await sb.auth.signUp(email: email, password: mdp, data: {
         'role': 'medecin',
@@ -491,7 +498,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
           });
           _msg('Ce compte existe déjà. Connectez-vous.');
         } else {
-          _msg(_libelleAuth(e));
+          _afficherErreur(_libelleAuth(e));
         }
       }
     } catch (_) {
@@ -669,6 +676,23 @@ class _ConnexionPageState extends State<ConnexionPage> {
       _entete(),
       if (estInscription) ...[_choixProfil(), const SizedBox(height: 18)],
       ...champs,
+      if (_erreurForm != null) ...[
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Tabibi.rougeClair,
+            borderRadius: BorderRadius.circular(Tabibi.r12),
+            border: Border.all(color: Tabibi.rouge, width: 1),
+          ),
+          child: Row(children: [
+            const Icon(Icons.error_outline, color: Tabibi.rouge, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(_erreurForm!, style: const TextStyle(color: Tabibi.rouge, fontWeight: FontWeight.w600))),
+          ]),
+        ),
+      ],
       const SizedBox(height: 20),
       ElevatedButton(
         onPressed: _charge ? null : actionBouton,
