@@ -12,6 +12,7 @@ import 'i18n/langue.dart';
 import 'i18n/traductions.dart';
 import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
+import 'pages/espace_medecin_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/langue_page.dart';
 import 'pages/mes_avis_page.dart';
@@ -25,6 +26,7 @@ import 'pages/mon_profil_page.dart';
 import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/medecin_supabase.dart';
 import 'services/praticiens_supabase.dart';
 import 'services/session.dart';
 import 'services/supabase_service.dart';
@@ -105,6 +107,8 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Annuaire en direct via Supabase (aucun backend requis).
   final PraticiensSupabase _prat = const PraticiensSupabase();
+  final MedecinSupabase _med = const MedecinSupabase();
+  bool _estMedecin = false;
 
   /// Total reel de praticiens dans la base (null tant qu'inconnu).
   int? _totalMedecins;
@@ -295,6 +299,19 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  /// Verifie si le compte connecte est un praticien (affiche l'entree Espace medecin).
+  Future<void> _verifierMedecin() async {
+    final est = await _med.estMedecin();
+    if (mounted) setState(() => _estMedecin = est);
+  }
+
+  Future<void> _ouvrirEspaceMedecin() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => EspaceMedecinPage(auth: _auth)),
+    );
+    if (mounted) setState(() {});
+  }
+
   Future<void> _ouvrirMonProfil() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -332,7 +349,9 @@ class _RecherchePageState extends State<RecherchePage> {
     _rechercher();
     _chargerStats();
     _chargerNonLues();
+    _verifierMedecin();
     _authSub = sb.auth.onAuthStateChange.listen((_) {
+      _verifierMedecin();
       if (mounted) setState(() {});
     });
   }
@@ -1304,6 +1323,9 @@ class _RecherchePageState extends State<RecherchePage> {
                         color: Tabibi.ink)),
               ),
             ),
+            if (_estMedecin)
+              _ligneMenu(Icons.medical_services_outlined, 'Espace médecin',
+                  () { Navigator.pop(ctx); _ouvrirEspaceMedecin(); }),
             _ligneMenu(Icons.badge_outlined, t(context, 'accueil.monProfil'),
                 () { Navigator.pop(ctx); _ouvrirMonProfil(); }),
             _ligneMenu(Icons.description_outlined, t(context, 'accueil.mesOrdonnances'),
