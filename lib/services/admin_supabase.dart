@@ -8,7 +8,6 @@ import 'supabase_service.dart';
 class AdminSupabase {
   const AdminSupabase();
 
-  /// Vrai si le compte connecte est administrateur.
   Future<bool> estAdmin() async {
     try {
       final r = await sb.rpc('is_admin');
@@ -18,7 +17,9 @@ class AdminSupabase {
     }
   }
 
-  /// Statistiques globales : {patients, medecinsActifs, medecinsAttente, rdv, candidatures}.
+  // ---------------------------------------------------------------------------
+  // Tableau de bord
+  // ---------------------------------------------------------------------------
   Future<Map<String, dynamic>> stats() async {
     try {
       final r = await sb.rpc('admin_stats');
@@ -35,7 +36,9 @@ class AdminSupabase {
     }
   }
 
-  /// Medecins en attente de validation : {email, nom, telephone, specialite, wilaya, creeLe}.
+  // ---------------------------------------------------------------------------
+  // Medecins en attente
+  // ---------------------------------------------------------------------------
   Future<List<Map<String, dynamic>>> medecinsEnAttente() async {
     try {
       final r = await sb.rpc('admin_medecins_en_attente');
@@ -55,14 +58,14 @@ class AdminSupabase {
     }
   }
 
-  /// Liste des utilisateurs (role: 'patient'/'medecin'/'admin'/null=tous ; q=recherche).
+  Future<void> validerMedecin(String email) => _rpcVide('admin_valider_medecin', {'p_email': email});
+
+  // ---------------------------------------------------------------------------
+  // Utilisateurs
+  // ---------------------------------------------------------------------------
   Future<List<Map<String, dynamic>>> listerUtilisateurs({String? role, String? q, int limite = 50}) async {
     try {
-      final r = await sb.rpc('admin_lister_utilisateurs', params: {
-        'p_role': role,
-        'p_query': q,
-        'p_limit': limite,
-      });
+      final r = await sb.rpc('admin_lister_utilisateurs', params: {'p_role': role, 'p_query': q, 'p_limit': limite});
       return (r as List).map((e) {
         final m = e as Map;
         return <String, dynamic>{
@@ -79,36 +82,6 @@ class AdminSupabase {
     }
   }
 
-  /// Rendez-vous (supervision) : {id, patientNom, medecinNom, debut, statut}.
-  Future<List<Map<String, dynamic>>> listerRdv({int limite = 50}) async {
-    try {
-      final r = await sb.rpc('admin_lister_rdv', params: {'p_limit': limite});
-      return (r as List).map((e) {
-        final m = e as Map;
-        return <String, dynamic>{
-          'id': m['id'],
-          'patientNom': m['patient_nom'],
-          'medecinNom': m['medecin_nom'],
-          'debut': m['debut'],
-          'statut': m['statut'],
-        };
-      }).toList();
-    } on PostgrestException catch (e) {
-      throw _erreur(e);
-    }
-  }
-
-  /// Valide un medecin par e-mail (cree sa fiche + active le compte).
-  Future<void> validerMedecin(String email) async {
-    try {
-      await sb.rpc('admin_valider_medecin', params: {'p_email': email});
-    } on PostgrestException catch (e) {
-      throw _erreur(e);
-    }
-  }
-
-  /// Recherche un compte par e-mail : {email, nom, role, statut, actif, estMedecin, creeLe} ;
-  /// null s'il n'existe pas.
   Future<Map<String, dynamic>?> rechercherCompte(String email) async {
     try {
       final r = await sb.rpc('admin_rechercher_compte', params: {'p_email': email});
@@ -129,19 +102,137 @@ class AdminSupabase {
     }
   }
 
-  /// Active un compte par e-mail (et confirme son e-mail cote auth).
-  Future<void> activerCompte(String email) async {
+  Future<void> activerCompte(String email) => _rpcVide('admin_activer_compte', {'p_email': email});
+  Future<void> desactiverCompte(String email) => _rpcVide('admin_desactiver_compte', {'p_email': email});
+  Future<void> supprimerCompte(String email) => _rpcVide('admin_supprimer_compte', {'p_email': email});
+
+  // ---------------------------------------------------------------------------
+  // Rendez-vous
+  // ---------------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> listerRdv({int limite = 50}) async {
     try {
-      await sb.rpc('admin_activer_compte', params: {'p_email': email});
+      final r = await sb.rpc('admin_lister_rdv', params: {'p_limit': limite});
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'patientNom': m['patient_nom'],
+          'medecinNom': m['medecin_nom'],
+          'debut': m['debut'],
+          'statut': m['statut'],
+        };
+      }).toList();
     } on PostgrestException catch (e) {
       throw _erreur(e);
     }
   }
 
-  /// Supprime un compte par e-mail (delie la fiche, supprime le profil et le compte auth).
-  Future<void> supprimerCompte(String email) async {
+  // ---------------------------------------------------------------------------
+  // Moderation des avis
+  // ---------------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> avisAModerer({int limite = 50}) async {
     try {
-      await sb.rpc('admin_supprimer_compte', params: {'p_email': email});
+      final r = await sb.rpc('admin_avis_a_moderer', params: {'p_limit': limite});
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'note': m['note'],
+          'commentaire': m['commentaire'],
+          'statut': m['statut'],
+          'signalements': m['signalements'],
+          'medecinNom': m['medecin_nom'],
+          'creeLe': m['cree_le'],
+        };
+      }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  Future<void> publierAvis(String id) => _rpcVide('admin_moderer_avis', {'p_id': id, 'p_action': 'publier'});
+  Future<void> rejeterAvis(String id) => _rpcVide('admin_moderer_avis', {'p_id': id, 'p_action': 'rejeter'});
+
+  // ---------------------------------------------------------------------------
+  // Dawini
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> dawiniStats() async {
+    try {
+      final r = await sb.rpc('admin_dawini_stats');
+      final m = (r is List && r.isNotEmpty) ? r.first as Map : (r as Map? ?? const {});
+      return <String, dynamic>{'demandes': m['demandes'] ?? 0, 'pharmacies': m['pharmacies'] ?? 0};
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listerDawini({int limite = 50}) async {
+    try {
+      final r = await sb.rpc('admin_lister_dawini', params: {'p_limit': limite});
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'medicaments': m['medicaments'],
+          'wilaya': m['wilaya'],
+          'statut': m['statut'],
+          'nbReponses': m['nb_reponses'],
+          'creeLe': m['cree_le'],
+        };
+      }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cabinets & membres
+  // ---------------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> listerCabinets({int limite = 50}) async {
+    try {
+      final r = await sb.rpc('admin_lister_cabinets', params: {'p_limit': limite});
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'nom': m['nom'],
+          'wilaya': m['wilaya'],
+          'commune': m['commune'],
+          'phone': m['phone'],
+          'nbMembres': m['nb_membres'],
+          'creeLe': m['cree_le'],
+        };
+      }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> membresCabinet(String cabinetId) async {
+    try {
+      final r = await sb.rpc('admin_lister_membres_cabinet', params: {'p_cabinet_id': cabinetId});
+      return (r as List).map((e) {
+        final m = e as Map;
+        return <String, dynamic>{
+          'id': m['id'],
+          'email': m['email'],
+          'nom': m['nom'],
+          'role': m['role'],
+          'actif': m['actif'],
+        };
+      }).toList();
+    } on PostgrestException catch (e) {
+      throw _erreur(e);
+    }
+  }
+
+  Future<void> retirerMembreCabinet(String membreId) =>
+      _rpcVide('admin_retirer_membre_cabinet', {'p_membre_id': membreId});
+
+  // ---------------------------------------------------------------------------
+  Future<void> _rpcVide(String fn, Map<String, dynamic> params) async {
+    try {
+      await sb.rpc(fn, params: params);
     } on PostgrestException catch (e) {
       throw _erreur(e);
     }
