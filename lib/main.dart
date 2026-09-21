@@ -14,6 +14,7 @@ import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
 import 'pages/espace_admin_page.dart';
 import 'pages/espace_medecin_page.dart';
+import 'pages/medecin_attente_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/langue_page.dart';
 import 'pages/mes_avis_page.dart';
@@ -103,7 +104,8 @@ class AccueilGate extends StatefulWidget {
 
 class _AccueilGateState extends State<AccueilGate> {
   final AdminSupabase _adm = const AdminSupabase();
-  bool _admin = false;
+  final MedecinSupabase _medc = const MedecinSupabase();
+  String _etat = 'normal'; // admin | attente | normal
   StreamSubscription<AuthState>? _sub;
 
   @override
@@ -120,15 +122,32 @@ class _AccueilGateState extends State<AccueilGate> {
   }
 
   Future<void> _verifier() async {
-    final a = sb.auth.currentSession == null ? false : await _adm.estAdmin();
-    if (mounted && a != _admin) setState(() => _admin = a);
+    String etat = 'normal';
+    final uid = sb.auth.currentUser?.id;
+    if (uid != null) {
+      if (await _adm.estAdmin()) {
+        etat = 'admin';
+      } else if (!await _medc.estMedecin()) {
+        // Medecin sans fiche validee -> en attente de validation.
+        try {
+          final r = await sb.from('users').select('role').eq('id', uid).maybeSingle();
+          if ((r as Map?)?['role'] == 'medecin') etat = 'attente';
+        } catch (_) {}
+      }
+    }
+    if (mounted && etat != _etat) setState(() => _etat = etat);
   }
 
   @override
   Widget build(BuildContext context) {
-    return _admin
-        ? EspaceAdminPage(auth: widget.auth)
-        : RecherchePage(api: widget.api, auth: widget.auth);
+    switch (_etat) {
+      case 'admin':
+        return EspaceAdminPage(auth: widget.auth);
+      case 'attente':
+        return MedecinAttentePage(auth: widget.auth);
+      default:
+        return RecherchePage(api: widget.api, auth: widget.auth);
+    }
   }
 }
 
