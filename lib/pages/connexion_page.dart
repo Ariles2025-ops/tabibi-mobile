@@ -49,6 +49,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   List<Map<String, dynamic>> _specialites = [];
   String? _specialite;
   bool _candidatureEnvoyee = false;
+  bool _medecinEnAttente = false;
 
   // Etape code SMS
   bool _etapeOtp = false;
@@ -233,7 +234,16 @@ class _ConnexionPageState extends State<ConnexionPage> {
       } else {
         await sb.auth.verifyOTP(type: OtpType.signup, email: _contactOtp, token: code);
       }
-      if (mounted && sb.auth.currentSession != null) Navigator.of(context).pop(true);
+      if (mounted && sb.auth.currentSession != null) {
+        if (_medecinEnAttente) {
+          setState(() {
+            _etapeOtp = false;
+            _candidatureEnvoyee = true;
+          });
+        } else {
+          Navigator.of(context).pop(true);
+        }
+      }
     } on AuthException catch (e) {
       if (mounted) _msg(e.message);
     } catch (_) {
@@ -368,11 +378,12 @@ class _ConnexionPageState extends State<ConnexionPage> {
   }
 
   // ---------- CANDIDATURE MEDECIN ----------
-  Future<void> _candidatureMedecin() async {
+  Future<void> _inscriptionMedecin() async {
     final prenom = _prenom.text.trim();
     final nom = _nom.text.trim();
     final email = _email.text.trim();
     final tel = _tel.text.trim();
+    final mdp = _mdp.text;
     if (prenom.isEmpty || nom.isEmpty) {
       _msg('Indiquez votre prénom et votre nom.');
       return;
@@ -381,47 +392,89 @@ class _ConnexionPageState extends State<ConnexionPage> {
       _msg('E-mail invalide.');
       return;
     }
-    if (tel.isEmpty) {
-      _msg('Indiquez votre téléphone.');
+    if (mdp.length < 6) {
+      _msg('Mot de passe : 6 caractères minimum.');
       return;
     }
     if (_specialite == null) {
       _msg('Choisissez votre spécialité.');
       return;
     }
+    if (_wilaya == null) {
+      _msg('Choisissez votre wilaya.');
+      return;
+    }
     if (!(_cgu && _confid)) {
       _msg('Merci d\'accepter les conditions.');
       return;
     }
-    final wilayaNom = _wilaya == null
-        ? null
-        : _wilayas
-            .firstWhere((w) => (w['code'] as num).toInt() == _wilaya,
-                orElse: () => const {})['name_fr']
-            ?.toString();
+    final wilayaNom = _wilayas
+        .firstWhere((w) => (w['code'] as num).toInt() == _wilaya,
+            orElse: () => const {})['name_fr']
+        ?.toString();
     FocusScope.of(context).unfocus();
     setState(() => _charge = true);
     try {
-      await sb.rpc('soumettre_candidature_medecin', params: {
-        'p': {
-          'firstname': prenom,
-          'lastname': nom,
-          'email': email,
-          'phone': _normTel(tel),
-          'ordre_num': _ordre.text.trim(),
-          'specialty': _specialite,
-          'wilaya': wilayaNom,
-          'cabinet': _cabinet.text.trim(),
-          'languages': <String>[],
-          'consents': {'terms': _cgu, 'privacy': _confid},
-          'lang': 'fr',
-        }
+      final res = await sb.auth.signUp(email: email, password: mdp, data: {
+        'role': 'medecin',
+        'first_name': prenom,
+        'last_name': nom,
+        'wilaya_code': _wilaya,
+        'consent_terms': _cgu,
+        'consent_privacy': _confid,
       });
-      if (mounted) setState(() => _candidatureEnvoyee = true);
-    } on PostgrestException catch (e) {
-      if (mounted) _msg(e.message);
+      // Enregistre les infos pro (specialite, ordre, cabinet) pour la validation admin.
+      try {
+        await sb.rpc('soumettre_candidature_medecin', params: {
+          'p': {
+            'firstname': prenom,
+            'lastname': nom,
+            'email': email,
+            'phone': _normTel(tel),
+            'ordre_num': _ordre.text.trim(),
+            'specialty': _specialite,
+            'wilaya': wilayaNom,
+            'cabinet': _cabinet.text.trim(),
+            'languages': <String>[],
+            'consents': {'terms': _cgu, 'privacy': _confid},
+            'lang': 'fr',
+          }
+        });
+      } catch (_) {}
+      if (!mounted) return;
+      if ((res.user?.identities ?? const []).isEmpty && res.session == null) {
+        _identifiant.text = email;
+        setState(() {
+          _mode = _Mode.connexion;
+          _profil = _Profil.patient;
+        });
+        _msg('Ce compte existe déjà. Connectez-vous.');
+      } else if (res.session != null) {
+        setState(() => _candidatureEnvoyee = true);
+      } else {
+        _contactOtp = email;
+        _methode = _Methode.email;
+        setState(() {
+          _medecinEnAttente = true;
+          _etapeOtp = true;
+        });
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        final m = e.message.toLowerCase();
+        if (m.contains('already') || m.contains('registered') || m.contains('exist')) {
+          _identifiant.text = email;
+          setState(() {
+            _mode = _Mode.connexion;
+            _profil = _Profil.patient;
+          });
+          _msg('Ce compte existe déjà. Connectez-vous.');
+        } else {
+          _msg(e.message);
+        }
+      }
     } catch (_) {
-      if (mounted) _msg('Envoi impossible. Réessayez.');
+      if (mounted) _msg('Création impossible. Réessayez.');
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -473,6 +526,8 @@ class _ConnexionPageState extends State<ConnexionPage> {
         _champ(_email, 'E-mail professionnel', Icons.mail_outline,
             clavier: TextInputType.emailAddress),
         const SizedBox(height: 14),
+        _champMdp(_mdp),
+        const SizedBox(height: 14),
         _champ(_tel, 'Téléphone', Icons.phone_outlined, clavier: TextInputType.phone),
         const SizedBox(height: 14),
         _champSpecialite(),
@@ -512,12 +567,12 @@ class _ConnexionPageState extends State<ConnexionPage> {
       const SizedBox(height: 24),
       const Icon(Icons.verified_outlined, size: 56, color: Tabibi.vert),
       const SizedBox(height: 16),
-      const Text('Demande envoyée',
+      const Text('Compte créé',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Tabibi.ink)),
       const SizedBox(height: 10),
       const Text(
-          'Merci ! Votre demande d\'inscription en tant que praticien a bien été reçue. Notre équipe vérifie vos informations et vous recontacte pour activer votre espace médecin.',
+          'Votre compte médecin a bien été créé. Il est en attente de validation par notre équipe. Vous accéderez à votre espace médecin une fois votre compte validé.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Tabibi.texteDoux, height: 1.4)),
       const SizedBox(height: 24),
@@ -532,7 +587,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   @override
   Widget build(BuildContext context) {
     final titre = _candidatureEnvoyee
-        ? 'Demande envoyée'
+        ? 'Compte créé'
         : _etapeReset
             ? 'Mot de passe oublié'
             : _etapeOtp
@@ -583,8 +638,8 @@ class _ConnexionPageState extends State<ConnexionPage> {
       libelleBouton = 'Se connecter';
       actionBouton = _connexion;
     } else if (estMedecin) {
-      libelleBouton = 'Envoyer ma demande';
-      actionBouton = _candidatureMedecin;
+      libelleBouton = 'Créer mon compte';
+      actionBouton = _inscriptionMedecin;
     } else {
       libelleBouton = _methode == _Methode.telephone ? 'Recevoir le code' : 'Créer un compte';
       actionBouton = _inscription;

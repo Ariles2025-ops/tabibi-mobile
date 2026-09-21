@@ -12,6 +12,7 @@ import 'i18n/langue.dart';
 import 'i18n/traductions.dart';
 import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
+import 'pages/espace_admin_page.dart';
 import 'pages/espace_medecin_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/langue_page.dart';
@@ -26,6 +27,7 @@ import 'pages/mon_profil_page.dart';
 import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/admin_supabase.dart';
 import 'services/medecin_supabase.dart';
 import 'services/praticiens_supabase.dart';
 import 'services/session.dart';
@@ -108,7 +110,9 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Annuaire en direct via Supabase (aucun backend requis).
   final PraticiensSupabase _prat = const PraticiensSupabase();
   final MedecinSupabase _med = const MedecinSupabase();
+  final AdminSupabase _adm = const AdminSupabase();
   bool _estMedecin = false;
+  bool _estAdmin = false;
 
   /// Total reel de praticiens dans la base (null tant qu'inconnu).
   int? _totalMedecins;
@@ -350,8 +354,10 @@ class _RecherchePageState extends State<RecherchePage> {
     _chargerStats();
     _chargerNonLues();
     _verifierMedecin();
+    _verifierAdmin();
     _authSub = sb.auth.onAuthStateChange.listen((_) {
       _verifierMedecin();
+      _verifierAdmin();
       if (mounted) setState(() {});
     });
   }
@@ -1323,6 +1329,9 @@ class _RecherchePageState extends State<RecherchePage> {
                         color: Tabibi.ink)),
               ),
             ),
+            if (_estAdmin)
+              _ligneMenu(Icons.admin_panel_settings_outlined, 'Espace admin',
+                  () { Navigator.pop(ctx); _ouvrirEspaceAdmin(); }),
             if (_estMedecin)
               _ligneMenu(Icons.medical_services_outlined, 'Espace médecin',
                   () { Navigator.pop(ctx); _ouvrirEspaceMedecin(); }),
