@@ -1,5 +1,6 @@
 analyzer:
   exclude:
+    - fcm/**
     - build/**
     - android/**
     - ios/**
