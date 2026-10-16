@@ -31,3 +31,6 @@ ios/Pods/
 ios/.symlinks/
 ios/Runner.xcworkspace/xcuserdata/
 .DS_Store
+
+# Firebase (contient une cle API) - present en local, non versionne
+android/app/google-services.json

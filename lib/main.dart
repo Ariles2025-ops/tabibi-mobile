@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'services/notifications_push.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'theme/theme_tabibi.dart';
@@ -44,6 +46,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await preparerDates(); // donnees de date de toutes les locales (intl)
   await initialiserSupabase(); // auth + acces direct a la base
+  await NotificationsPush.initialiser(); // push/FCM (se desactive si non configure)
   await langues.initialiser(); // defaut francais (sauf choix memorise de l'utilisateur)
   runApp(const TabibiApp());
 }

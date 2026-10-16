@@ -5,8 +5,7 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Push/FCM (INACTIF) : decommenter APRES avoir depose google-services.json
-    // id("com.google.gms.google-services")
+    id("com.google.gms.google-services")
 }
 
 val keystoreProperties = Properties()
