@@ -202,13 +202,13 @@ class _EspaceAdminPageState extends State<EspaceAdminPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
-          GridView.count(
-            crossAxisCount: 2,
+          GridView.extent(
+            maxCrossAxisExtent: 240,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            childAspectRatio: 1.1,
             children: [
               _kpi('Patients', _stats['patients'], Icons.people_outline),
               _kpi('Médecins actifs', _stats['medecinsActifs'], Icons.medical_services_outlined),
@@ -270,7 +270,7 @@ class _EspaceAdminPageState extends State<EspaceAdminPage> {
               MaterialPageRoute<void>(builder: (_) => MedecinsValidationPage(auth: _auth)),
             ),
             icon: const Icon(Icons.verified_outlined),
-            label: const Text('Valider les fiches réclamées (75k)'),
+            label: const Text('Gérer les fiches réclamées'),
           ),
           const SizedBox(height: 16),
           Text('Nouveaux comptes en attente (${_attente.length})',

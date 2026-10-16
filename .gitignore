@@ -1,17 +1,33 @@
+# Flutter / Dart
 .dart_tool/
+.packages
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
-.packages
-ios/Pods/
-.DS_Store
+.metadata
+pubspec.lock
 
-# Signature Android (voir README, « Publication ») : jamais versionnee.
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Backups / scratch
+*.BACKUP
+*.bak
+_emu/
+
+# Android generated
+android/.gradle/
+android/app/build/
+android/local.properties
 android/key.properties
-key.properties
-*.jks
-*.keystore
+**/GeneratedPluginRegistrant*
 
-# Certificats et profils iOS : geres par Xcode, jamais versionnes.
-*.p12
-*.mobileprovision
+# iOS generated
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/.symlinks/
+ios/Runner.xcworkspace/xcuserdata/
+.DS_Store

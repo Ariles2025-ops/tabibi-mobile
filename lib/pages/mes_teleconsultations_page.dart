@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'package:permission_handler/permission_handler.dart';
 
 import '../i18n/langue.dart';
 import '../models/teleconsultation.dart';
@@ -11,6 +12,7 @@ import '../theme/theme_tabibi.dart';
 import '../utils/teleconsultations.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import 'teleconsultation_page.dart';
 
 /// Ouverture d'un lien hors de l'application ; vrai si elle a ete acceptee.
 typedef OuvrirLien = Future<bool> Function(Uri lien);
@@ -30,7 +32,7 @@ class MesTeleconsultationsPage extends StatefulWidget {
   /// Session a utiliser ; par defaut la session partagee [session].
   final AuthService? auth;
 
-  /// Ouverture du lien de salle ; par defaut le navigateur externe (`url_launcher`).
+  /// Ouverture de la salle ; par defaut dans l'app (WebView), repli navigateur possible.
   final OuvrirLien? ouvrirLien;
 
   @override
@@ -114,25 +116,46 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     }
   }
 
-  /// Ouvre la salle video dans le navigateur externe ; seuls les liens http(s) sont acceptes.
+  /// Cree/recupere la salle Daily du rendez-vous (edge function create-video-room),
+  /// recupere le jeton de reunion du patient, puis ouvre la salle (URL + `?t=jeton`)
+  /// dans la WebView embarquee ; seuls les liens http(s) sont acceptes.
   Future<void> _rejoindre(Teleconsultation tele) async {
-    final lien = tele.lienSalle;
-    final uri = lien == null ? null : Uri.tryParse(lien);
-    if (uri == null || !(uri.isScheme('https') || uri.isScheme('http'))) {
-      _message(t(context, 'tele.lienInvalide'));
-      return;
-    }
-    final ouvrir = widget.ouvrirLien ?? _ouvrirDansLeNavigateur;
+    if (_enCours != null) return;
+    setState(() => _enCours = tele.id);
     try {
+      // Demande des permissions Android camera/micro AVANT d'ouvrir la salle.
+      final cam = await Permission.camera.request();
+      final mic = await Permission.microphone.request();
+      if (!cam.isGranted || !mic.isGranted) {
+        if (mounted) _message(t(context, 'tele.permissionsCameraMicro'));
+        return;
+      }
+      final salle = await _patient.salleTeleconsultation(tele.rendezVousId);
+      final uri = Uri.tryParse(salle['urlSalle'] ?? '');
+      if (uri == null || !(uri.isScheme('https') || uri.isScheme('http'))) {
+        if (mounted) _message(t(context, 'tele.lienInvalide'));
+        return;
+      }
+      final ouvrir = widget.ouvrirLien ?? _ouvrirDansLeNavigateur;
       final ok = await ouvrir(uri);
       if (!ok && mounted) _message(t(context, 'tele.ouvertureImpossible'));
+    } on ApiException catch (e) {
+      if (e.nonAutorise) _auth.seDeconnecter();
+      if (mounted) _message(messageApi(context, e));
     } on Exception {
       if (mounted) _message(t(context, 'tele.ouvertureImpossible'));
+    } finally {
+      if (mounted) setState(() => _enCours = null);
     }
   }
 
-  Future<bool> _ouvrirDansLeNavigateur(Uri lien) =>
-      launchUrl(lien, mode: LaunchMode.externalApplication);
+  Future<bool> _ouvrirDansLeNavigateur(Uri lien) async {
+    if (!mounted) return false;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => TeleconsultationPage(salleUrl: lien.toString(), titre: 'Téléconsultation'),
+    ));
+    return true;
+  }
 
   void _message(String texte) {
     if (!mounted) return;

@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'theme/theme_tabibi.dart';
+import 'pages/carte_medecins_page.dart';
 import 'utils/libelles.dart';
 
 import 'i18n/langue.dart';
@@ -78,6 +80,7 @@ class TabibiApp extends StatelessWidget {
           ],
           navigatorKey: navigatorCle,
           theme: themeTabibi(),
+          scrollBehavior: const _TabibiScrollBehavior(),
           home: AccueilGate(api: api, auth: auth),
         ),
       ),
@@ -93,6 +96,19 @@ class TabibiApp extends StatelessWidget {
 /// et au choix de la langue de l'interface.
 /// Porte d'entree : un compte administrateur ouvre la console d'admin ;
 /// tout le monde (anonyme, patient, medecin) voit l'accueil patient.
+/// Autorise le defilement au glissement souris/trackpad/tactile/stylet
+/// (Flutter web/desktop n'active le drag qu'au tactile par defaut).
+class _TabibiScrollBehavior extends MaterialScrollBehavior {
+  const _TabibiScrollBehavior();
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+}
+
 class AccueilGate extends StatefulWidget {
   const AccueilGate({super.key, this.api = const ApiService(), this.auth});
 
@@ -193,6 +209,7 @@ class _RecherchePageState extends State<RecherchePage> {
 
   /// Abonnement a l'etat d'authentification Supabase (met a jour l'icone profil).
   StreamSubscription<AuthState>? _authSub;
+  Timer? _debRech;
 
   /// Vrai si une session Supabase est ouverte.
   bool get _connecteSb => sb.auth.currentSession != null;
@@ -334,6 +351,11 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  Future<void> _ouvrirCarte() async {
+    await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => CarteMedecinsPage(prat: _prat)));
+  }
+
   Future<void> _ouvrirMessagerie() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -444,6 +466,7 @@ class _RecherchePageState extends State<RecherchePage> {
   @override
   void dispose() {
     _authSub?.cancel();
+    _debRech?.cancel();
     _nom.dispose();
     super.dispose();
   }
@@ -608,7 +631,7 @@ class _RecherchePageState extends State<RecherchePage> {
         ]),
         actions: [
           _boutonLangue(context),
-          IconButton(
+          if (_connecteSb) IconButton(
             tooltip: t(context, 'accueil.notifications'),
             onPressed: _ouvrirNotifications,
             icon: Badge(
@@ -710,7 +733,7 @@ class _RecherchePageState extends State<RecherchePage> {
           if (i == 1) {
             _ouvrirMesRendezVous();
           } else if (i == 2) {
-            _ouvrirMessagerie();
+            _ouvrirCarte();
           } else if (i == 3) {
             _ouvrirCompte();
           } else {
@@ -727,9 +750,9 @@ class _RecherchePageState extends State<RecherchePage> {
               selectedIcon: const Icon(Icons.calendar_month),
               label: t(context, 'accueil.mesRendezVous')),
           NavigationDestination(
-              icon: const Icon(Icons.chat_bubble_outline),
-              selectedIcon: const Icon(Icons.chat_bubble),
-              label: t(context, 'accueil.messagerie')),
+              icon: const Icon(Icons.map_outlined),
+              selectedIcon: const Icon(Icons.map),
+              label: t(context, 'accueil.carte')),
           NavigationDestination(
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person),
@@ -815,6 +838,10 @@ class _RecherchePageState extends State<RecherchePage> {
             controller: _nom,
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _rechercher(),
+            onChanged: (_) {
+              _debRech?.cancel();
+              _debRech = Timer(const Duration(milliseconds: 450), _rechercher);
+            },
             decoration: InputDecoration(
               hintText: t(context, 'accueil.recherchePlaceholder'),
               prefixIcon: const Icon(Icons.search, color: Tabibi.vert),
@@ -1273,6 +1300,7 @@ class _RecherchePageState extends State<RecherchePage> {
                   style: const TextStyle(
                       fontWeight: FontWeight.w700, color: Tabibi.texte)),
             ),
+            if (m['verifie'] == true) ...[
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -1289,6 +1317,7 @@ class _RecherchePageState extends State<RecherchePage> {
                         color: Tabibi.orTexte)),
               ]),
             ),
+            ],
           ],
         ),
         subtitle: Text(
@@ -1382,55 +1411,38 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Panneau « Compte » (feuille du bas) : profil, ordonnances, avis, liste d'attente,
   /// verification, langue — tout le secondaire, hors de l'accueil.
   void _ouvrirCompte() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: Tabibi.bord, borderRadius: BorderRadius.circular(2))),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(t(context, 'accueil.compte'),
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Tabibi.ink)),
-              ),
-            ),
-            if (_estAdmin)
-              _ligneMenu(Icons.admin_panel_settings_outlined, 'Espace admin',
-                  () { Navigator.pop(ctx); _ouvrirEspaceAdmin(); }),
-            if (_estMedecin)
-              _ligneMenu(Icons.medical_services_outlined, 'Espace médecin',
-                  () { Navigator.pop(ctx); _ouvrirEspaceMedecin(); }),
-            _ligneMenu(Icons.badge_outlined, t(context, 'accueil.monProfil'),
-                () { Navigator.pop(ctx); _ouvrirMonProfil(); }),
-            _ligneMenu(Icons.description_outlined, t(context, 'accueil.mesOrdonnances'),
-                () { Navigator.pop(ctx); _ouvrirMesOrdonnances(); }),
-            _ligneMenu(Icons.star_outline, t(context, 'accueil.mesAvis'),
-                () { Navigator.pop(ctx); _ouvrirMesAvis(); }),
-            _ligneMenu(Icons.hourglass_top_outlined, t(context, 'accueil.listeAttente'),
-                () { Navigator.pop(ctx); _ouvrirListesAttente(); }),
-            _ligneMenu(Icons.verified_outlined, t(context, 'accueil.verifierOrdonnance'),
-                () { Navigator.pop(ctx); _ouvrirVerification(); }),
-            _ligneMenu(Icons.language_outlined, t(context, 'accueil.langue'),
-                () { Navigator.pop(ctx); _ouvrirLangue(); }),
-            const SizedBox(height: 10),
-          ],
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (pageCtx) => Scaffold(
+        appBar: AppBar(title: Text(t(context, 'accueil.compte'))),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              if (_estAdmin)
+                _ligneMenu(Icons.admin_panel_settings_outlined, 'Espace admin',
+                    () => _ouvrirEspaceAdmin()),
+              if (_estMedecin)
+                _ligneMenu(Icons.medical_services_outlined, 'Espace médecin',
+                    () => _ouvrirEspaceMedecin()),
+              _ligneMenu(Icons.badge_outlined, t(context, 'accueil.monProfil'),
+                  () => _ouvrirMonProfil()),
+              _ligneMenu(Icons.chat_bubble_outline, t(context, 'accueil.messagerie'),
+                  () => _ouvrirMessagerie()),
+              _ligneMenu(Icons.description_outlined, t(context, 'accueil.mesOrdonnances'),
+                  () => _ouvrirMesOrdonnances()),
+              _ligneMenu(Icons.star_outline, t(context, 'accueil.mesAvis'),
+                  () => _ouvrirMesAvis()),
+              _ligneMenu(Icons.hourglass_top_outlined, t(context, 'accueil.listeAttente'),
+                  () => _ouvrirListesAttente()),
+              _ligneMenu(Icons.verified_outlined, t(context, 'accueil.verifierOrdonnance'),
+                  () => _ouvrirVerification()),
+              _ligneMenu(Icons.language_outlined, t(context, 'accueil.langue'),
+                  () => _ouvrirLangue()),
+            ],
+          ),
         ),
       ),
-    );
+    ));
   }
 
   /// Une ligne de menu : pastille verte + icone, libelle, chevron.

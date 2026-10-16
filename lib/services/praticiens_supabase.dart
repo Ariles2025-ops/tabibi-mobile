@@ -77,6 +77,13 @@ class PraticiensSupabase {
     return (r as Map).cast<String, dynamic>();
   }
 
+  /// Donnees de la carte : une entree par wilaya (centroide + nombre de praticiens).
+  Future<List<Map<String, dynamic>>> carteParWilaya() async {
+    final r = await sb.rpc('carte_medecins_par_wilaya');
+    return List<Map<String, dynamic>>.from(
+        (r as List).map((e) => (e as Map).cast<String, dynamic>()));
+  }
+
   /// Fiche d'un praticien par son identifiant.
   Future<Map<String, dynamic>?> parId(String id) async {
     final r = await sb.rpc('praticien', params: {'p_id': id});

@@ -5,14 +5,15 @@ import '../services/auth_service.dart';
 import '../services/medecin_supabase.dart';
 import '../services/session.dart';
 import '../theme/theme_tabibi.dart';
-import '../utils/dates.dart';
 import '../utils/libelles.dart';
 import 'espace_medecin_page.dart';
-import 'medecin_disponibilites_page.dart';
-import 'medecin_profil_page.dart';
+import 'medecin_compte_page.dart';
+import 'medecin_messagerie_page.dart';
+import 'medecin_notifications_page.dart';
+import 'medecin_patients_page.dart';
 
 /// Application du praticien (facon Doctolib Pro) : un medecin valide arrive ici.
-/// Navigation basse : Accueil (tableau de bord), Agenda (RDV), Disponibilités, Profil.
+/// Navigation basse : Accueil (tableau de bord), Agenda (RDV), Patients, Messagerie, Compte.
 class AccueilMedecinPage extends StatefulWidget {
   const AccueilMedecinPage({super.key, this.auth});
 
@@ -33,8 +34,9 @@ class _AccueilMedecinPageState extends State<AccueilMedecinPage> {
     final pages = [
       MedecinDashboardPage(auth: _auth, onVoirAgenda: _allerAgenda),
       MedecinRendezVousPage(auth: _auth),
-      MedecinDisponibilitesPage(auth: _auth),
-      MedecinProfilPage(auth: _auth),
+      MedecinPatientsPage(auth: _auth),
+      MedecinMessageriePage(auth: _auth),
+      MedecinComptePage(auth: _auth),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
@@ -45,8 +47,9 @@ class _AccueilMedecinPageState extends State<AccueilMedecinPage> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Accueil'),
           NavigationDestination(icon: Icon(Icons.event_note_outlined), selectedIcon: Icon(Icons.event_note), label: 'Agenda'),
-          NavigationDestination(icon: Icon(Icons.schedule_outlined), selectedIcon: Icon(Icons.schedule), label: 'Dispo'),
-          NavigationDestination(icon: Icon(Icons.badge_outlined), selectedIcon: Icon(Icons.badge), label: 'Profil'),
+          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Patients'),
+          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Messages'),
+          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Compte'),
         ],
       ),
     );
@@ -69,6 +72,7 @@ class _MedecinDashboardPageState extends State<MedecinDashboardPage> {
   late final AuthService _auth = widget.auth ?? session;
   String? _nom;
   List<Map<String, dynamic>> _rdvs = [];
+  int _nonLues = 0;
   bool _charge = false;
 
   @override
@@ -82,10 +86,17 @@ class _MedecinDashboardPageState extends State<MedecinDashboardPage> {
     try {
       final p = await widget.medecin.monProfil();
       final rdvs = await widget.medecin.rdvRecus();
+      int nonLues = 0;
+      try {
+        nonLues = await widget.medecin.nbNotificationsNonLues();
+      } on Exception {
+        nonLues = 0;
+      }
       if (mounted) {
         setState(() {
           _nom = p?['nomComplet'] as String?;
           _rdvs = rdvs;
+          _nonLues = nonLues;
         });
       }
     } on Exception {
@@ -115,14 +126,50 @@ class _MedecinDashboardPageState extends State<MedecinDashboardPage> {
     }).length;
   }
 
+  bool _ceMois(String? iso) {
+    final d = DateTime.tryParse('$iso')?.toLocal();
+    final now = DateTime.now();
+    return d != null && d.year == now.year && d.month == now.month;
+  }
+
+  int get _consultationsMois =>
+      _rdvs.where((r) => '${r['statut']}'.toUpperCase() == 'HONORE' && _ceMois('${r['debut']}')).length;
+
+  int get _absentsMois =>
+      _rdvs.where((r) => '${r['statut']}'.toUpperCase() == 'ABSENT' && _ceMois('${r['debut']}')).length;
+
+  int get _revenusMois {
+    var total = 0;
+    for (final r in _rdvs) {
+      if ('${r['statut']}'.toUpperCase() == 'HONORE' && _ceMois('${r['debut']}')) {
+        final p = r['prix'];
+        if (p is num) total += p.toInt();
+      }
+    }
+    return total;
+  }
+
+  void _ouvrirNotifs() {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => MedecinNotificationsPage(auth: _auth)))
+        .then((_) => _charger());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tableau de bord'),
         actions: [
+          IconButton(
+            onPressed: _ouvrirNotifs,
+            icon: Badge(
+              isLabelVisible: _nonLues > 0,
+              label: Text('$_nonLues'),
+              child: const Icon(Icons.notifications_none),
+            ),
+          ),
           IconButton(onPressed: _charge ? null : _charger, icon: const Icon(Icons.refresh)),
-          IconButton(onPressed: () => _auth.seDeconnecter(), icon: const Icon(Icons.logout)),
         ],
       ),
       body: _charge
@@ -133,7 +180,7 @@ class _MedecinDashboardPageState extends State<MedecinDashboardPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
                 children: [
-                  Text('Bonjour${_nom != null && _nom!.isNotEmpty ? ' Dr $_nom' : ''}',
+                  Text((_nom == null || _nom!.isEmpty ? 'Bonjour' : ((_nom!.trimLeft().toLowerCase().startsWith('dr ') || _nom!.trimLeft().toLowerCase().startsWith('dr.')) ? 'Bonjour $_nom' : 'Bonjour Dr $_nom')),
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Tabibi.ink)),
                   const SizedBox(height: 16),
                   Row(children: [
@@ -141,6 +188,17 @@ class _MedecinDashboardPageState extends State<MedecinDashboardPage> {
                     const SizedBox(width: 12),
                     Expanded(child: _stat('À venir', _aVenir, Icons.event_available_outlined)),
                   ]),
+                  const SizedBox(height: 12),
+                  const Text('Ce mois-ci',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Tabibi.texteDoux)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: _stat('Consultations', _consultationsMois, Icons.check_circle_outline)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _stat('Absents', _absentsMois, Icons.person_off_outlined)),
+                  ]),
+                  const SizedBox(height: 12),
+                  _carteRevenu(),
                   const SizedBox(height: 20),
                   Row(children: [
                     const Text('Rendez-vous du jour',
@@ -176,6 +234,35 @@ class _MedecinDashboardPageState extends State<MedecinDashboardPage> {
         Text('$valeur',
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: accent ? Colors.white : Tabibi.texte)),
         Text(libelle, style: TextStyle(color: accent ? Colors.white70 : Tabibi.texteDoux, fontSize: 12)),
+      ]),
+    );
+  }
+
+  Widget _carteRevenu() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Tabibi.vert, Tabibi.vertFonce]),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: Tabibi.ombreDouce,
+      ),
+      child: Row(children: [
+        Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.payments_outlined, color: Colors.white),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$_revenusMois DA',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+            const Text('Revenus des consultations honorées ce mois',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ]),
+        ),
       ]),
     );
   }

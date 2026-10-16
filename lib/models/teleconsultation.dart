@@ -46,7 +46,7 @@ class Teleconsultation {
   /// Date du consentement du patient ; null tant qu'il n'a pas consenti.
   final DateTime? consentementPatientLe;
 
-  /// Lien de la salle video (Jitsi Meet) ; null tant que le patient n'a pas consenti.
+  /// Lien de la salle video (Daily) ; null tant que le patient n'a pas consenti.
   final String? lienSalle;
 
   /// Date de planification par le medecin ; null si absente ou illisible.

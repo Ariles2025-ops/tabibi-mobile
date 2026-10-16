@@ -15,12 +15,17 @@ dependencies:
   supabase_flutter: ^2.8.0        # auth + acces direct a la base (Supabase)
   intl: ^0.20.3                    # dates et mois selon la locale courante (DateFormat)
   shared_preferences: ^2.3.0       # memorisation de la langue choisie par l'utilisateur
-  flutter_appauth: ^8.0.0        # OAuth2/OIDC (Keycloak) natif iOS + Android
   flutter_secure_storage: ^9.2.2 # stockage sur du jeton
-  url_launcher: ^6.3.0           # ouverture du lien de salle (teleconsultation) dans le navigateur
+  url_launcher: ^6.3.0           # ouverture du lien de salle (teleconsultation) dans le navigateur (repli)
+  webview_flutter: ^4.7.0        # teleconsultation embarquee dans l'app (salle Daily)
+  webview_flutter_android: ^3.16.0 # gestion permissions camera/micro dans la WebView Android
   path_provider: ^2.1.4          # dossier temporaire ou est ecrit le PDF d'une ordonnance
   open_filex: ^4.5.0             # ouverture du PDF avec l'application du telephone
+  permission_handler: ^11.3.1    # demande runtime camera/micro (teleconsultation)
   flutter_svg: ^2.0.10           # logo SVG Tabibi
+  flutter_map: ^8.3.2
+  file_picker: ^8.1.2        # upload documents (verification medecin)
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:

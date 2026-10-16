@@ -4,12 +4,14 @@ import '../i18n/langue.dart';
 import '../services/auth_service.dart';
 import '../services/medecin_supabase.dart';
 import '../services/session.dart';
+import '../services/supabase_service.dart';
 import '../theme/theme_tabibi.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'medecin_profil_page.dart';
+import 'teleconsultation_page.dart';
 
 /// Tableau de bord du praticien : acces a ses rendez-vous recus et a sa fiche.
 class EspaceMedecinPage extends StatefulWidget {
@@ -24,12 +26,13 @@ class EspaceMedecinPage extends StatefulWidget {
 
 class _EspaceMedecinPageState extends State<EspaceMedecinPage> {
   late final AuthService _auth = widget.auth ?? session;
+  bool get _connecte => sb.auth.currentSession != null;
   String? _nom;
 
   @override
   void initState() {
     super.initState();
-    if (_auth.estConnecte) _charger();
+    if (_connecte) _charger();
   }
 
   Future<void> _charger() async {
@@ -45,7 +48,7 @@ class _EspaceMedecinPageState extends State<EspaceMedecinPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Espace médecin')),
-      body: !_auth.estConnecte
+      body: !_connecte
           ? VueConnexion(
               icone: Icons.medical_services_outlined,
               titre: 'Espace médecin',
@@ -53,7 +56,7 @@ class _EspaceMedecinPageState extends State<EspaceMedecinPage> {
               onSeConnecter: () async {
                 await _auth.seConnecter();
                 if (mounted) setState(() {});
-                if (_auth.estConnecte) _charger();
+                if (_connecte) _charger();
               },
             )
           : ListView(
@@ -62,7 +65,7 @@ class _EspaceMedecinPageState extends State<EspaceMedecinPage> {
                 if (_nom != null && _nom!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Text('Dr $_nom',
+                    child: Text((_nom!.trimLeft().toLowerCase().startsWith('dr ') || _nom!.trimLeft().toLowerCase().startsWith('dr.')) ? _nom! : 'Dr $_nom',
                         style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -125,7 +128,9 @@ class MedecinRendezVousPage extends StatefulWidget {
 
 class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
   late final AuthService _auth = widget.auth ?? session;
+  bool get _connecte => sb.auth.currentSession != null;
   List<Map<String, dynamic>> _rdvs = [];
+  DateTime _jour = DateTime.now();
   bool _charge = false;
   String? _enCours;
   String? _erreur;
@@ -133,7 +138,7 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
   @override
   void initState() {
     super.initState();
-    if (_auth.estConnecte) _charger();
+    if (_connecte) _charger();
   }
 
   Future<void> _charger() async {
@@ -176,7 +181,7 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
       appBar: AppBar(
         title: const Text('Mes rendez-vous'),
         actions: [
-          if (_auth.estConnecte)
+          if (_connecte)
             IconButton(
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
@@ -188,7 +193,7 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
   }
 
   Widget _corps() {
-    if (!_auth.estConnecte) {
+    if (!_connecte) {
       return VueConnexion(
         icone: Icons.event_note_outlined,
         titre: 'Mes rendez-vous',
@@ -196,7 +201,7 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
         onSeConnecter: () async {
           await _auth.seConnecter();
           if (mounted) setState(() {});
-          if (_auth.estConnecte) _charger();
+          if (_connecte) _charger();
         },
       );
     }
@@ -212,12 +217,84 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
         ),
       );
     }
+    final jour = _rdvsJour;
     return RefreshIndicator(
       color: Tabibi.vert,
       onRefresh: _charger,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        children: [for (final r in _rdvs) _carte(r)],
+        children: [
+          _bandeJours(),
+          const SizedBox(height: 12),
+          if (jour.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: Text('Aucun rendez-vous ce jour.', style: TextStyle(color: Tabibi.texteDoux))),
+            )
+          else
+            ...[for (final r in jour) _carte(r)],
+        ],
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> get _rdvsJour => _rdvs.where((r) {
+    final d = DateTime.tryParse('${r['debut']}');
+    return d != null && d.year == _jour.year && d.month == _jour.month && d.day == _jour.day;
+  }).toList();
+
+  int _compteJour(DateTime j) => _rdvs.where((r) {
+    final d = DateTime.tryParse('${r['debut']}');
+    return d != null && d.year == j.year && d.month == j.month && d.day == j.day;
+  }).length;
+
+  Widget _bandeJours() {
+    const jSem = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    final now = DateTime.now();
+    final jours = [for (int i = 0; i < 30; i++) DateTime(now.year, now.month, now.day + i)];
+    return SizedBox(
+      height: 74,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: jours.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final j = jours[i];
+          final sel = j.year == _jour.year && j.month == _jour.month && j.day == _jour.day;
+          final n = _compteJour(j);
+          return InkWell(
+            onTap: () => setState(() => _jour = DateTime(j.year, j.month, j.day)),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 54,
+              decoration: BoxDecoration(
+                color: sel ? Tabibi.vert : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: sel ? Tabibi.vert : Tabibi.bord),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(jSem[j.weekday - 1], style: TextStyle(fontSize: 11, color: sel ? Colors.white : Tabibi.texteDoux)),
+                  const SizedBox(height: 2),
+                  Text('${j.day}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: sel ? Colors.white : Tabibi.ink)),
+                  const SizedBox(height: 2),
+                  if (n > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: sel ? Colors.white : Tabibi.pastille,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text('$n', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: sel ? Tabibi.vert : Tabibi.vert)),
+                    )
+                  else
+                    const SizedBox(height: 14),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -271,15 +348,23 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
               _pile(statut),
             ],
           ),
-          _actions(id, statut),
+          _actions(rdv, id, statut),
         ],
       ),
     );
   }
 
-  Widget _actions(String id, String statut) {
+  bool _estVideo(Map<String, dynamic> rdv) {
+    final t = '${rdv['consultType'] ?? ''}'.toLowerCase();
+    return t.contains('video') || t.contains('tele') || t.contains('visio');
+  }
+
+  Widget _actions(Map<String, dynamic> rdv, String id, String statut) {
     final s = statut.toUpperCase();
     final boutons = <Widget>[];
+    if (_estVideo(rdv) && s == 'CONFIRME') {
+      boutons.add(_btn('Téléconsulter', () => _teleconsulter(id)));
+    }
     if (s == 'EN_ATTENTE') {
       boutons.add(_btn('Confirmer', () => _action(id, () => widget.medecin.confirmer(id), 'Rendez-vous confirmé')));
       boutons.add(_btn('Refuser', () => _action(id, () => widget.medecin.annuler(id), 'Rendez-vous annulé'), doux: true));
@@ -293,6 +378,50 @@ class _MedecinRendezVousPageState extends State<MedecinRendezVousPage> {
       padding: const EdgeInsets.only(top: 8),
       child: Wrap(alignment: WrapAlignment.end, spacing: 8, children: boutons),
     );
+  }
+
+  Future<void> _teleconsulter(String id) async {
+    if (_enCours != null) return;
+    setState(() => _enCours = id);
+    try {
+      final sess = await widget.medecin.demarrerTeleconsultation(id);
+      final err = '${sess['erreur'] ?? ''}';
+      if (err.isNotEmpty) {
+        _signaler(_libelleErreurVideo(err));
+        return;
+      }
+      final url = '${sess['salleUrl'] ?? ''}';
+      if (url.isEmpty) {
+        _signaler('La salle de téléconsultation est en cours de préparation. Réessayez dans quelques instants.');
+        return;
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => TeleconsultationPage(salleUrl: url, titre: 'Téléconsultation'),
+      ));
+    } on Exception catch (e) {
+      _signaler(e.toString());
+    } finally {
+      if (mounted) setState(() => _enCours = null);
+    }
+  }
+
+  String _libelleErreurVideo(String code) {
+    switch (code) {
+      case 'appointment_not_confirmed':
+        return 'Le rendez-vous doit d\'abord être confirmé.';
+      case 'forbidden':
+        return 'Accès non autorisé à ce rendez-vous.';
+      case 'appointment_not_found':
+        return 'Rendez-vous introuvable.';
+      default:
+        return 'Téléconsultation indisponible pour le moment.';
+    }
+  }
+
+  void _signaler(String t) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
   }
 
   Widget _btn(String texte, VoidCallback onTap, {bool doux = false}) {

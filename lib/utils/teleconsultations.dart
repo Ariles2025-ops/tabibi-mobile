@@ -16,9 +16,10 @@ String libelleStatutTeleconsultation(String langue, Object? statut) {
 /// Vrai si la session peut encore avoir lieu : planifiee ou en cours.
 bool estActive(Teleconsultation t) => t.statut == 'PLANIFIEE' || t.statut == 'EN_COURS';
 
-/// Vrai si le patient peut rejoindre la salle : lien remis (donc consentement donne)
-/// et session planifiee ou en cours.
-bool peutRejoindre(Teleconsultation t) => t.lienSalle != null && estActive(t);
+/// Vrai si le patient peut rejoindre la salle : consentement donne et session
+/// planifiee ou en cours (la salle Daily et le jeton sont crees a la demande au
+/// moment de rejoindre, via l'edge function create-video-room).
+bool peutRejoindre(Teleconsultation t) => t.aConsenti && estActive(t);
 
 /// Date a afficher selon l'avancement : « Terminée le ... », « Démarrée le ... » ou
 /// « Proposée le ... » (date de planification, format « jeu. 4 déc. 09:00 ») ;

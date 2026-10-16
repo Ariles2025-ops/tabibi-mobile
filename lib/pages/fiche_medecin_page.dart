@@ -49,6 +49,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   final PatientSupabase _patient = const PatientSupabase();
   Map<String, dynamic>? _medecin;
   List<Map<String, dynamic>> _creneaux = [];
+  DateTime _jour = DateTime.now();
+  bool _chargeCreneaux = false;
+  bool _agendaConfigure = true;
 
   /// Synthese publique des avis ; null tant qu'elle est indisponible.
   SyntheseAvis? _avis;
@@ -86,11 +89,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       }
       final creneaux = await _chargerCreneaux();
       final avis = await _chargerAvis();
+      final agenda = await _agendaEstConfigure();
       if (!mounted) return;
       setState(() {
         _medecin = medecin;
         _creneaux = creneaux;
         _avis = avis;
+        _agendaConfigure = agenda;
       });
     } catch (_) {
       if (mounted) setState(() => _erreur = 'Fiche momentanément indisponible.');
@@ -103,7 +108,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// Vide tant que le praticien n'a pas de planning : la fiche reste consultable.
   Future<List<Map<String, dynamic>>> _chargerCreneaux() async {
     try {
-      final n = DateTime.now();
+      final n = _jour;
       final d = '${n.year.toString().padLeft(4, '0')}-'
           '${n.month.toString().padLeft(2, '0')}-'
           '${n.day.toString().padLeft(2, '0')}';
@@ -124,10 +129,126 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
           'disponible': true,
           'dureeMinutes': duree,
         };
+      }).where((c) {
+        try {
+          return DateTime.parse(c['debut'] as String)
+              .toLocal()
+              .isAfter(DateTime.now().add(const Duration(minutes: 15)));
+        } catch (_) {
+          return true;
+        }
       }).toList();
     } catch (_) {
       return [];
     }
+  }
+
+  /// Vrai si le praticien a configuré des horaires d'ouverture (sinon aucun
+  /// créneau ne sera jamais proposé : on l'indique clairement au patient).
+  Future<bool> _agendaEstConfigure() async {
+    try {
+      final r = await sb
+          .from('public_doctors')
+          .select('working_hours')
+          .eq('id', widget.medecinId)
+          .maybeSingle();
+      final wh = r == null ? null : (r as Map)['working_hours'];
+      if (wh is Map) return wh.isNotEmpty;
+      return wh != null;
+    } catch (_) {
+      return true; // en cas de doute, ne pas afficher de message alarmant
+    }
+  }
+
+  /// Recharge les creneaux pour le jour choisi.
+  Future<void> _changerJour(DateTime d) async {
+    setState(() {
+      _jour = DateTime(d.year, d.month, d.day);
+      _chargeCreneaux = true;
+    });
+    final c = await _chargerCreneaux();
+    if (!mounted) return;
+    setState(() {
+      _creneaux = c;
+      _chargeCreneaux = false;
+    });
+  }
+
+  /// Calendrier complet (jusqu'a 90 jours = ~3 mois).
+  Future<void> _ouvrirCalendrier() async {
+    final now = DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _jour,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 90)),
+      helpText: t(context, 'fiche.creneaux'),
+    );
+    if (d != null) await _changerJour(d);
+  }
+
+  /// Bande horizontale des 30 prochains jours + bouton calendrier (mois suivants).
+  Widget _selecteurDates(BuildContext context) {
+    const jSem = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const mois = ['', 'janv', 'fevr', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sept', 'oct', 'nov', 'dec'];
+    final now = DateTime.now();
+    final jours = [for (int i = 0; i < 30; i++) DateTime(now.year, now.month, now.day + i)];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${jSem[_jour.weekday - 1]} ${_jour.day} ${mois[_jour.month]} ${_jour.year}',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Tabibi.ink),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _ouvrirCalendrier,
+              icon: const Icon(Icons.calendar_month, size: 18, color: Tabibi.vert),
+              label: const Text('Calendrier', style: TextStyle(color: Tabibi.vert)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 66,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: jours.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final j = jours[i];
+              final sel = j.year == _jour.year && j.month == _jour.month && j.day == _jour.day;
+              return InkWell(
+                onTap: () => _changerJour(j),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 52,
+                  decoration: BoxDecoration(
+                    color: sel ? Tabibi.vert : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: sel ? Tabibi.vert : Tabibi.bord),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(jSem[j.weekday - 1],
+                          style: TextStyle(fontSize: 11, color: sel ? Colors.white : Tabibi.texteDoux)),
+                      const SizedBox(height: 2),
+                      Text('${j.day}',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: sel ? Colors.white : Tabibi.ink)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 
   /// Synthese publique des avis (GET /api/medecins/{id}/avis) ; un echec n'empeche pas
@@ -154,6 +275,24 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         return;
       }
     }
+    if (!mounted) return;
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t(context, 'fiche.confirmerRdvTitre')),
+        content: Text(formaterDateIso(langueDe(context), debut)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(t(context, 'fiche.confirmerRdvNon'))),
+          FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Tabibi.vert),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(t(context, 'fiche.confirmerRdvOui'))),
+        ],
+      ),
+    );
+    if (confirme != true || !mounted) return;
     setState(() => _enCours = creneauId);
     try {
       await sb.from('appointments').insert({
@@ -311,8 +450,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         const SizedBox(height: 24),
         _titreSection(t(context, 'fiche.creneaux')),
         const SizedBox(height: 10),
-        if (_creneaux.isEmpty) _infoVide(t(context, 'fiche.aucunCreneau')),
-        for (final c in _creneaux) _creneauTile(context, c),
+        _selecteurDates(context),
+        if (_chargeCreneaux)
+          const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator(color: Tabibi.vert)))
+        else if (_creneaux.isEmpty)
+          _infoVide(_agendaConfigure
+              ? t(context, 'fiche.aucunCreneau')
+              : 'Cet agenda n\'est pas encore configuré par le praticien.')
+        else
+          ...[for (final c in _creneaux) _creneauTile(context, c)],
         const SizedBox(height: 24),
         _listeAttente(context),
         const SizedBox(height: 24),
@@ -351,7 +499,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                   style: const TextStyle(color: Tabibi.texteDoux),
                 ),
                 const SizedBox(height: 8),
-                _ligneMoyenne(context),
+                _ligneMoyenne(context, medecin),
               ],
             ),
           ),
@@ -508,17 +656,18 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// « 4,5 / 5 (12 avis) » (ou « Aucun avis »), precede d'une etoile ; masquee si la
   /// synthese est indisponible.
-  Widget _ligneMoyenne(BuildContext context) {
-    final avis = _avis;
-    if (avis == null) return const SizedBox.shrink();
+  Widget _ligneMoyenne(BuildContext context, Map<String, dynamic> medecin) {
+    final note = medecin['note'];
+    if (note is! num) return const SizedBox.shrink();
+    final nb = (medecin['nombreAvis'] as num?)?.toInt() ?? 0;
+    final txt = nb > 0
+        ? '${note.toStringAsFixed(1)} · ${t(context, 'fiche.avisN', params: {'n': nb})}'
+        : t(context, 'fiche.aucunAvis');
     return Row(
       children: [
         Icon(Icons.star, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 4),
-        Text(
-          formaterMoyenne(langueDe(context), avis),
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        Text(txt, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }

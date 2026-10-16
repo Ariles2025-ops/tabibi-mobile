@@ -60,9 +60,11 @@ class _ConnexionPageState extends State<ConnexionPage> {
 
   // Etape reinitialisation du mot de passe
   bool _etapeReset = false;
+  bool _resetTel = false;
   final _resetCode = TextEditingController();
   final _resetMdp = TextEditingController();
   String _resetEmail = '';
+  String _resetPhone = '';
 
   @override
   void initState() {
@@ -135,7 +137,10 @@ class _ConnexionPageState extends State<ConnexionPage> {
   Future<void> _connexion() async {
     final id = _identifiant.text.trim();
     final mdp = _mdpConnexion.text;
-    if (id.isEmpty || mdp.isEmpty) return;
+    if (id.isEmpty || mdp.isEmpty) {
+      _msg('Entrez votre e-mail/téléphone et votre mot de passe.');
+      return;
+    }
     FocusScope.of(context).unfocus();
     setState(() { _charge = true; _erreurForm = null; });
     try {
@@ -216,8 +221,8 @@ class _ConnexionPageState extends State<ConnexionPage> {
         }
       } else {
         _telNorm = _normTel(_tel.text);
-        if (_telNorm.length < 8) {
-          _msg('Numéro invalide.');
+        if (!RegExp(r'^\+213[567]\d{8}$').hasMatch(_telNorm)) {
+          _msg('Numéro de mobile algérien invalide (ex. 0555 12 34 56).');
           return;
         }
         final res = await sb.auth.signUp(phone: _telNorm, password: mdp, data: data);
@@ -254,7 +259,10 @@ class _ConnexionPageState extends State<ConnexionPage> {
 
   Future<void> _verifierOtp() async {
     final code = _otp.text.trim();
-    if (code.isEmpty) return;
+    if (code.isEmpty) {
+      _msg('Entrez le code reçu.');
+      return;
+    }
     setState(() { _charge = true; _erreurForm = null; });
     try {
       if (_methode == _Methode.telephone) {
@@ -299,23 +307,39 @@ class _ConnexionPageState extends State<ConnexionPage> {
   // ---------- MOT DE PASSE OUBLIE ----------
   Future<void> _ouvrirReset() async {
     final id = _identifiant.text.trim();
-    if (!id.contains('@')) {
-      _msg('Entrez votre e-mail ci-dessus, puis « Mot de passe oublié ? ».');
-      return;
+    if (id.contains('@')) {
+      _resetTel = false;
+      _resetEmail = id;
+      await _envoyerReset();
+    } else if (id.isNotEmpty) {
+      // Reinitialisation par SMS pour les comptes crees par telephone.
+      _resetPhone = _normTel(id);
+      if (!RegExp(r'^\+213[567]\d{8}$').hasMatch(_resetPhone)) {
+        _msg('Entrez un e-mail ou un mobile valide ci-dessus, puis « Mot de passe oublié ? ».');
+        return;
+      }
+      _resetTel = true;
+      await _envoyerReset();
+    } else {
+      _msg('Entrez votre e-mail ou téléphone ci-dessus, puis « Mot de passe oublié ? ».');
     }
-    _resetEmail = id;
-    await _envoyerReset();
   }
 
   Future<void> _envoyerReset() async {
-    if (_resetEmail.isEmpty) return;
+    if (_resetTel ? _resetPhone.isEmpty : _resetEmail.isEmpty) return;
     FocusScope.of(context).unfocus();
     setState(() { _charge = true; _erreurForm = null; });
     try {
-      await sb.auth.resetPasswordForEmail(_resetEmail);
+      if (_resetTel) {
+        await sb.auth.signInWithOtp(phone: _resetPhone, shouldCreateUser: false);
+      } else {
+        await sb.auth.resetPasswordForEmail(_resetEmail);
+      }
       if (mounted) {
         setState(() => _etapeReset = true);
-        _msg('Code envoyé par e-mail à $_resetEmail.');
+        _msg(_resetTel
+            ? 'Code envoyé par SMS au $_resetPhone.'
+            : 'Code envoyé par e-mail à $_resetEmail.');
       }
     } on AuthException catch (e) {
       if (mounted) _afficherErreur(_libelleAuth(e));
@@ -340,7 +364,11 @@ class _ConnexionPageState extends State<ConnexionPage> {
     FocusScope.of(context).unfocus();
     setState(() { _charge = true; _erreurForm = null; });
     try {
-      await sb.auth.verifyOTP(type: OtpType.recovery, email: _resetEmail, token: code);
+      if (_resetTel) {
+        await sb.auth.verifyOTP(type: OtpType.sms, phone: _resetPhone, token: code);
+      } else {
+        await sb.auth.verifyOTP(type: OtpType.recovery, email: _resetEmail, token: code);
+      }
       await sb.auth.updateUser(UserAttributes(password: mdp));
       if (!mounted) return;
       if (sb.auth.currentSession != null) {
@@ -366,7 +394,9 @@ class _ConnexionPageState extends State<ConnexionPage> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Tabibi.ink)),
       const SizedBox(height: 8),
       Text(
-          'Un code à 6 chiffres a été envoyé par e-mail à $_resetEmail. Entrez-le, puis choisissez un nouveau mot de passe.',
+          _resetTel
+              ? 'Un code à 6 chiffres a été envoyé par SMS au $_resetPhone. Entrez-le, puis choisissez un nouveau mot de passe.'
+              : 'Un code à 6 chiffres a été envoyé par e-mail à $_resetEmail. Entrez-le, puis choisissez un nouveau mot de passe.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Tabibi.texteDoux, height: 1.4)),
       const SizedBox(height: 22),
@@ -452,6 +482,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         'consent_privacy': _confid,
       });
       // Enregistre les infos pro (specialite, ordre, cabinet) pour la validation admin.
+      Object? erreurDossier;
       try {
         await sb.rpc('soumettre_candidature_medecin', params: {
           'p': {
@@ -468,8 +499,13 @@ class _ConnexionPageState extends State<ConnexionPage> {
             'lang': 'fr',
           }
         });
-      } catch (_) {}
+      } catch (e) {
+        erreurDossier = e;
+      }
       if (!mounted) return;
+      if (erreurDossier != null) {
+        _msg('Compte créé, mais vos informations professionnelles n\'ont pas pu être enregistrées. Contactez le support si la validation tarde.');
+      }
       if ((res.user?.identities ?? const []).isEmpty && res.session == null) {
         _identifiant.text = email;
         setState(() {
@@ -567,7 +603,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
         const SizedBox(height: 14),
         _champ(_cabinet, 'Nom du cabinet (facultatif)', Icons.local_hospital_outlined),
         const SizedBox(height: 18),
-        _consentements(),
+        _consentements(medecin: true),
       ];
 
   Widget _champSpecialite() {
@@ -839,7 +875,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
     );
   }
 
-  Widget _consentements() {
+  Widget _consentements({bool medecin = false}) {
     Widget c(bool v, ValueChanged<bool?> on, String texte, {bool gras = false}) {
       return InkWell(
         onTap: () => on(!v),
@@ -881,9 +917,10 @@ class _ConnexionPageState extends State<ConnexionPage> {
             "J'accepte les Conditions Générales d'Utilisation de Tabibi."),
         c(_confid, (x) => setState(() => _confid = x ?? false),
             'Je consens au traitement de mes données personnelles (loi 18-07).'),
-        c(_sante, (x) => setState(() => _sante = x ?? false),
-            'Consentement données de santé : j\'autorise le traitement de mes données médicales pour la prise de rendez-vous (art. 18, loi 18-07).',
-            gras: true),
+        if (!medecin)
+          c(_sante, (x) => setState(() => _sante = x ?? false),
+              'Consentement données de santé : j\'autorise le traitement de mes données médicales pour la prise de rendez-vous (art. 18, loi 18-07).',
+              gras: true),
         c(_marketing, (x) => setState(() => _marketing = x ?? false),
             '(Optionnel) J\'accepte de recevoir des conseils santé et offres Tabibi.'),
       ]),

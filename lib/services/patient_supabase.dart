@@ -721,6 +721,58 @@ class PatientSupabase {
     }
   }
 
+  /// Cree (ou recupere) la salle video Daily du rendez-vous via l'edge function
+  /// `create-video-room`, puis renvoie l'URL a rejoindre (jeton de reunion du
+  /// patient inclus en parametre `?t=`) et le jeton. Indispensable : les salles
+  /// Daily sont privees, l'URL nue sans jeton est refusee.
+  Future<Map<String, String>> salleTeleconsultation(String appointmentId) async {
+    try {
+      final res = await sb.functions.invoke(
+        'create-video-room',
+        body: {'appointment_id': appointmentId},
+      );
+      final data = (res.data is Map) ? (res.data as Map) : const {};
+      final erreur = data['error'];
+      if (erreur != null) {
+        throw ApiException(_statutVideo(erreur.toString()), erreur.toString(), cle: _cleVideo(erreur.toString()));
+      }
+      final url = (data['room_url'] ?? '').toString();
+      final token = (data['my_token'] ?? '').toString();
+      if (url.isEmpty || token.isEmpty) {
+        throw const ApiException(502, 'video_provider_error');
+      }
+      final separateur = url.contains('?') ? '&' : '?';
+      return {
+        'urlSalle': '$url${separateur}t=$token',
+        'token': token,
+      };
+    } on FunctionException catch (e) {
+      final corps = e.details;
+      final code = (corps is Map && corps['error'] != null)
+          ? corps['error'].toString()
+          : 'server_error';
+      throw ApiException(e.status ?? 500, code, cle: _cleVideo(code));
+    }
+  }
+
+  /// Statut HTTP approche pour un code d'erreur renvoye par `create-video-room`.
+  static int _statutVideo(String code) => switch (code) {
+        'too_early' || 'too_late' || 'appointment_not_confirmed' => 409,
+        'forbidden' => 403,
+        'appointment_not_found' => 404,
+        'invalid_params' => 400,
+        'not_authenticated' => 401,
+        _ => 500,
+      };
+
+  /// Cle de traduction d'un message lisible pour un code d'erreur create-video-room.
+  static String _cleVideo(String code) => switch (code) {
+        'too_early' => 'tele.erreurTropTot',
+        'too_late' => 'tele.erreurTropTard',
+        'video_not_configured' => 'tele.erreurVideoNonConfig',
+        _ => 'tele.erreurVideoGenerique',
+      };
+
   // ---------------------------------------------------------------------------
   // Outils internes
   // ---------------------------------------------------------------------------

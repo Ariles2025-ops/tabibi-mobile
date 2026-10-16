@@ -4,6 +4,7 @@ import '../i18n/langue.dart';
 import '../models/besoin_medicament.dart';
 import '../services/api_service.dart';
 import '../services/patient_supabase.dart';
+import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../theme/theme_tabibi.dart';
@@ -34,6 +35,7 @@ class _DawiniPageState extends State<DawiniPage> {
   final _wilaya = TextEditingController();
   final _commune = TextEditingController();
   final _precision = TextEditingController();
+  List<Map<String, dynamic>> _wilayas = [];
   List<BesoinMedicament> _besoins = [];
   bool _charge = false;
   bool _envoi = false;
@@ -42,7 +44,21 @@ class _DawiniPageState extends State<DawiniPage> {
   @override
   void initState() {
     super.initState();
+    _chargerWilayas();
     if (_auth.estConnecte) _charger();
+  }
+
+  Future<void> _chargerWilayas() async {
+    try {
+      final r = await sb
+          .from('wilayas')
+          .select('code,name_fr')
+          .eq('is_active', true)
+          .order('name_fr');
+      if (mounted) {
+        setState(() => _wilayas = List<Map<String, dynamic>>.from(r as List));
+      }
+    } catch (_) {}
   }
 
   @override
@@ -224,16 +240,22 @@ class _DawiniPageState extends State<DawiniPage> {
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _wilaya,
-              keyboardType: TextInputType.number,
-              maxLength: 2,
+            DropdownButtonFormField<int>(
+              value: _wilaya.text.isEmpty ? null : int.tryParse(_wilaya.text),
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: t(context, 'dawini.wilaya'),
-                hintText: t(context, 'dawini.wilayaIndice'),
-                counterText: '',
                 prefixIcon: const Icon(Icons.map_outlined),
               ),
+              items: [
+                for (final w in _wilayas)
+                  DropdownMenuItem<int>(
+                    value: (w['code'] as num).toInt(),
+                    child: Text('${w['name_fr']}'),
+                  ),
+              ],
+              onChanged: (v) =>
+                  setState(() => _wilaya.text = v == null ? '' : '\$v'),
             ),
             const SizedBox(height: 8),
             TextField(

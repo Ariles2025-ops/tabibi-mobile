@@ -4,6 +4,7 @@ import '../i18n/langue.dart';
 import '../models/profil.dart';
 import '../services/api_service.dart';
 import '../services/patient_supabase.dart';
+import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/profil.dart';
@@ -38,6 +39,9 @@ class MonProfilPage extends StatefulWidget {
 class _MonProfilPageState extends State<MonProfilPage> {
   late final AuthService _auth = widget.auth ?? session;
   final PatientSupabase _patient = const PatientSupabase();
+
+  /// Connexion via Supabase (et non plus Keycloak).
+  bool get _connecte => sb.auth.currentSession != null;
   final _nomComplet = TextEditingController();
   final _telephone = TextEditingController();
   final _wilaya = TextEditingController();
@@ -55,7 +59,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
   @override
   void initState() {
     super.initState();
-    if (_auth.estConnecte) _charger();
+    if (_connecte) _charger();
   }
 
   @override
@@ -79,8 +83,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
   /// Charge le profil (GET /api/moi/profil) et preremplit le formulaire ; un 404 (profil
   /// jamais renseigne) laisse simplement le formulaire vide.
   Future<void> _charger() async {
-    final token = _auth.accessToken;
-    if (token == null) return;
+    if (!_connecte) return;
     setState(() {
       _charge = true;
       _erreur = null;
@@ -98,7 +101,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
         return;
       }
       // Jeton expire : retour au bouton « Se connecter ».
-      if (e.nonAutorise) _auth.seDeconnecter();
+      if (e.nonAutorise) await sb.auth.signOut();
       setState(() => _erreur = messageApi(context, e));
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageApi(context, e));
@@ -147,8 +150,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
       return;
     }
     if (_envoi) return;
-    final token = _auth.accessToken;
-    if (token == null) return;
+    if (!_connecte) return;
     FocusScope.of(context).unfocus();
     setState(() => _envoi = true);
     Profil? enregistre;
@@ -163,7 +165,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
       );
       enregistre = Profil.fromJson(await _patient.enregistrerProfil(profil.toJson()));
     } on ApiException catch (e) {
-      if (e.nonAutorise) _auth.seDeconnecter();
+      if (e.nonAutorise) await sb.auth.signOut();
       if (mounted) _message(messageApi(context, e));
     } on Exception catch (e) {
       if (mounted) _message(messageApi(context, e));
@@ -189,7 +191,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
   }
 
   Widget _corps(BuildContext context) {
-    if (!_auth.estConnecte) {
+    if (!_connecte) {
       return VueConnexion(
         icone: Icons.person_outline,
         titre: t(context, 'connexion.titreCompte'),
