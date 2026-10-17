@@ -362,7 +362,7 @@ const Map<String, String> _fr = {
   'statut.CLOTURE': 'Clôturée',
   // Praticien sans fiche
   'medecin.inconnu': 'Médecin inconnu',
-  'medecin.abrege': 'Médecin {id}',
+  'medecin.abrege': 'Médecin',
   'accueil.medecinTitre': 'Vous êtes médecin ?',
   'accueil.medecinTexte': 'Rejoignez Tabibi et développez votre patientèle en ligne. Inscription gratuite pendant 30 jours.',
   'accueil.medecinBouton': 'Rejoindre Tabibi',
@@ -716,7 +716,7 @@ const Map<String, String> _ar = {
   'statut.CLOTURE': 'مغلق',
   // Praticien sans fiche
   'medecin.inconnu': 'طبيب غير معروف',
-  'medecin.abrege': 'الطبيب {id}',
+  'medecin.abrege': 'الطبيب',
   'accueil.medecinTitre': 'هل أنت طبيب؟',
   'accueil.medecinTexte': 'انضم إلى طبيبي ووسّع قاعدة مرضاك عبر الإنترنت. التسجيل مجاني لمدة 30 يومًا.',
   'accueil.medecinBouton': 'انضم إلى طبيبي',
@@ -1071,7 +1071,7 @@ const Map<String, String> _en = {
   'statut.CLOTURE': 'Closed',
   // Praticien sans fiche
   'medecin.inconnu': 'Unknown doctor',
-  'medecin.abrege': 'Doctor {id}',
+  'medecin.abrege': 'Doctor',
   'accueil.medecinTitre': 'Are you a doctor?',
   'accueil.medecinTexte': 'Join Tabibi and grow your patient base online. Free for the first 30 days.',
   'accueil.medecinBouton': 'Join Tabibi',
