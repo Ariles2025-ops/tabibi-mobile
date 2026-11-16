@@ -1,0 +1,19 @@
+# Fusion automatique des PR de l'agent développeur (branches claude/...) :
+# la PR se fusionne seule dès que les vérifications obligatoires (tests, Gitleaks, Trivy) sont vertes.
+# Rien ne part en production : le déploiement reste une étape à part.
+name: Fusion auto agent
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  auto-merge:
+    if: startsWith(github.head_ref, 'claude/') && !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh pr merge --auto --squash "$PR"
+        env:
+          PR: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
