@@ -8,11 +8,18 @@ String sousTitrePraticien(Map<String, dynamic> m) {
   var wilaya = (m['wilayaFr'] as String?) ?? '';
   if (Langue.estArabe) {
     final sp = specialiteParSlug(m['specialiteSlug'] as String?);
-    if (sp != null) specialite = sp.nomAr;
+    if (sp != null) {
+      specialite = sp.nomAr;
+    } else if (m['specialiteSlug'] == 'autre') {
+      specialite = 'أخرى';
+    }
     final w = wilayaParCode(m['wilayaCode']?.toString());
     if (w != null) wilaya = w.nomAr;
   }
   final ville = m['ville'] as String?;
-  final lieu = (ville == null || ville.isEmpty) ? wilaya : '$ville ($wilaya)';
+  // « Alger (Alger) » : la ville n'est pas repetee quand elle porte le nom de la wilaya.
+  final villeUtile =
+      ville != null && ville.isNotEmpty && ville != (m['wilayaFr'] as String?);
+  final lieu = villeUtile ? '$ville ($wilaya)' : wilaya;
   return [specialite, lieu].where((x) => x.isNotEmpty).join(' · ');
 }

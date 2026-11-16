@@ -18,7 +18,29 @@ void main() {
   });
 
   test('sous-titre praticien sans « null » quand la ville manque', () {
-    expect(sousTitrePraticien({'specialiteFr': 'Cardiologue', 'ville': null, 'wilayaFr': 'Sétif'}), 'Cardiologue · Sétif');
-    expect(sousTitrePraticien({'specialiteFr': 'Dentiste', 'ville': 'Kouba', 'wilayaFr': 'Alger'}), 'Dentiste · Kouba (Alger)');
+    expect(
+        sousTitrePraticien({
+          'specialiteFr': 'Cardiologue',
+          'ville': null,
+          'wilayaFr': 'Sétif'
+        }),
+        'Cardiologue · Sétif');
+    expect(
+        sousTitrePraticien({
+          'specialiteFr': 'Dentiste',
+          'ville': 'Kouba',
+          'wilayaFr': 'Alger'
+        }),
+        'Dentiste · Kouba (Alger)');
+  });
+
+  test('sous-titre sans « Alger (Alger) » quand la ville est la wilaya', () {
+    expect(
+        sousTitrePraticien({
+          'specialiteFr': 'Médecin généraliste',
+          'ville': 'Alger',
+          'wilayaFr': 'Alger'
+        }),
+        'Médecin généraliste · Alger');
   });
 }

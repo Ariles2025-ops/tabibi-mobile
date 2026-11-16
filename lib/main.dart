@@ -118,8 +118,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await widget.api
-          .rechercherMedecins(specialite: _specialite, wilaya: _wilaya, q: _nom.text);
+      final r = await widget.api.rechercherMedecins(
+          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
       _message(messageErreur(e));
@@ -206,7 +206,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _ouvrirFiche(String medecinId) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
+        builder: (_) => FicheMedecinPage(
+            medecinId: medecinId, api: widget.api, auth: _auth),
       ),
     );
     await _apresRetour();
@@ -327,14 +328,10 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
+        title:
+            const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           const SelecteurLangue(),
-          IconButton(
-            tooltip: t('Vérifier une ordonnance', 'التحقق من وصفة طبية'),
-            onPressed: _ouvrirVerification,
-            icon: const Icon(Icons.verified_outlined),
-          ),
           IconButton(
             tooltip: t('Mes ordonnances', 'وصفاتي الطبية'),
             onPressed: _ouvrirMesOrdonnances,
@@ -346,7 +343,9 @@ class _RecherchePageState extends State<RecherchePage> {
             icon: const Icon(Icons.calendar_month),
           ),
           IconButton(
-            tooltip: connecte ? t('Connecté', 'متصل') : t('Se connecter', 'تسجيل الدخول'),
+            tooltip: connecte
+                ? t('Connecté', 'متصل')
+                : t('Se connecter', 'تسجيل الدخول'),
             onPressed: _seConnecter,
             icon: Icon(connecte ? Icons.person : Icons.person_outline),
           ),
@@ -361,7 +360,8 @@ class _RecherchePageState extends State<RecherchePage> {
               Expanded(
                 child: TextField(
                   controller: _nom,
-                  decoration: InputDecoration(labelText: t('Nom du médecin', 'اسم الطبيب')),
+                  decoration: InputDecoration(
+                      labelText: t('Nom du médecin', 'اسم الطبيب')),
                   onSubmitted: (_) => _rechercher(),
                 ),
               ),
@@ -378,13 +378,16 @@ class _RecherchePageState extends State<RecherchePage> {
                 child: DropdownButtonFormField<String>(
                   initialValue: _specialite,
                   isExpanded: true,
-                  decoration: InputDecoration(labelText: t('Spécialité', 'التخصص')),
+                  decoration:
+                      InputDecoration(labelText: t('Spécialité', 'التخصص')),
                   items: [
-                    DropdownMenuItem<String>(value: null, child: Text(t('Toutes', 'الكل'))),
+                    DropdownMenuItem<String>(
+                        value: null, child: Text(t('Toutes', 'الكل'))),
                     for (final sp in specialites)
                       DropdownMenuItem(
                           value: sp.slug,
-                          child: Text(nomSpecialite(sp), overflow: TextOverflow.ellipsis)),
+                          child: Text(nomSpecialite(sp),
+                              overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     setState(() => _specialite = v);
@@ -397,14 +400,16 @@ class _RecherchePageState extends State<RecherchePage> {
                 child: DropdownButtonFormField<String>(
                   initialValue: _wilaya,
                   isExpanded: true,
-                  decoration: InputDecoration(labelText: t('Wilaya', 'الولاية')),
+                  decoration:
+                      InputDecoration(labelText: t('Wilaya', 'الولاية')),
                   items: [
-                    DropdownMenuItem<String>(value: null, child: Text(t('Toutes', 'الكل'))),
+                    DropdownMenuItem<String>(
+                        value: null, child: Text(t('Toutes', 'الكل'))),
                     for (final w in wilayas)
                       DropdownMenuItem(
                           value: w.code,
-                          child:
-                              Text('${w.code} - ${nomWilaya(w)}', overflow: TextOverflow.ellipsis)),
+                          child: Text('${w.code} - ${nomWilaya(w)}',
+                              overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     setState(() => _wilaya = v);
@@ -444,7 +449,8 @@ class _RecherchePageState extends State<RecherchePage> {
   /// fermee), « Messagerie », « Mes avis », « Dawini (pharmacies) », « Liste d'attente »,
   /// « Mon profil ».
   Widget _entrees() {
-    Widget puce(IconData icone, String libelle, VoidCallback? action) => Padding(
+    Widget puce(IconData icone, String libelle, VoidCallback? action) =>
+        Padding(
           padding: const EdgeInsetsDirectional.only(end: 8),
           child: ActionChip(
             avatar: Icon(icone, size: 18),
@@ -458,8 +464,10 @@ class _RecherchePageState extends State<RecherchePage> {
       child: Row(
         children: [
           if (aUnEspacePro(_roles))
-            puce(Icons.work_outline, t('Mon espace', 'فضائي'), _ouvrirMonEspace),
-          puce(Icons.notifications_outlined, libelleNotifications(_nonLues), _ouvrirNotifications),
+            puce(
+                Icons.work_outline, t('Mon espace', 'فضائي'), _ouvrirMonEspace),
+          puce(Icons.notifications_outlined, libelleNotifications(_nonLues),
+              _ouvrirNotifications),
           puce(
             Icons.videocam_outlined,
             visioActive
@@ -467,13 +475,19 @@ class _RecherchePageState extends State<RecherchePage> {
                 : t('Téléconsultation · Bientôt', 'الاستشارة عن بعد · قريبًا'),
             visioActive ? _ouvrirTeleconsultations : null,
           ),
-          puce(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'), _ouvrirMessagerie),
+          puce(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'),
+              _ouvrirMessagerie),
           puce(Icons.star_outline, t('Mes avis', 'تقييماتي'), _ouvrirMesAvis),
-          puce(Icons.local_pharmacy_outlined, t('Dawini (pharmacies)', 'دَويني (الصيدليات)'),
-              _ouvrirDawini),
-          puce(Icons.hourglass_top_outlined, t("Liste d'attente", 'قائمة الانتظار'),
-              _ouvrirListesAttente),
-          puce(Icons.badge_outlined, t('Mon profil', 'ملفي الشخصي'), _ouvrirMonProfil),
+          puce(Icons.local_pharmacy_outlined,
+              t('Dawini (pharmacies)', 'دَويني (الصيدليات)'), _ouvrirDawini),
+          puce(Icons.hourglass_top_outlined,
+              t("Liste d'attente", 'قائمة الانتظار'), _ouvrirListesAttente),
+          puce(Icons.badge_outlined, t('Mon profil', 'ملفي الشخصي'),
+              _ouvrirMonProfil),
+          puce(
+              Icons.verified_outlined,
+              t('Vérifier une ordonnance', 'التحقق من وصفة طبية'),
+              _ouvrirVerification),
         ],
       ),
     );

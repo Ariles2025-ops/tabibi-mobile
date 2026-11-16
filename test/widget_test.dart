@@ -706,7 +706,7 @@ void main() {
 
     expect(find.text('Fiche médecin'), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
-    expect(find.text('Cardiologue · Alger (Alger)'), findsOneWidget);
+    expect(find.text('Cardiologue · Alger'), findsOneWidget);
     // Seul le creneau disponible est propose a la reservation.
     expect(find.text('jeu. 3 déc. 09:00'), findsOneWidget);
     expect(find.text('jeu. 3 déc. 09:30'), findsNothing);
