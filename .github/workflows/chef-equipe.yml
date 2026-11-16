@@ -1,0 +1,52 @@
+# Chef d'équipe : toutes les 2 heures, regarde les PR des agents (branches claude/…).
+# Si une PR a des tests rouges ou un conflit avec main, Claude la reprend : il corrige ou rebase, puis pousse sur la même branche.
+# Une PR verte et sans conflit se fusionne déjà seule (Fusion auto) : rien à faire.
+name: Chef d'equipe
+on:
+  schedule:
+    - cron: '50 */2 * * *'
+  workflow_dispatch:
+concurrency:
+  group: chef-equipe
+  cancel-in-progress: false
+jobs:
+  surveiller:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+      checks: read
+    steps:
+      - name: PR d'agents à reprendre
+        id: liste
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list -R "${{ github.repository }}" --state open --json number,headRefName,mergeable,statusCheckRollup \
+            -q '[.[] | select(.headRefName|startswith("claude/")) | select(.mergeable=="CONFLICTING" or ([.statusCheckRollup[]?|select(.conclusion=="FAILURE")]|length>0)) | {numero:.number, branche:.headRefName, conflit:(.mergeable=="CONFLICTING")}]' > a-reprendre.json
+          cat a-reprendre.json
+          echo "nombre=$(jq length a-reprendre.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.liste.outputs.nombre != '0'
+        with:
+          fetch-depth: 0
+          clean: false
+      - uses: anthropics/claude-code-action@v1
+        if: steps.liste.outputs.nombre != '0'
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Tu es le chef d'équipe des agents développeurs de ${{ github.repository }}. Le fichier a-reprendre.json liste les PR
+            d'agents bloquées (tests rouges ou conflit avec main). Pour CHACUNE :
+            1. git checkout de sa branche ; si conflit : git merge origin/main et résous proprement en gardant les deux intentions.
+            2. Si tests rouges : lis l'échec (gh pr checks <numero>, puis gh run view <id> --log-failed), corrige le code.
+               Si c'est une panne passagère (réseau, téléchargement Gradle/npm), relance seulement : gh run rerun <id> --failed.
+            3. Pousse sur la MÊME branche et laisse un commentaire court en français sur la PR (gh pr comment) qui dit ce que tu as fait.
+            Règles : ne pousse jamais sur main, ne supprime ni n'affaiblis aucun test, aucun secret, aucun envoi de message à des
+            médecins ou patients, choix voulus intouchables (pré-lancement, « 75 000 », visio « Bientôt », gratuit).
+          claude_args: --max-turns 80 --allowedTools "Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr view:*),Bash(gh run view:*),Bash(gh run rerun:*),Bash(git:*),Bash(jq *),Bash(npm ci),Bash(npm run *),Bash(npx ng *),Bash(./mvnw *),Bash(mvn *),Bash(flutter *),Bash(dart *),Read,Edit,Write,Glob,Grep"
