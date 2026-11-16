@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'config/lancement.dart';
+import 'config/referentiel.dart';
+import 'config/theme.dart';
+
 import 'pages/dawini_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/mes_avis_page.dart';
@@ -26,7 +30,8 @@ class TabibiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tabibi',
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF0F7560), useMaterial3: true),
+      debugShowCheckedModeBanner: false,
+      theme: Charte.theme(),
       home: const RecherchePage(),
     );
   }
@@ -53,6 +58,7 @@ class _RecherchePageState extends State<RecherchePage> {
   late final AuthService _auth = widget.auth ?? session;
   final _nom = TextEditingController();
   String? _specialite;
+  String? _wilaya;
   List<Map<String, dynamic>> _resultats = [];
   bool _charge = false;
 
@@ -62,7 +68,7 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await widget.api.rechercherMedecins(specialite: _specialite, q: _nom.text);
+      final r = await widget.api.rechercherMedecins(specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
       _message(messageErreur(e));
@@ -78,16 +84,16 @@ class _RecherchePageState extends State<RecherchePage> {
       if (!mounted) return;
       setState(() {}); // met a jour l'icone de l'AppBar
       if (!ok) {
-        _message('Connexion annulee');
+        _message('Connexion annulée');
         return;
       }
     }
     final token = _auth.accessToken;
     if (token == null) return;
-    var texte = 'Connecte';
+    var texte = 'Connecté';
     try {
       final moi = await widget.api.moi(token);
-      texte = 'Connecte : ${moi['nom']}';
+      texte = 'Connecté : ${moi['nom']}';
     } on Exception {
       // Identite indisponible : message generique.
     }
@@ -158,6 +164,10 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   Future<void> _ouvrirTeleconsultations() async {
+    if (!visioActive) {
+      _message('La téléconsultation arrive bientôt sur Tabibi.');
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MesTeleconsultationsPage(api: widget.api, auth: _auth),
@@ -243,10 +253,10 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tabibi'),
+        title: const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
-            tooltip: 'Verifier une ordonnance',
+            tooltip: 'Vérifier une ordonnance',
             onPressed: _ouvrirVerification,
             icon: const Icon(Icons.verified_outlined),
           ),
@@ -261,7 +271,7 @@ class _RecherchePageState extends State<RecherchePage> {
             icon: const Icon(Icons.calendar_month),
           ),
           IconButton(
-            tooltip: connecte ? 'Connecte' : 'Se connecter',
+            tooltip: connecte ? 'Connecté' : 'Se connecter',
             onPressed: _seConnecter,
             icon: Icon(connecte ? Icons.person : Icons.person_outline),
           ),
@@ -271,27 +281,57 @@ class _RecherchePageState extends State<RecherchePage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            if (prelancement) const _BandeauLancement(),
             Row(children: [
               Expanded(
                 child: TextField(
                   controller: _nom,
-                  decoration: const InputDecoration(labelText: 'Nom du medecin'),
+                  decoration: const InputDecoration(labelText: 'Nom du médecin'),
                   onSubmitted: (_) => _rechercher(),
                 ),
               ),
               const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _specialite,
-                hint: const Text('Specialite'),
-                items: const [
-                  DropdownMenuItem(value: 'generaliste', child: Text('Generaliste')),
-                  DropdownMenuItem(value: 'cardiologue', child: Text('Cardiologue')),
-                  DropdownMenuItem(value: 'dermatologue', child: Text('Dermatologue')),
-                  DropdownMenuItem(value: 'pediatre', child: Text('Pediatre')),
-                ],
-                onChanged: (v) => setState(() => _specialite = v),
+              IconButton.filled(
+                tooltip: 'Rechercher',
+                onPressed: _rechercher,
+                icon: const Icon(Icons.search),
               ),
-              IconButton(onPressed: _rechercher, icon: const Icon(Icons.search)),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _specialite,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Spécialité'),
+                  items: [
+                    const DropdownMenuItem<String>(value: null, child: Text('Toutes')),
+                    for (final sp in specialites)
+                      DropdownMenuItem(value: sp.slug, child: Text(sp.nom, overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _specialite = v);
+                    _rechercher();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _wilaya,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Wilaya'),
+                  items: [
+                    const DropdownMenuItem<String>(value: null, child: Text('Toutes')),
+                    for (final w in wilayas)
+                      DropdownMenuItem(value: w.code, child: Text('${w.code} - ${w.nom}', overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _wilaya = v);
+                    _rechercher();
+                  },
+                ),
+              ),
             ]),
             const SizedBox(height: 12),
             _entrees(),
@@ -305,7 +345,7 @@ class _RecherchePageState extends State<RecherchePage> {
                   final m = _resultats[i];
                   return ListTile(
                     title: Text(m['nomComplet'] as String),
-                    subtitle: Text('${m['specialiteFr']} · ${m['ville']} (${m['wilayaFr']})'),
+                    subtitle: Text(sousTitrePraticien(m)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _ouvrirFiche(identifiant(m['id'])),
                   );
@@ -336,7 +376,7 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
           ActionChip(
             avatar: const Icon(Icons.videocam_outlined, size: 18),
-            label: const Text('Teleconsultations'),
+            label: Text(visioActive ? 'Téléconsultations' : 'Téléconsultation · Bientôt'),
             onPressed: _ouvrirTeleconsultations,
           ),
           ActionChip(
@@ -366,6 +406,44 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Ligne « spécialité · ville (wilaya) » d'un praticien, sans « null » quand une donnée manque.
+String sousTitrePraticien(Map<String, dynamic> m) {
+  final specialite = (m['specialiteFr'] as String?) ?? '';
+  final ville = m['ville'] as String?;
+  final wilaya = (m['wilayaFr'] as String?) ?? '';
+  final lieu = (ville == null || ville.isEmpty) ? wilaya : '$ville ($wilaya)';
+  return [specialite, lieu].where((x) => x.isNotEmpty).join(' · ');
+}
+
+/// Bandeau de pré-lancement, identique à celui du site.
+class _BandeauLancement extends StatelessWidget {
+  const _BandeauLancement();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Charte.vert, Charte.vertFonce]),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Row(children: [
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: 'Lancement prochainement', style: TextStyle(fontWeight: FontWeight.w800)),
+              TextSpan(text: " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins."),
+            ]),
+            style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+          ),
+        ),
+      ]),
     );
   }
 }

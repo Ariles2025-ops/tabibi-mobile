@@ -692,7 +692,7 @@ void main() {
   testWidgets('affiche le champ de recherche et les acces aux ordonnances au demarrage',
       (tester) async {
     await tester.pumpWidget(const TabibiApp());
-    expect(find.text('Nom du medecin'), findsOneWidget);
+    expect(find.text('Nom du médecin'), findsOneWidget);
     expect(find.byIcon(Icons.description_outlined), findsOneWidget);
     expect(find.byIcon(Icons.verified_outlined), findsOneWidget);
   });
@@ -871,7 +871,7 @@ void main() {
       home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Teleconsultations'), findsOneWidget);
+    expect(find.text('Téléconsultation · Bientôt'), findsOneWidget);
   });
 
   testWidgets('mes teleconsultations sans jeton propose de se connecter', (tester) async {

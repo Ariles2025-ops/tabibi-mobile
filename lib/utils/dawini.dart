@@ -20,7 +20,7 @@ String libelleStatutBesoin(Object? statut) {
 }
 
 /// « 0 réponse », « 1 réponse », « 3 réponses ».
-String libelleReponses(int nombre) => nombre == 1 ? '1 réponse' : '$nombre réponses';
+String libelleReponses(int nombre) => nombre <= 1 ? '$nombre réponse' : '$nombre réponses';
 
 /// « Disponible » ou « Indisponible ».
 String libelleDisponibilite(bool disponible) => disponible ? 'Disponible' : 'Indisponible';

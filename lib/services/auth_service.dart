@@ -30,6 +30,8 @@ class AuthService {
           Configuration.redirect,
           issuer: Configuration.issuer,
           scopes: ['openid', 'profile'],
+          // Comme le site : mot de passe (ou code) exige a chaque connexion.
+          promptValues: ['login'],
         ),
       );
       accessToken = result.accessToken;
