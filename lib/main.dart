@@ -26,6 +26,7 @@ import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
 import 'utils/praticien.dart';
 import 'widgets/selecteur_langue.dart';
+import 'widgets/vue_erreur.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,6 +110,9 @@ class _RecherchePageState extends State<RecherchePage> {
   List<Map<String, dynamic>> _resultats = [];
   bool _charge = false;
 
+  /// Message affiche a la place de la liste quand la recherche echoue (reseau, delai...).
+  String? _erreur;
+
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
   int? _nonLues;
 
@@ -116,13 +120,16 @@ class _RecherchePageState extends State<RecherchePage> {
   Set<String> _roles = {};
 
   Future<void> _rechercher() async {
-    setState(() => _charge = true);
+    setState(() {
+      _charge = true;
+      _erreur = null;
+    });
     try {
       final r = await widget.api.rechercherMedecins(
           specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -423,7 +430,9 @@ class _RecherchePageState extends State<RecherchePage> {
             const SizedBox(height: 8),
             if (_charge) const LinearProgressIndicator(),
             Expanded(
-              child: ListView.separated(
+              child: _erreur != null
+                  ? VueErreur(message: _erreur!, onReessayer: _rechercher)
+                  : ListView.separated(
                 itemCount: _resultats.length,
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (_, i) {
