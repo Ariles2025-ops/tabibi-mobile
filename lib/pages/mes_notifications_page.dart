@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/notification.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/notifications.dart';
@@ -26,7 +24,6 @@ class MesNotificationsPage extends StatefulWidget {
 
 class _MesNotificationsPageState extends State<MesNotificationsPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
   List<NotificationUtilisateur> _notifications = [];
   bool _charge = false;
   String? _erreur;
@@ -46,7 +43,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -60,7 +57,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       _erreur = null;
     });
     try {
-      final notifications = await _patient.mesNotifications();
+      final notifications = await widget.api.mesNotifications(token);
       if (!mounted) return;
       setState(() {
         _notifications = trierParCreation(
@@ -71,9 +68,9 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -90,7 +87,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     setState(() => _enCours = notification.id);
     try {
       final lue = NotificationUtilisateur.fromJson(
-        await _patient.marquerLue(notification.id),
+        await widget.api.marquerLue(notification.id, token),
       );
       if (!mounted) return;
       setState(() {
@@ -100,9 +97,9 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       });
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      if (mounted) _message(messageApi(context, e));
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _enCours = null); // rebatit aussi si la session a expire
     }
@@ -113,17 +110,19 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     final token = _auth.accessToken;
     if (token == null) return;
     try {
-      final nombre = await _patient.toutMarquerLu();
+      final nombre = await widget.api.toutMarquerLu(token);
       if (!mounted) return;
       setState(() {
         _notifications = [for (final n in _notifications) n.marquerLue()];
       });
-      _message(tp(context, 'notifs.marquees', nombre));
+      _message(nombre > 0
+          ? '$nombre notification(s) marquée(s) lue(s)'
+          : 'Aucune notification a marquer');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      if (mounted) _message(messageApi(context, e));
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     }
     if (mounted) setState(() {}); // la session a pu expirer
   }
@@ -138,16 +137,16 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     final nonLues = compterNonLues(_notifications);
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'notifs.titre')),
+        title: const Text('Mes notifications'),
         actions: [
           if (_auth.estConnecte) ...[
             IconButton(
-              tooltip: t(context, 'notifs.toutMarquerLu'),
+              tooltip: 'Tout marquer comme lu',
               onPressed: _charge || nonLues == 0 ? null : _toutMarquerLu,
               icon: const Icon(Icons.done_all),
             ),
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -161,7 +160,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? t(context, 'notifs.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour consulter vos notifications.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -169,7 +168,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_notifications.isEmpty) {
-      return Center(child: Text(t(context, 'notifs.aucune')));
+      return const Center(child: Text('Aucune notification pour le moment.'));
     }
     return RefreshIndicator(
       onRefresh: _rafraichir,
@@ -196,17 +195,17 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         children: [
           Text(n.message),
           const SizedBox(height: 4),
-          Text(dateNotification(langueDe(context), n), style: texte.bodySmall),
+          Text(dateNotification(n), style: texte.bodySmall),
         ],
       ),
       isThreeLine: true,
-      trailing: _actionLecture(context, n),
+      trailing: _actionLecture(n),
       onTap: n.lue ? null : () => _marquerLue(n),
     );
   }
 
   /// Bouton « Marquer comme lue » d'une notification non lue (indicateur pendant l'envoi).
-  Widget? _actionLecture(BuildContext context, NotificationUtilisateur n) {
+  Widget? _actionLecture(NotificationUtilisateur n) {
     if (n.lue) return null;
     if (_enCours == n.id) {
       return const SizedBox(
@@ -216,7 +215,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       );
     }
     return IconButton(
-      tooltip: t(context, 'notifs.marquerLue'),
+      tooltip: 'Marquer comme lue',
       onPressed: () => _marquerLue(n),
       icon: const Icon(Icons.mark_email_read_outlined),
     );

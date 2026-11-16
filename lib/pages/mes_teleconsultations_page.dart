@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import 'package:permission_handler/permission_handler.dart';
-
-import '../i18n/langue.dart';
 import '../models/teleconsultation.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
-import '../theme/theme_tabibi.dart';
 import '../utils/teleconsultations.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
-import 'teleconsultation_page.dart';
 
 /// Ouverture d'un lien hors de l'application ; vrai si elle a ete acceptee.
 typedef OuvrirLien = Future<bool> Function(Uri lien);
+
+/// Texte du consentement explicite demande avant de remettre le lien de salle.
+const String texteConsentement =
+    "En rejoignant cette teleconsultation, vous acceptez qu'elle se deroule en video via un "
+    "service tiers (Jitsi Meet). Aucun enregistrement n'est realise par Tabibi.";
 
 /// Teleconsultations du patient connecte : statut et date de chaque session ; consentement
 /// explicite avant la remise du lien de salle, puis bouton « Rejoindre » (navigateur externe).
@@ -32,7 +32,7 @@ class MesTeleconsultationsPage extends StatefulWidget {
   /// Session a utiliser ; par defaut la session partagee [session].
   final AuthService? auth;
 
-  /// Ouverture de la salle ; par defaut dans l'app (WebView), repli navigateur possible.
+  /// Ouverture du lien de salle ; par defaut le navigateur externe (`url_launcher`).
   final OuvrirLien? ouvrirLien;
 
   @override
@@ -41,7 +41,6 @@ class MesTeleconsultationsPage extends StatefulWidget {
 
 class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
   List<Teleconsultation> _teleconsultations = [];
   bool _charge = false;
   String? _erreur;
@@ -61,7 +60,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -73,7 +72,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
       _erreur = null;
     });
     try {
-      final teleconsultations = await _patient.mesTeleconsultations();
+      final teleconsultations = await widget.api.mesTeleconsultations(token);
       if (!mounted) return;
       setState(() {
         _teleconsultations = teleconsultations.map(Teleconsultation.fromJson).toList();
@@ -82,9 +81,9 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -92,70 +91,49 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
 
   /// Consentement explicite (POST /api/teleconsultations/{id}/consentir) ; la vue renvoyee,
   /// qui porte desormais le lien de salle, remplace l'element.
-  Future<void> _consentir(Teleconsultation tele) async {
+  Future<void> _consentir(Teleconsultation t) async {
     if (_enCours != null) return;
     final token = _auth.accessToken;
     if (token == null) return;
-    setState(() => _enCours = tele.id);
+    setState(() => _enCours = t.id);
     try {
-      final consentie = Teleconsultation.fromJson(await _patient.consentir(tele.id));
+      final consentie = Teleconsultation.fromJson(await widget.api.consentir(t.id, token));
       if (!mounted) return;
       setState(() {
         _teleconsultations = [
-          for (final autre in _teleconsultations) autre.id == tele.id ? consentie : autre,
+          for (final autre in _teleconsultations) autre.id == t.id ? consentie : autre,
         ];
       });
-      _message(t(context, 'tele.consentementEnregistre'));
+      _message('Consentement enregistré');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      if (mounted) _message(messageApi(context, e));
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _enCours = null); // rebatit aussi si la session a expire
     }
   }
 
-  /// Cree/recupere la salle Daily du rendez-vous (edge function create-video-room),
-  /// recupere le jeton de reunion du patient, puis ouvre la salle (URL + `?t=jeton`)
-  /// dans la WebView embarquee ; seuls les liens http(s) sont acceptes.
-  Future<void> _rejoindre(Teleconsultation tele) async {
-    if (_enCours != null) return;
-    setState(() => _enCours = tele.id);
+  /// Ouvre la salle video dans le navigateur externe ; seuls les liens http(s) sont acceptes.
+  Future<void> _rejoindre(Teleconsultation t) async {
+    final lien = t.lienSalle;
+    final uri = lien == null ? null : Uri.tryParse(lien);
+    if (uri == null || !(uri.isScheme('https') || uri.isScheme('http'))) {
+      _message('Lien de salle invalide');
+      return;
+    }
+    final ouvrir = widget.ouvrirLien ?? _ouvrirDansLeNavigateur;
     try {
-      // Demande des permissions Android camera/micro AVANT d'ouvrir la salle.
-      final cam = await Permission.camera.request();
-      final mic = await Permission.microphone.request();
-      if (!cam.isGranted || !mic.isGranted) {
-        if (mounted) _message(t(context, 'tele.permissionsCameraMicro'));
-        return;
-      }
-      final salle = await _patient.salleTeleconsultation(tele.rendezVousId);
-      final uri = Uri.tryParse(salle['urlSalle'] ?? '');
-      if (uri == null || !(uri.isScheme('https') || uri.isScheme('http'))) {
-        if (mounted) _message(t(context, 'tele.lienInvalide'));
-        return;
-      }
-      final ouvrir = widget.ouvrirLien ?? _ouvrirDansLeNavigateur;
       final ok = await ouvrir(uri);
-      if (!ok && mounted) _message(t(context, 'tele.ouvertureImpossible'));
-    } on ApiException catch (e) {
-      if (e.nonAutorise) _auth.seDeconnecter();
-      if (mounted) _message(messageApi(context, e));
+      if (!ok) _message("Impossible d'ouvrir le lien de la salle");
     } on Exception {
-      if (mounted) _message(t(context, 'tele.ouvertureImpossible'));
-    } finally {
-      if (mounted) setState(() => _enCours = null);
+      _message("Impossible d'ouvrir le lien de la salle");
     }
   }
 
-  Future<bool> _ouvrirDansLeNavigateur(Uri lien) async {
-    if (!mounted) return false;
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => TeleconsultationPage(salleUrl: lien.toString(), titre: 'Téléconsultation'),
-    ));
-    return true;
-  }
+  Future<bool> _ouvrirDansLeNavigateur(Uri lien) =>
+      launchUrl(lien, mode: LaunchMode.externalApplication);
 
   void _message(String texte) {
     if (!mounted) return;
@@ -166,11 +144,11 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'tele.titre')),
+        title: const Text('Mes téléconsultations'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -183,9 +161,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        icone: Icons.videocam_outlined,
-        titre: t(context, 'connexion.titreTele'),
-        message: _erreur ?? t(context, 'tele.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour consulter vos téléconsultations.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -193,94 +169,55 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_teleconsultations.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.videocam_off_outlined, size: 44, color: Tabibi.texte4),
-            const SizedBox(height: 12),
-            Text(t(context, 'tele.aucune'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Tabibi.texteDoux)),
-          ]),
-        ),
-      );
+      return const Center(child: Text('Aucune téléconsultation pour le moment.'));
     }
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-      children: [for (final tele in _teleconsultations) _carte(context, tele)],
+      padding: const EdgeInsets.all(16),
+      children: [for (final t in _teleconsultations) _carte(context, t)],
     );
   }
 
   /// Une carte par session : date et statut, puis consentement, bouton « Rejoindre »
   /// ou texte d'etat selon l'avancement.
-  Widget _carte(BuildContext context, Teleconsultation tele) {
-    final langue = langueDe(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                    color: Tabibi.pastille, shape: BoxShape.circle),
-                child:
-                    const Icon(Icons.videocam_outlined, color: Tabibi.vert, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(dateTeleconsultation(langue, tele),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, color: Tabibi.texte)),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                    color: Tabibi.vertTresClair,
-                    borderRadius: BorderRadius.circular(999)),
-                child: Text(libelleStatutTeleconsultation(langue, tele.statut),
-                    style: const TextStyle(
-                        color: Tabibi.vert,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _zoneAction(context, tele),
-        ],
+  Widget _carte(BuildContext context, Teleconsultation t) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.videocam_outlined),
+              title: Text(dateTeleconsultation(t)),
+              subtitle: Text(libelleStatutTeleconsultation(t.statut)),
+            ),
+            const SizedBox(height: 8),
+            _zoneAction(context, t),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _zoneAction(BuildContext context, Teleconsultation tele) {
-    if (!tele.aConsenti && estActive(tele)) return _carteConsentement(context, tele);
-    if (peutRejoindre(tele)) {
+  Widget _zoneAction(BuildContext context, Teleconsultation t) {
+    if (!t.aConsenti && estActive(t)) return _carteConsentement(context, t);
+    if (peutRejoindre(t)) {
       return FilledButton.icon(
-        onPressed: () => _rejoindre(tele),
+        onPressed: () => _rejoindre(t),
         icon: const Icon(Icons.video_call_outlined),
-        label: Text(t(context, 'tele.rejoindre')),
+        label: const Text('Rejoindre la téléconsultation'),
       );
     }
-    return Text(_texteEtat(context, tele), style: Theme.of(context).textTheme.bodyMedium);
+    return Text(_texteEtat(t), style: Theme.of(context).textTheme.bodyMedium);
   }
 
   /// Consentement explicite : texte d'information et bouton « Je donne mon consentement ».
-  Widget _carteConsentement(BuildContext context, Teleconsultation tele) {
+  Widget _carteConsentement(BuildContext context, Teleconsultation t) {
     final couleurs = Theme.of(context).colorScheme;
     final texte = Theme.of(context).textTheme;
-    final enCours = _enCours == tele.id;
+    final enCours = _enCours == t.id;
     return Card(
       color: couleurs.primaryContainer,
       margin: EdgeInsets.zero,
@@ -289,19 +226,19 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t(context, 'tele.consentementNecessaire'), style: texte.titleSmall),
+            Text('Votre consentement est necessaire', style: texte.titleSmall),
             const SizedBox(height: 8),
-            Text(t(context, 'tele.consentement'), style: texte.bodyMedium),
+            Text(texteConsentement, style: texte.bodyMedium),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: _enCours == null ? () => _consentir(tele) : null,
+              onPressed: _enCours == null ? () => _consentir(t) : null,
               child: enCours
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(t(context, 'tele.consentir')),
+                  : const Text('Je donne mon consentement'),
             ),
           ],
         ),
@@ -310,11 +247,11 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   }
 
   /// Texte d'etat quand aucune action n'est possible (session terminee, annulee ou lien absent).
-  String _texteEtat(BuildContext context, Teleconsultation tele) {
-    return switch (tele.statut) {
-      'TERMINEE' => t(context, 'tele.terminee'),
-      'ANNULEE' => t(context, 'tele.annulee'),
-      _ => t(context, 'tele.lienAVenir'),
+  String _texteEtat(Teleconsultation t) {
+    return switch (t.statut) {
+      'TERMINEE' => 'Cette téléconsultation est terminée.',
+      'ANNULEE' => 'Cette téléconsultation a été annulée.',
+      _ => 'Le lien de la salle sera disponible prochainement.',
     };
   }
 }

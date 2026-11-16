@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
-import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
-import '../theme/theme_tabibi.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
@@ -32,8 +28,6 @@ class MesRendezVousPage extends StatefulWidget {
 
 class _MesRendezVousPageState extends State<MesRendezVousPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
-  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<Map<String, dynamic>> _rdvs = [];
 
   /// Noms des praticiens deja resolus, par identifiant (UUID en texte).
@@ -56,7 +50,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -68,7 +62,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       _erreur = null;
     });
     try {
-      final rdvs = await _patient.mesRendezVous();
+      final rdvs = await widget.api.mesRendezVous(token);
       await _chargerNomsMedecins(rdvs);
       final evalues = await _chargerRendezVousEvalues(token);
       if (!mounted) return;
@@ -80,9 +74,9 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -94,7 +88,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     for (final id in rdvs.map((r) => identifiant(r['medecinId'])).toSet()) {
       if (id.isEmpty || _nomsMedecins.containsKey(id)) continue;
       try {
-        final Object? nom = (await _prat.parId(id))?['nomComplet'];
+        final Object? nom = (await widget.api.medecin(id))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[id] = nom;
       } on Exception {
         // Nom indisponible : « Médecin » et l'identifiant abrege seront affiches a la place.
@@ -106,7 +100,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   /// avis » reste propose et un eventuel 409 sera explique au depot.
   Future<Set<String>> _chargerRendezVousEvalues(String token) async {
     try {
-      final avis = await _patient.mesAvis();
+      final avis = await widget.api.mesAvis(token);
       return avis.map(Avis.fromJson).map((a) => a.rendezVousId).toSet();
     } on Exception {
       return _rendezVousEvalues;
@@ -122,10 +116,10 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (id.isEmpty) return;
     final depose = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (ctx) => DeposerAvisPage(
+        builder: (_) => DeposerAvisPage(
           rendezVousId: id,
-          nomMedecin: _nomMedecin(ctx, rdv),
-          dateRendezVous: _dateRdv(ctx, rdv),
+          nomMedecin: _nomMedecin(rdv),
+          dateRendezVous: _dateRdv(rdv),
           api: widget.api,
           auth: _auth,
         ),
@@ -143,31 +137,31 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t(ctx, 'rdv.annulerQuestion')),
-        content: Text('${_nomMedecin(ctx, rdv)}\n${_dateRdv(ctx, rdv)}'),
+        title: const Text('Annuler ce rendez-vous ?'),
+        content: Text('${_nomMedecin(rdv)}\n${_dateRdv(rdv)}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t(ctx, 'commun.non')),
+            child: const Text('Non'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(t(ctx, 'rdv.ouiAnnuler')),
+            child: const Text('Oui, annuler'),
           ),
         ],
       ),
     );
-    if (confirme != true || !mounted) return;
+    if (confirme != true) return;
     final token = _auth.accessToken;
     if (token == null) return;
     try {
-      await _patient.annuler(identifiant(rdv['id']));
-      if (mounted) _message(t(context, 'rdv.annule'));
+      await widget.api.annuler(identifiant(rdv['id']), token);
+      _message('Rendez-vous annulé');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      if (mounted) _message(messageApi(context, e));
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     }
     if (!mounted) return;
     if (_auth.estConnecte) {
@@ -182,16 +176,18 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
-  String _dateRdv(BuildContext context, Map<String, dynamic> rdv) =>
-      formaterDateIso(langueDe(context), rdv['debut'] as String);
+  String _dateRdv(Map<String, dynamic> rdv) => formaterDateIso(rdv['debut'] as String);
 
   /// Nom du praticien ; « Médecin » suivi de l'identifiant abrege s'il n'a pu etre resolu.
-  String _nomMedecin(BuildContext context, Map<String, dynamic> rdv) {
+  String _nomMedecin(Map<String, dynamic> rdv) {
     final id = identifiant(rdv['medecinId']);
-    return _nomsMedecins[id] ?? libelleMedecin(langueDe(context), id);
+    return _nomsMedecins[id] ?? libelleMedecin(id);
   }
 
   String _statut(Map<String, dynamic> rdv) => '${rdv['statut'] ?? ''}';
+
+  /// « CONFIRME » -> « Confirme », « EN_ATTENTE » -> « En attente ».
+  String _libelleStatut(Map<String, dynamic> rdv) => libelleStatut(rdv['statut']);
 
   /// Annulable tant qu'il n'est ni annule ni honore (un rendez-vous honore est passe).
   bool _annulable(Map<String, dynamic> rdv) =>
@@ -199,19 +195,13 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
 
   /// Action d'un rendez-vous : « Donner mon avis » (ou « Avis donné ») s'il est honore,
   /// « Annuler » s'il est encore annulable, rien sinon.
-  Widget? _action(BuildContext context, Map<String, dynamic> rdv) {
+  Widget? _action(Map<String, dynamic> rdv) {
     if (estHonore(rdv['statut'])) {
-      if (_aDonneSonAvis(rdv)) return Text(t(context, 'rdv.avisDonne'));
-      return TextButton(
-        onPressed: () => _donnerAvis(rdv),
-        child: Text(t(context, 'rdv.donnerAvis')),
-      );
+      if (_aDonneSonAvis(rdv)) return const Text('Avis donné');
+      return TextButton(onPressed: () => _donnerAvis(rdv), child: const Text('Donner mon avis'));
     }
     if (_annulable(rdv)) {
-      return TextButton(
-        onPressed: () => _annuler(rdv),
-        child: Text(t(context, 'rdv.annuler')),
-      );
+      return TextButton(onPressed: () => _annuler(rdv), child: const Text('Annuler'));
     }
     return null;
   }
@@ -220,144 +210,44 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'rdv.titre')),
+        title: const Text('Mes rendez-vous'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
         ],
       ),
-      body: _corps(context),
+      body: _corps(),
     );
   }
 
-  Widget _corps(BuildContext context) {
-    if (!_auth.estConnecte) return _vueConnexion(context);
+  Widget _corps() {
+    if (!_auth.estConnecte) return _vueConnexion();
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_rdvs.isEmpty) {
-      return _vueVide(Icons.event_busy_outlined, t(context, 'rdv.aucun'));
-    }
-    return RefreshIndicator(
-      color: Tabibi.vert,
-      onRefresh: _charger,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [for (final rdv in _rdvs) _carteRdv(context, rdv)],
-      ),
+    if (_rdvs.isEmpty) return const Center(child: Text('Aucun rendez-vous.'));
+    return ListView.separated(
+      itemCount: _rdvs.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) {
+        final rdv = _rdvs[i];
+        return ListTile(
+          leading: const Icon(Icons.event),
+          title: Text(_dateRdv(rdv)),
+          subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
+          trailing: _action(rdv),
+        );
+      },
     );
   }
 
-  /// Une carte de rendez-vous : pastille, medecin, date, pilule de statut, action.
-  Widget _carteRdv(BuildContext context, Map<String, dynamic> rdv) {
-    final langue = langueDe(context);
-    final action = _action(context, rdv);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                    color: Tabibi.pastille, shape: BoxShape.circle),
-                child: const Icon(Icons.event, color: Tabibi.vert, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_nomMedecin(context, rdv),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Tabibi.texte,
-                            fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(_dateRdv(context, rdv),
-                        style: const TextStyle(
-                            color: Tabibi.texteDoux, fontSize: 13)),
-                  ],
-                ),
-              ),
-              _pileStatut(langue, rdv),
-            ],
-          ),
-          if (action != null) ...[
-            const SizedBox(height: 10),
-            Align(alignment: AlignmentDirectional.centerEnd, child: action),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Pilule de statut coloree (vert = confirme, ambre = en attente, rouge = annule,
-  /// gris = honore/passe).
-  Widget _pileStatut(String langue, Map<String, dynamic> rdv) {
-    final st = _statut(rdv).toUpperCase();
-    Color bg;
-    Color fg;
-    if (st.startsWith('ANNUL')) {
-      bg = Tabibi.rougeClair;
-      fg = Tabibi.rouge;
-    } else if (estHonore(rdv['statut'])) {
-      bg = Tabibi.bg2;
-      fg = Tabibi.texte3;
-    } else if (st.contains('ATTENTE') || st.contains('PENDING')) {
-      bg = Tabibi.orClair;
-      fg = Tabibi.orTexte;
-    } else {
-      bg = Tabibi.vertTresClair;
-      fg = Tabibi.vert;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Text(libelleStatut(langue, rdv['statut']),
-          style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w700)),
-    );
-  }
-
-  /// Etat vide soigne (icone + message centres).
-  Widget _vueVide(IconData icone, String texte) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icone, size: 44, color: Tabibi.texte4),
-            const SizedBox(height: 12),
-            Text(texte,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Tabibi.texteDoux)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _vueConnexion(BuildContext context) {
+  Widget _vueConnexion() {
     return VueConnexion(
-      icone: Icons.calendar_month_outlined,
-      titre: t(context, 'connexion.titreRdv'),
-      message: _erreur ?? t(context, 'rdv.connectezVous'),
+      message: _erreur ?? 'Connectez-vous pour consulter vos rendez-vous.',
       onSeConnecter: _seConnecter,
     );
   }

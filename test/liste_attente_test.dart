@@ -2,11 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/models/inscription_attente.dart';
 import 'package:tabibi_mobile/utils/liste_attente.dart';
 
-import 'outils.dart';
-
 void main() {
-  setUp(preparerTests);
-
   test("InscriptionAttente.fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final i = InscriptionAttente.fromJson({
       'id': 'aa77aa77-0000-4000-8000-000000000001',
@@ -39,10 +35,10 @@ void main() {
 
   test("dateInscription affiche la date d'inscription ou son absence", () {
     expect(
-      dateInscription('fr', InscriptionAttente.fromJson({'inscritLe': '2026-11-20T09:00:00'})),
+      dateInscription(InscriptionAttente.fromJson({'inscritLe': '2026-11-20T09:00:00'})),
       'Inscription le ven. 20 nov. 09:00',
     );
-    expect(dateInscription('fr', InscriptionAttente.fromJson({})), "Date d'inscription inconnue");
+    expect(dateInscription(InscriptionAttente.fromJson({})), "Date d'inscription inconnue");
   });
 
   test('trierParInscription place la plus ancienne en tete et les dates absentes en fin', () {

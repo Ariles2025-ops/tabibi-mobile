@@ -2,26 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/models/notification.dart';
 import 'package:tabibi_mobile/utils/notifications.dart';
 
-import 'outils.dart';
-
 void main() {
-  setUp(preparerTests);
-
   test("fromJson lit tous les champs de la vue renvoyee par l'API", () {
     final n = NotificationUtilisateur.fromJson({
       'id': 'b7f1e2c4-0000-4000-8000-000000000001',
       'destinataireId': 'a1a1a1a1-0000-4000-8000-000000000007',
       'canal': 'INTERNE',
-      'sujet': 'Rendez-vous confirme',
-      'message': 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.',
+      'sujet': 'Rendez-vous confirmé',
+      'message': 'Votre rendez-vous du 3 déc. 2026 09:00 est confirme.',
       'lue': false,
       'creeLe': '2026-12-01T18:00:00',
     });
     expect(n.id, 'b7f1e2c4-0000-4000-8000-000000000001');
     expect(n.destinataireId, 'a1a1a1a1-0000-4000-8000-000000000007');
     expect(n.canal, 'INTERNE');
-    expect(n.sujet, 'Rendez-vous confirme');
-    expect(n.message, 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.');
+    expect(n.sujet, 'Rendez-vous confirmé');
+    expect(n.message, 'Votre rendez-vous du 3 déc. 2026 09:00 est confirme.');
     expect(n.lue, isFalse);
     expect(n.creeLe, DateTime(2026, 12, 1, 18));
   });
@@ -68,10 +64,10 @@ void main() {
 
   test('dateNotification formate creeLe et signale une date absente', () {
     expect(
-      dateNotification('fr', NotificationUtilisateur.fromJson({'creeLe': '2026-12-03T10:15:00'})),
+      dateNotification(NotificationUtilisateur.fromJson({'creeLe': '2026-12-03T10:15:00'})),
       'jeu. 3 déc. 10:15',
     );
-    expect(dateNotification('fr', NotificationUtilisateur.fromJson({})), 'date inconnue');
+    expect(dateNotification(NotificationUtilisateur.fromJson({})), 'date inconnue');
   });
 
   test('trierParCreation place la plus recente en tete et les dates absentes en fin', () {
@@ -97,9 +93,8 @@ void main() {
 
   test("libelleNotifications ajoute le nombre de non lues seulement s'il est connu et positif",
       () {
-    expect(libelleNotifications('fr', null), 'Notifications');
-    expect(libelleNotifications('fr', 0), 'Notifications');
-    expect(libelleNotifications('fr', 3), 'Notifications (3)');
-    expect(libelleNotifications('ar', 3), 'الإشعارات (3)');
+    expect(libelleNotifications(null), 'Notifications');
+    expect(libelleNotifications(0), 'Notifications');
+    expect(libelleNotifications(3), 'Notifications (3)');
   });
 }

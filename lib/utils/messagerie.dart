@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../i18n/traductions.dart' as i18n;
 import '../models/conversation.dart';
 import '../models/message.dart';
 import 'dates.dart';
@@ -13,39 +12,33 @@ import 'dates.dart';
 bool estDeMoi(Message message, String? moi) =>
     moi != null && moi.isNotEmpty && message.auteurId == moi;
 
-/// Alignement de la bulle : du cote de la fin de ligne pour mes messages, du cote du debut
-/// pour ceux du praticien. L'alignement est directionnel : il suit la langue (a droite en
-/// francais et en anglais, a gauche en arabe, qui s'ecrit de droite a gauche).
-AlignmentDirectional alignementMessage(Message message, String? moi) =>
-    estDeMoi(message, moi) ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart;
+/// Alignement de la bulle : a droite pour mes messages, a gauche pour ceux du praticien.
+Alignment alignementMessage(Message message, String? moi) =>
+    estDeMoi(message, moi) ? Alignment.centerRight : Alignment.centerLeft;
 
-/// Date d'envoi formatee (« jeu. 4 déc. 09:00 ») ; « date inconnue » si absente.
-String dateMessage(String langue, Message message) {
+/// Date d'envoi formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
+String dateMessage(Message message) {
   final envoyeLe = message.envoyeLe;
-  return envoyeLe == null
-      ? i18n.traduire(langue, 'commun.dateInconnue')
-      : formaterDateHeure(langue, envoyeLe);
+  return envoyeLe == null ? 'date inconnue' : formaterDateHeure(envoyeLe);
 }
 
-/// Activite d'une conversation : « Dernier message le jeu. 4 déc. 09:00 », sinon
+/// Activite d'une conversation : « Dernier message le jeu. 4 dec. 09:00 », sinon
 /// « Ouverte le ... » (date d'ouverture), sinon « Aucun message ».
-String libelleActivite(String langue, Conversation conversation) {
+String libelleActivite(Conversation conversation) {
   final dernierMessageLe = conversation.dernierMessageLe;
   if (dernierMessageLe != null) {
-    return i18n.traduire(langue, 'messagerie.dernierMessageLe',
-        params: {'date': formaterDateHeure(langue, dernierMessageLe)});
+    return 'Dernier message le ${formaterDateHeure(dernierMessageLe)}';
   }
   final creeLe = conversation.creeLe;
-  if (creeLe != null) {
-    return i18n.traduire(langue, 'messagerie.ouverteLe',
-        params: {'date': formaterDateHeure(langue, creeLe)});
-  }
-  return i18n.traduire(langue, 'messagerie.aucunMessage');
+  if (creeLe != null) return 'Ouverte le ${formaterDateHeure(creeLe)}';
+  return 'Aucun message';
 }
 
 /// Pastille textuelle des non lus : « 1 non lu », « 3 non lus » ; chaine vide sans non lu.
-String libelleNonLus(String langue, int nonLus) =>
-    nonLus <= 0 ? '' : i18n.traduirePluriel(langue, 'messagerie.nonLus', nonLus);
+String libelleNonLus(int nonLus) {
+  if (nonLus <= 0) return '';
+  return nonLus == 1 ? '1 non lu' : '$nonLus non lus';
+}
 
 /// Copie triee de l'activite la plus recente a la plus ancienne ([Conversation.derniereActivite]) ;
 /// les conversations sans date sont placees en fin de liste.

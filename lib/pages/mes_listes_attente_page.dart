@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/inscription_attente.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
-import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
 import '../utils/liste_attente.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+
+/// Message affiche apres le retrait d'une liste d'attente.
+const String messageRetrait = "Retrait de la liste d'attente effectué.";
 
 /// Listes d'attente du patient connecte : une carte par inscription avec le praticien (nom
 /// via `GET /api/medecins/{id}`, ou « Médecin » et l'identifiant abrege) et la date
@@ -29,8 +29,6 @@ class MesListesAttentePage extends StatefulWidget {
 
 class _MesListesAttentePageState extends State<MesListesAttentePage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
-  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<InscriptionAttente> _inscriptions = [];
 
   /// Noms des praticiens deja resolus, par identifiant (texte).
@@ -53,7 +51,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -65,7 +63,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
       _erreur = null;
     });
     try {
-      final inscriptions = await _patient.mesInscriptionsAttente();
+      final inscriptions = await widget.api.mesInscriptionsAttente(token);
       final triees = trierParInscription(inscriptions.map(InscriptionAttente.fromJson).toList());
       await _chargerNomsMedecins(triees);
       if (!mounted) return;
@@ -74,9 +72,9 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -89,7 +87,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     for (final medecinId in inscriptions.map((i) => i.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await _prat.parId(medecinId))?['nomComplet'];
+        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
         // Fiche indisponible : libelle de repli ([libelleMedecin]).
@@ -97,8 +95,8 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     }
   }
 
-  String _nomMedecin(BuildContext context, InscriptionAttente i) =>
-      _nomsMedecins[i.medecinId] ?? libelleMedecin(langueDe(context), i.medecinId);
+  String _nomMedecin(InscriptionAttente i) =>
+      _nomsMedecins[i.medecinId] ?? libelleMedecin(i.medecinId);
 
   /// Retire l'inscription apres confirmation (POST /api/liste-attente/{id}/retirer) ; une
   /// inscription deja disparue cote serveur (404) est aussi retiree de la liste.
@@ -106,40 +104,38 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t(ctx, 'attente.retirerQuestion')),
-        content: Text(t(ctx, 'attente.retirerDetail', params: {
-          'medecin': _nomMedecin(ctx, i),
-        })),
+        title: const Text("Vous retirer de cette liste d'attente ?"),
+        content: Text('${_nomMedecin(i)}\nVous ne serez plus notifié des créneaux libérés.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t(ctx, 'commun.non')),
+            child: const Text('Non'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(t(ctx, 'attente.ouiRetirer')),
+            child: const Text('Oui, me retirer'),
           ),
         ],
       ),
     );
-    if (confirme != true || _enCours != null || !mounted) return;
+    if (confirme != true || _enCours != null) return;
     final token = _auth.accessToken;
     if (token == null) return;
     setState(() => _enCours = i.id);
     var retiree = false;
     try {
-      await _patient.retirerListeAttente(i.id);
+      await widget.api.retirerListeAttente(i.id, token);
       retiree = true;
-      if (mounted) _message(t(context, 'attente.retrait'));
+      _message(messageRetrait);
     } on ApiException catch (e) {
       if (e.introuvable) {
         retiree = true; // deja retiree cote serveur
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
       }
-      if (mounted) _message(messageApi(context, e));
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) {
         setState(() {
@@ -159,11 +155,11 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'attente.titre')),
+        title: const Text("Mes listes d'attente"),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -176,7 +172,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? t(context, 'attente.connectezVous'),
+        message: _erreur ?? "Connectez-vous pour consulter vos listes d'attente.",
         onSeConnecter: _seConnecter,
       );
     }
@@ -184,10 +180,15 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_inscriptions.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(t(context, 'attente.aucune'), textAlign: TextAlign.center),
+          padding: EdgeInsets.all(24),
+          child: Text(
+            "Aucune inscription sur une liste d'attente. Inscrivez-vous depuis la fiche d'un "
+            "médecin dont aucun créneau n'est disponible : vous serez notifié dès qu'un "
+            'créneau se libère.',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
@@ -204,8 +205,8 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: const Icon(Icons.hourglass_top_outlined),
-        title: Text(_nomMedecin(context, i)),
-        subtitle: Text(dateInscription(langueDe(context), i)),
+        title: Text(_nomMedecin(i)),
+        subtitle: Text(dateInscription(i)),
         trailing: enCours
             ? const SizedBox(
                 width: 18,
@@ -214,7 +215,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
               )
             : TextButton(
                 onPressed: _enCours == null ? () => _retirer(i) : null,
-                child: Text(t(context, 'attente.retirer')),
+                child: const Text('Me retirer'),
               ),
       ),
     );

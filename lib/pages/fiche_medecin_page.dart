@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
+import '../utils/praticien.dart';
 import '../models/avis.dart';
 import '../models/conversation.dart';
 import '../models/synthese_avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import '../services/patient_supabase.dart';
-import '../services/praticiens_supabase.dart';
 import '../services/session.dart';
-import '../services/supabase_service.dart';
-import '../theme/theme_tabibi.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
-import '../utils/libelles.dart';
 import '../widgets/vue_erreur.dart';
-import 'connexion_page.dart';
 import 'conversation_page.dart';
+
+/// Message affiche quand le patient n'a aucun rendez-vous avec le praticien (403).
+const String messageConversationRefusee =
+    'Vous devez avoir un rendez-vous avec ce médecin pour lui écrire.';
 
 /// Nombre de derniers avis affiches sur la fiche.
 const int nombreAvisAffiches = 5;
+
+/// Ce que promet la liste d'attente : une notification des qu'un creneau se libere.
+const String texteListeAttente = "Vous serez notifié dès qu'un créneau se libère.";
+
+/// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
+const String messageDejaInscrit = 'Vous êtes déjà inscrit sur cette liste.';
+
+/// Etat affiche a la place du bouton une fois le patient inscrit.
+const String texteInscrit = "Vous êtes inscrit sur la liste d'attente de ce médecin.";
 
 /// Fiche d'un praticien : informations, moyenne des avis, ouverture d'une conversation,
 /// creneaux reservables, inscription sur la liste d'attente et derniers avis anonymes.
@@ -45,13 +52,8 @@ class FicheMedecinPage extends StatefulWidget {
 
 class _FicheMedecinPageState extends State<FicheMedecinPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PraticiensSupabase _prat = const PraticiensSupabase();
-  final PatientSupabase _patient = const PatientSupabase();
   Map<String, dynamic>? _medecin;
   List<Map<String, dynamic>> _creneaux = [];
-  DateTime _jour = DateTime.now();
-  bool _chargeCreneaux = false;
-  bool _agendaConfigure = true;
 
   /// Synthese publique des avis ; null tant qu'elle est indisponible.
   SyntheseAvis? _avis;
@@ -82,180 +84,27 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       _erreur = null;
     });
     try {
-      final medecin = await _prat.parId(widget.medecinId);
-      if (medecin == null) {
-        if (mounted) setState(() => _erreur = 'Praticien introuvable.');
-        return;
-      }
-      final creneaux = await _chargerCreneaux();
+      final medecin = await widget.api.medecin(widget.medecinId);
+      final creneaux = await widget.api.creneaux(widget.medecinId);
       final avis = await _chargerAvis();
-      final agenda = await _agendaEstConfigure();
       if (!mounted) return;
       setState(() {
         _medecin = medecin;
-        _creneaux = creneaux;
+        _creneaux = creneaux.where((c) => c['disponible'] != false).toList();
         _avis = avis;
-        _agendaConfigure = agenda;
       });
-    } catch (_) {
-      if (mounted) setState(() => _erreur = 'Fiche momentanément indisponible.');
+    } on Exception catch (e) {
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
-  }
-
-  /// Creneaux reservables du jour via Supabase (`get_available_slots`).
-  /// Vide tant que le praticien n'a pas de planning : la fiche reste consultable.
-  Future<List<Map<String, dynamic>>> _chargerCreneaux() async {
-    try {
-      final n = _jour;
-      final d = '${n.year.toString().padLeft(4, '0')}-'
-          '${n.month.toString().padLeft(2, '0')}-'
-          '${n.day.toString().padLeft(2, '0')}';
-      final r = await sb.rpc('get_available_slots',
-          params: {'p_doctor_id': widget.medecinId, 'p_date': d});
-      final rows = (r as List?) ?? const [];
-      return rows.map((e) {
-        final m = e as Map;
-        final debut = m['slot_start']?.toString() ?? '';
-        final fin = m['slot_end']?.toString() ?? '';
-        int duree = 30;
-        try {
-          duree = DateTime.parse(fin).difference(DateTime.parse(debut)).inMinutes;
-        } catch (_) {}
-        return <String, dynamic>{
-          'id': debut,
-          'debut': debut,
-          'disponible': true,
-          'dureeMinutes': duree,
-        };
-      }).where((c) {
-        try {
-          return DateTime.parse(c['debut'] as String)
-              .toLocal()
-              .isAfter(DateTime.now().add(const Duration(minutes: 15)));
-        } catch (_) {
-          return true;
-        }
-      }).toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  /// Vrai si le praticien a configuré des horaires d'ouverture (sinon aucun
-  /// créneau ne sera jamais proposé : on l'indique clairement au patient).
-  Future<bool> _agendaEstConfigure() async {
-    try {
-      final r = await sb
-          .from('public_doctors')
-          .select('working_hours')
-          .eq('id', widget.medecinId)
-          .maybeSingle();
-      final wh = r == null ? null : (r as Map)['working_hours'];
-      if (wh is Map) return wh.isNotEmpty;
-      return wh != null;
-    } catch (_) {
-      return true; // en cas de doute, ne pas afficher de message alarmant
-    }
-  }
-
-  /// Recharge les creneaux pour le jour choisi.
-  Future<void> _changerJour(DateTime d) async {
-    setState(() {
-      _jour = DateTime(d.year, d.month, d.day);
-      _chargeCreneaux = true;
-    });
-    final c = await _chargerCreneaux();
-    if (!mounted) return;
-    setState(() {
-      _creneaux = c;
-      _chargeCreneaux = false;
-    });
-  }
-
-  /// Calendrier complet (jusqu'a 90 jours = ~3 mois).
-  Future<void> _ouvrirCalendrier() async {
-    final now = DateTime.now();
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _jour,
-      firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: now.add(const Duration(days: 90)),
-      helpText: t(context, 'fiche.creneaux'),
-    );
-    if (d != null) await _changerJour(d);
-  }
-
-  /// Bande horizontale des 30 prochains jours + bouton calendrier (mois suivants).
-  Widget _selecteurDates(BuildContext context) {
-    const jSem = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    const mois = ['', 'janv', 'fevr', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sept', 'oct', 'nov', 'dec'];
-    final now = DateTime.now();
-    final jours = [for (int i = 0; i < 30; i++) DateTime(now.year, now.month, now.day + i)];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${jSem[_jour.weekday - 1]} ${_jour.day} ${mois[_jour.month]} ${_jour.year}',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Tabibi.ink),
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _ouvrirCalendrier,
-              icon: const Icon(Icons.calendar_month, size: 18, color: Tabibi.vert),
-              label: const Text('Calendrier', style: TextStyle(color: Tabibi.vert)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 66,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: jours.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final j = jours[i];
-              final sel = j.year == _jour.year && j.month == _jour.month && j.day == _jour.day;
-              return InkWell(
-                onTap: () => _changerJour(j),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 52,
-                  decoration: BoxDecoration(
-                    color: sel ? Tabibi.vert : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: sel ? Tabibi.vert : Tabibi.bord),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(jSem[j.weekday - 1],
-                          style: TextStyle(fontSize: 11, color: sel ? Colors.white : Tabibi.texteDoux)),
-                      const SizedBox(height: 2),
-                      Text('${j.day}',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: sel ? Colors.white : Tabibi.ink)),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
   }
 
   /// Synthese publique des avis (GET /api/medecins/{id}/avis) ; un echec n'empeche pas
   /// l'affichage de la fiche, la section indique alors que les avis sont indisponibles.
   Future<SyntheseAvis?> _chargerAvis() async {
     try {
-      return SyntheseAvis.fromJson(await _patient.avisDuMedecin(widget.medecinId));
+      return SyntheseAvis.fromJson(await widget.api.avisDuMedecin(widget.medecinId));
     } on Exception {
       return null;
     }
@@ -263,53 +112,37 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   Future<void> _reserver(Map<String, dynamic> creneau) async {
     final creneauId = identifiant(creneau['id']);
-    final debut = creneau['debut']?.toString();
-    if (creneauId.isEmpty || debut == null || debut.isEmpty) return;
-    // Connexion Supabase requise pour reserver.
-    if (sb.auth.currentSession == null) {
-      await Navigator.of(context).push(
-          MaterialPageRoute<bool>(builder: (_) => const ConnexionPage()));
+    if (creneauId.isEmpty) return;
+    if (!_auth.estConnecte) {
+      final ok = await _auth.seConnecter();
       if (!mounted) return;
-      if (sb.auth.currentSession == null) {
-        _message(t(context, 'fiche.connexionReserver'));
+      if (!ok) {
+        _message('Connexion necessaire pour reserver');
         return;
       }
     }
-    if (!mounted) return;
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t(context, 'fiche.confirmerRdvTitre')),
-        content: Text(formaterDateIso(langueDe(context), debut)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(t(context, 'fiche.confirmerRdvNon'))),
-          FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Tabibi.vert),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(t(context, 'fiche.confirmerRdvOui'))),
-        ],
-      ),
-    );
-    if (confirme != true || !mounted) return;
+    final token = _auth.accessToken;
+    if (token == null) return;
     setState(() => _enCours = creneauId);
     try {
-      await sb.from('appointments').insert({
-        'patient_id': sb.auth.currentUser!.id,
-        'doctor_id': widget.medecinId,
-        'scheduled_at': debut,
-        'duration_minutes': creneau['dureeMinutes'] ?? 30,
-      });
+      await widget.api.reserverCreneau(creneauId, token);
       if (!mounted) return;
       setState(() => _retirerCreneau(creneauId));
-      _message(t(context, 'fiche.rdvConfirme'));
-    } catch (_) {
-      if (mounted) {
-        // Le creneau vient d'etre pris, ou reservation refusee : on le retire.
+      _message('Rendez-vous confirmé');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.conflit) {
+        // Pris entre-temps par un autre patient : il n'est plus reservable.
         setState(() => _retirerCreneau(creneauId));
-        _message('Réservation impossible (créneau déjà pris ou indisponible).');
+        _message("Ce creneau vient d'etre pris");
+      } else if (e.nonAutorise) {
+        _auth.seDeconnecter();
+        _message('Session expirée : reconnectez-vous puis réessayez');
+      } else {
+        _message(e.message);
       }
+    } on Exception catch (e) {
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _enCours = null);
     }
@@ -322,13 +155,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Ouvre (ou retrouve) la conversation avec ce praticien (POST /api/conversations),
   /// connexion Keycloak a la volee si necessaire, puis affiche le fil ; 403 si le patient
-  /// n'a aucun rendez-vous avec lui (« fiche.conversationRefusee »).
+  /// n'a aucun rendez-vous avec lui ([messageConversationRefusee]).
   Future<void> _ouvrirConversation() async {
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message(t(context, 'fiche.connexionEcrire'));
+        _message('Connexion nécessaire pour écrire au médecin');
         return;
       }
     }
@@ -338,20 +171,19 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     Conversation? conversation;
     try {
       conversation = Conversation.fromJson(
-        await _patient.ouvrirConversation(widget.medecinId),
+        await widget.api.ouvrirConversation(widget.medecinId, token),
       );
     } on ApiException catch (e) {
-      if (!mounted) return;
       if (e.interdit) {
-        _message(t(context, 'fiche.conversationRefusee'));
+        _message(messageConversationRefusee);
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message(t(context, 'commun.sessionExpiree'));
+        _message('Session expirée : reconnectez-vous puis réessayez');
       } else {
-        _message(messageApi(context, e));
+        _message(e.message);
       }
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _conversationEnCours = false);
     }
@@ -373,13 +205,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Inscrit le patient sur la liste d'attente du praticien
   /// (POST /api/medecins/{id}/liste-attente), connexion Keycloak a la volee si necessaire ;
-  /// 409 (deja inscrit) -> « fiche.dejaInscrit », l'etat passe a inscrit dans les deux cas.
+  /// 409 (deja inscrit) -> [messageDejaInscrit], l'etat passe a inscrit dans les deux cas.
   Future<void> _inscrire() async {
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message(t(context, 'fiche.connexionInscrire'));
+        _message("Connexion nécessaire pour s'inscrire sur la liste d'attente");
         return;
       }
     }
@@ -388,25 +220,21 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     setState(() => _inscriptionEnCours = true);
     var inscrit = false;
     try {
-      await _patient.inscrireListeAttente(widget.medecinId);
+      await widget.api.inscrireListeAttente(widget.medecinId, token);
       inscrit = true;
-      if (!mounted) return;
-      _message(t(context, 'fiche.inscriptionEnregistree', params: {
-        'texte': t(context, 'fiche.texteListeAttente'),
-      }));
+      _message('Inscription enregistrée. $texteListeAttente');
     } on ApiException catch (e) {
-      if (!mounted) return;
       if (e.conflit) {
         inscrit = true;
-        _message(t(context, 'fiche.dejaInscrit'));
+        _message(messageDejaInscrit);
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message(t(context, 'commun.sessionExpiree'));
+        _message('Session expirée : reconnectez-vous puis réessayez');
       } else {
-        _message(messageApi(context, e));
+        _message(e.message);
       }
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) {
         setState(() {
@@ -425,7 +253,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t(context, 'fiche.titre'))),
+      appBar: AppBar(title: const Text('Fiche médecin')),
       body: _corps(context),
     );
   }
@@ -435,239 +263,44 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     final erreur = _erreur;
     final medecin = _medecin;
     if (erreur != null || medecin == null) {
-      return VueErreur(
-        message: erreur ?? t(context, 'fiche.introuvable'),
-        onReessayer: _charger,
-      );
+      return VueErreur(message: erreur ?? 'Médecin introuvable', onReessayer: _charger);
     }
+    final texte = Theme.of(context).textTheme;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _enteteMedecin(context, medecin),
+        Text(medecin['nomComplet'] as String, style: texte.titleLarge),
+        const SizedBox(height: 4),
+        Text(sousTitrePraticien(medecin)),
+        const SizedBox(height: 8),
+        _ligneMoyenne(context),
         const SizedBox(height: 16),
-        _infosPratiques(context, medecin),
-        _boutonConversation(context),
+        _boutonConversation(),
         const SizedBox(height: 24),
-        _titreSection(t(context, 'fiche.creneaux')),
-        const SizedBox(height: 10),
-        _selecteurDates(context),
-        if (_chargeCreneaux)
-          const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator(color: Tabibi.vert)))
-        else if (_creneaux.isEmpty)
-          _infoVide(_agendaConfigure
-              ? t(context, 'fiche.aucunCreneau')
-              : 'Cet agenda n\'est pas encore configuré par le praticien.')
-        else
-          ...[for (final c in _creneaux) _creneauTile(context, c)],
+        Text('Créneaux disponibles', style: texte.titleMedium),
+        const SizedBox(height: 8),
+        if (_creneaux.isEmpty) const Text('Aucun créneau disponible pour le moment.'),
+        for (final c in _creneaux) _creneauTile(c),
         const SizedBox(height: 24),
         _listeAttente(context),
         const SizedBox(height: 24),
-        _titreSection(t(context, 'fiche.avisPatients')),
-        const SizedBox(height: 10),
+        Text('Avis des patients', style: texte.titleMedium),
+        const SizedBox(height: 8),
         ..._derniersAvis(context),
       ],
     );
   }
 
-  /// En-tete praticien facon Doctolib : avatar, nom, specialite/ville, note.
-  Widget _enteteMedecin(BuildContext context, Map<String, dynamic> medecin) {
-    final texte = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Tabibi.surface,
-        borderRadius: BorderRadius.circular(Tabibi.r16),
-        border: Border.all(color: Tabibi.bord),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AvatarInitiales(medecin['nomComplet'] as String, taille: 60),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(medecin['nomComplet'] as String,
-                    style: texte.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800, color: Tabibi.texte)),
-                const SizedBox(height: 4),
-                Text(
-                  medecinSousTitre(medecin),
-                  style: const TextStyle(color: Tabibi.texteDoux),
-                ),
-                const SizedBox(height: 8),
-                _ligneMoyenne(context, medecin),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Carte « Infos pratiques » : note, type, langues, paiement, teleconsultation
-  /// (masquee si rien a afficher). Alimentee par les vraies donnees Supabase.
-  Widget _infosPratiques(BuildContext context, Map<String, dynamic> m) {
-    final note = m['note'];
-    final avis = (m['nombreAvis'] as num?)?.toInt() ?? 0;
-    final langues = (m['langues'] as List?)
-            ?.whereType<String>()
-            .map(_labelLangue)
-            .where((v) => v.isNotEmpty)
-            .toList() ??
-        const <String>[];
-    final paiements = <String>[
-      if (m['accepteChifa'] == true) t(context, 'fiche.chifa'),
-      if (m['accepteCarte'] == true) t(context, 'fiche.carte'),
-      if (m['accepteEspeces'] == true) t(context, 'fiche.especes'),
-    ];
-    final type = _labelType(context, m['typeEntite']?.toString());
-
-    final lignes = <Widget>[];
-    if (note is num) {
-      final noteTxt = avis > 0
-          ? '${note.toStringAsFixed(1)} · ${t(context, 'fiche.avisN', params: {'n': avis})}'
-          : note.toStringAsFixed(1);
-      lignes.add(_ligneInfo(Icons.star_rounded, Tabibi.or, noteTxt));
-    }
-    if (type != null) {
-      lignes.add(_ligneInfo(Icons.local_hospital_outlined, Tabibi.vert, type));
-    }
-    if (langues.isNotEmpty) {
-      lignes.add(_ligneChips(Icons.translate, langues));
-    }
-    if (paiements.isNotEmpty) {
-      lignes.add(_ligneChips(Icons.payments_outlined, paiements));
-    }
-    if (m['teleconsultation'] == true) {
-      lignes.add(_ligneInfo(
-          Icons.videocam_outlined, Tabibi.vert, t(context, 'fiche.teleDispo')));
-    }
-    if (lignes.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Tabibi.surface,
-          borderRadius: BorderRadius.circular(Tabibi.r16),
-          border: Border.all(color: Tabibi.bord),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (int i = 0; i < lignes.length; i++) ...[
-              if (i > 0) const SizedBox(height: 12),
-              lignes[i],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _ligneInfo(IconData icone, Color couleur, String texte) {
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icone, size: 18, color: couleur),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(texte,
-            style: const TextStyle(
-                color: Tabibi.texte, fontWeight: FontWeight.w600)),
-      ),
-    ]);
-  }
-
-  Widget _ligneChips(IconData icone, List<String> valeurs) {
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icone, size: 18, color: Tabibi.texte3),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Wrap(spacing: 6, runSpacing: 6, children: [
-          for (final v in valeurs)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                  color: Tabibi.pastille,
-                  borderRadius: BorderRadius.circular(999)),
-              child: Text(v,
-                  style: const TextStyle(
-                      color: Tabibi.vertFonce,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-            ),
-        ]),
-      ),
-    ]);
-  }
-
-  /// Type d'etablissement en francais ; null pour un medecin ordinaire (deja implicite).
-  String? _labelType(BuildContext context, String? brut) {
-    if (brut == null || brut.trim().isEmpty) return null;
-    const cles = {
-      'dentist': 'fiche.typeDentiste',
-      'clinic': 'fiche.typeClinique',
-      'hospital': 'fiche.typeHopital',
-      'optician': 'fiche.typeOpticien',
-      'pharmacy': 'fiche.typePharmacie',
-      'lab': 'fiche.typeLabo',
-      'laboratory': 'fiche.typeLabo',
-      'health_center': 'fiche.typeCentre',
-      'midwife': 'fiche.typeSageFemme',
-      'physiotherapist': 'fiche.typeKine',
-    };
-    final cle = cles[brut.toLowerCase()];
-    return cle == null ? null : t(context, cle);
-  }
-
-  String _labelLangue(String code) {
-    const map = {
-      'fr': 'Français',
-      'ar': 'العربية',
-      'en': 'English',
-      'ber': 'Tamazight',
-      'kab': 'Tamazight',
-      'es': 'Español',
-    };
-    return map[code.toLowerCase()] ?? code;
-  }
-
-  Widget _titreSection(String titre) {
-    return Text(titre,
-        style: const TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink));
-  }
-
-  Widget _infoVide(String texte) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Tabibi.bg2,
-        borderRadius: BorderRadius.circular(Tabibi.r12),
-      ),
-      child: Text(texte, style: const TextStyle(color: Tabibi.texteDoux)),
-    );
-  }
-
   /// « 4,5 / 5 (12 avis) » (ou « Aucun avis »), precede d'une etoile ; masquee si la
   /// synthese est indisponible.
-  Widget _ligneMoyenne(BuildContext context, Map<String, dynamic> medecin) {
-    final note = medecin['note'];
-    if (note is! num) return const SizedBox.shrink();
-    final nb = (medecin['nombreAvis'] as num?)?.toInt() ?? 0;
-    final txt = nb > 0
-        ? '${note.toStringAsFixed(1)} · ${t(context, 'fiche.avisN', params: {'n': nb})}'
-        : t(context, 'fiche.aucunAvis');
+  Widget _ligneMoyenne(BuildContext context) {
+    final avis = _avis;
+    if (avis == null) return const SizedBox.shrink();
     return Row(
       children: [
         Icon(Icons.star, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 4),
-        Text(txt, style: Theme.of(context).textTheme.bodyMedium),
+        Text(formaterMoyenne(avis), style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }
@@ -675,14 +308,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// Derniers avis anonymes (note, commentaire, date), ou un texte d'etat.
   List<Widget> _derniersAvis(BuildContext context) {
     final avis = _avis;
-    if (avis == null) return [Text(t(context, 'fiche.avisIndisponibles'))];
-    if (!avis.aDesAvis || avis.avis.isEmpty) return [Text(t(context, 'fiche.aucunAvis'))];
+    if (avis == null) return const [Text('Avis indisponibles pour le moment.')];
+    if (!avis.aDesAvis || avis.avis.isEmpty) return const [Text('Aucun avis pour le moment.')];
     return [for (final a in avis.avis.take(nombreAvisAffiches)) _carteAvis(context, a)];
   }
 
   /// Un avis anonyme : « 4 / 5 », commentaire s'il existe, date de depot.
   Widget _carteAvis(BuildContext context, Avis a) {
-    final langue = langueDe(context);
     final texte = Theme.of(context).textTheme;
     final commentaire = a.commentaire;
     return Card(
@@ -696,7 +328,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
               children: [
                 const Icon(Icons.star_outline, size: 18),
                 const SizedBox(width: 4),
-                Text(formaterNote(langue, a.note), style: texte.titleSmall),
+                Text(formaterNote(a.note), style: texte.titleSmall),
               ],
             ),
             if (commentaire != null) ...[
@@ -704,7 +336,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
               Text(commentaire),
             ],
             const SizedBox(height: 4),
-            Text(dateAvis(langue, a), style: texte.bodySmall),
+            Text(dateAvis(a), style: texte.bodySmall),
           ],
         ),
       ),
@@ -713,21 +345,21 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Liste d'attente, surtout utile quand aucun creneau n'est disponible : rappel de ce
   /// qu'elle promet, puis bouton « M'inscrire sur la liste d'attente » ou, une fois inscrit,
-  /// texte d'etat.
+  /// texte d'etat ([texteInscrit]).
   Widget _listeAttente(BuildContext context) {
     final texte = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t(context, 'fiche.listeAttente'), style: texte.titleMedium),
+        Text("Liste d'attente", style: texte.titleMedium),
         const SizedBox(height: 4),
-        Text(t(context, 'fiche.texteListeAttente'), style: texte.bodySmall),
+        Text(texteListeAttente, style: texte.bodySmall),
         const SizedBox(height: 8),
         if (_inscrit)
-          Text(t(context, 'fiche.inscrit'))
+          const Text(texteInscrit)
         else
           Align(
-            alignment: AlignmentDirectional.centerStart,
+            alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(
               onPressed: _inscriptionEnCours ? null : _inscrire,
               icon: _inscriptionEnCours
@@ -737,17 +369,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.hourglass_top_outlined),
-              label: Text(t(context, 'fiche.inscrire')),
+              label: const Text("M'inscrire sur la liste d'attente"),
             ),
           ),
       ],
     );
   }
 
-  /// « Ouvrir une conversation » (messagerie avec ce praticien), aligne du cote du debut.
-  Widget _boutonConversation(BuildContext context) {
+  /// « Ouvrir une conversation » (messagerie avec ce praticien), aligne a gauche.
+  Widget _boutonConversation() {
     return Align(
-      alignment: AlignmentDirectional.centerStart,
+      alignment: Alignment.centerLeft,
       child: OutlinedButton.icon(
         onPressed: _conversationEnCours ? null : _ouvrirConversation,
         icon: _conversationEnCours
@@ -757,56 +389,27 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.chat_bubble_outline),
-        label: Text(t(context, 'fiche.ouvrirConversation')),
+        label: const Text('Ouvrir une conversation'),
       ),
     );
   }
 
-  Widget _creneauTile(BuildContext context, Map<String, dynamic> creneau) {
+  Widget _creneauTile(Map<String, dynamic> creneau) {
     final enCours = _enCours == identifiant(creneau['id']);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Tabibi.surface,
-        borderRadius: BorderRadius.circular(Tabibi.r12),
-        border: Border.all(color: Tabibi.bord),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration:
-                const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
-            child: const Icon(Icons.schedule, size: 20, color: Tabibi.vert),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(formaterDateIso(langueDe(context), creneau['debut'] as String),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, color: Tabibi.texte)),
-                Text(t(context, 'fiche.duree', params: {'n': creneau['dureeMinutes']}),
-                    style: const TextStyle(color: Tabibi.texte3, fontSize: 13)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          FilledButton(
-            onPressed: _enCours == null ? () => _reserver(creneau) : null,
-            child: enCours
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(t(context, 'fiche.reserver')),
-          ),
-        ],
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.schedule),
+      title: Text(formaterDateIso(creneau['debut'] as String)),
+      subtitle: Text('${creneau['dureeMinutes']} min'),
+      trailing: FilledButton(
+        onPressed: _enCours == null ? () => _reserver(creneau) : null,
+        child: enCours
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Réserver'),
       ),
     );
   }

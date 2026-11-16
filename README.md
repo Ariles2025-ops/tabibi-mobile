@@ -51,37 +51,13 @@ doit etre declare dans les projets natifs (`appAuthRedirectScheme` sur Android, 
 sur iOS), voir la documentation de `flutter_appauth`. Les tests (`flutter test`) s'executent sans
 `--dart-define` et verifient les valeurs par defaut (`test/configuration_test.dart`).
 
-## Langues
-L'interface existe en **francais**, en **arabe** (de droite a gauche) et en **anglais**.
-Aucune generation de code (pas de `flutter gen-l10n`) : les libelles vivent dans des cartes
-Dart, `lib/i18n/traductions.dart` (`Map<String, Map<String, String>>`, memes cles pour les
-trois langues, un test le verifie) ; un ecran affiche `t(context, 'cle')`, jamais un texte en
-dur (`tool/verifier_libelles.py` le controle).
-
-- Langue de depart : celle que l'utilisateur a choisie (memorisee avec `shared_preferences`),
-  sinon celle du telephone (`ar` -> arabe, `en` -> anglais, tout le reste -> francais), sinon
-  celle du profil enregistre sur le serveur (`GET /api/moi/profil`), qui ne s'applique que
-  tant qu'aucun choix explicite n'a ete fait.
-- Changer de langue : entree « Langue » sur l'accueil (Français / العربية / English). Le choix
-  s'applique aussitot a toute l'application et est memorise sur le telephone.
-- Droite a gauche : `MaterialApp` recoit `locale`, `supportedLocales` (fr, ar, en) et les
-  `localizationsDelegates` de `flutter_localizations` ; la direction d'ecriture (RTL en arabe)
-  et les widgets Material (selecteur de date, champs de saisie) suivent donc la langue. Les
-  mises en page utilisent des alignements directionnels (`AlignmentDirectional`), par exemple
-  les bulles de la messagerie, alignees du cote de la fin de ligne pour mes messages.
-- Dates : `intl` (`DateFormat`), avec `initializeDateFormatting` au demarrage et la locale de
-  la langue courante (`fr`, `en`, `ar_DZ` pour l'arabe algerien : « جانفي », « فيفري »...).
-- Ajouter une langue : ajouter son code a `languesInterface`, son nom a `nomsLangues` et un
-  dictionnaire complet dans `traductions.dart` (le test `test/i18n_test.dart` refuse une cle
-  manquante) ; l'API, elle, accepte aussi `kab` (kabyle), pas encore traduit dans l'interface.
-
 ## Note plateforme
 Les projets natifs `ios/` et `android/` se generent avec `flutter create .`
 (non versionnes ici pour rester leger). L'essentiel — code, auth, API, test — est present.
 Pour Android, `tool/preparer_android.sh` genere le projet s'il manque et y applique la
 configuration Tabibi (identifiant `dz.tabibi.app`, schema de redirection OAuth exige par
-`flutter_appauth`, requetes `<queries>` https pour `url_launcher` et PDF pour `open_filex`) ; il
-est relancable sans effet de bord et sert aussi a la CI. Pour iOS, voir « Publication ».
+`flutter_appauth`, requete `<queries>` https pour `url_launcher`) ; il est relancable sans effet
+de bord et sert aussi a la CI. Pour iOS, voir « Publication ».
 
 ## Integration continue
 `.github/workflows/ci.yml` (GitHub Actions) s'execute a chaque `push` et `pull_request` :
@@ -95,8 +71,8 @@ Une execution en cours est annulee par un nouvel envoi sur la meme branche.
 ## Publication
 Identifiant d'application sur les deux stores : `dz.tabibi.app` (aussi schema de l'URI de
 redirection OAuth). Avant toute publication :
-- `pubspec.yaml` : `version: 0.15.0+1` donne `versionName` / `CFBundleShortVersionString`
-  (`0.15.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
+- `pubspec.yaml` : `version: 0.13.0+1` donne `versionName` / `CFBundleShortVersionString`
+  (`0.13.0`) et `versionCode` / `CFBundleVersion` (`1`) ; incrementer le numero apres `+` a
   chaque envoi sur un store (et la version a chaque livraison fonctionnelle).
 - Construire avec les valeurs de production (`--dart-define`, voir « Configuration ») : API et
   Keycloak en HTTPS, jamais les adresses de developpement.
@@ -111,9 +87,8 @@ redirection OAuth). Avant toute publication :
 
 ### Android (Google Play)
 1. Projet natif : `tool/preparer_android.sh` (genere `android/` et applique l'identifiant, le
-   schema de redirection et les requetes https et PDF). Une fois configure, le dossier
-   `android/` peut etre versionne ; `key.properties` et le keystore ne le sont jamais
-   (`.gitignore`).
+   schema de redirection et la requete https). Une fois configure, le dossier `android/` peut
+   etre versionne ; `key.properties` et le keystore ne le sont jamais (`.gitignore`).
 2. Cle de signature (une seule fois, a conserver hors du depot et sauvegarder) :
    ```bash
    keytool -genkey -v -keystore ~/tabibi-release.jks -keyalg RSA -keysize 2048 \
@@ -477,57 +452,3 @@ Simulateur iOS en developpement : `flutter run --dart-define=TABIBI_API_URL=http
   `flutter build appbundle --release --dart-define=...`, Play Console ; iOS : projet genere sur
   macOS, bundle id `dz.tabibi.app`, certificats via Xcode, `Info.plist`, `flutter build ipa`,
   TestFlight) ; icone et ecran de lancement a fournir (aucun fichier binaire dans le depot).
-
-## v0.14.0 — Ordonnance imprimable, PDF (mobile)
-- Detail d'une ordonnance : bouton « Ouvrir le PDF » sous le code de verification. La version
-  imprimable (avec QR code de verification) est telechargee via `GET /api/ordonnances/{id}/pdf`
-  (jeton PATIENT, `application/pdf`), ecrite sous `ordonnance-<code>.pdf` dans le dossier
-  temporaire de l'application (`getTemporaryDirectory`, `path_provider`) puis ouverte avec
-  l'application du telephone qui lit les PDF (`OpenFilex.open`, `open_filex`) ; indicateur
-  pendant le telechargement, bouton desactive entre-temps.
-- Erreurs : une erreur de l'API (403 ordonnance d'un autre patient, 404 inconnue, 401 -> retour
-  au bouton « Se connecter ») est affichee telle quelle ; une reponse 2xx qui n'est pas un PDF
-  (`Content-Type`) est refusee ; si le fichier ne peut etre ecrit ou qu'aucune application ne
-  l'ouvre, « Impossible d'ouvrir le PDF : aucune application ne prend en charge ce document. ».
-- `ApiService.ordonnancePdf(id, token)` -> `Uint8List` (en-tete `Accept: application/pdf`,
-  verification du statut puis du type de contenu, `estPdf`, `typePdf`, `messagePasUnPdf`) ;
-  `nomFichierPdf` dans `lib/utils/ordonnances.dart` (code de verification epure, repli sur
-  l'identifiant abrege puis `ordonnance.pdf`).
-- Injection testable : `DetailOrdonnancePage(enregistrerEtOuvrir: ...)` (type
-  `EnregistrerEtOuvrir`, `Future<bool> Function(String nomFichier, Uint8List octets)`) ; par
-  defaut `enregistrerEtOuvrirFichier`, l'implementation reelle avec les greffons. Les tests de
-  widget verifient l'appel (nom de fichier, octets commencant par `%PDF`) sans aucun greffon.
-- Dependances `path_provider: ^2.1.4` et `open_filex: ^4.5.0` (`flutter pub get`) ;
-  `tool/preparer_android.sh` ajoute au manifeste Android la requete `<queries>` VIEW
-  `application/pdf` (visibilite des lecteurs de PDF sur Android 11+). Sur iOS, aucun reglage :
-  `open_filex` s'appuie sur l'apercu du systeme. `pubspec.yaml` en `version: 0.14.0+1`.
-- Tests : `FakeApiService.ordonnancePdf` (octets `%PDF-1.4`), variante `FakeApiServiceSansPdf`
-  (404) ; detail : bouton, appel avec `ordonnance-ABC123.pdf` et octets `%PDF`, echec
-  d'ouverture puis erreur de l'API sans appel ; `test/ordonnances_test.dart` (`nomFichierPdf`,
-  `estPdf`).
-
-## v0.15.0 — Interface en francais, arabe et anglais (mobile)
-- Toute l'interface (ecrans, widgets, messages, dates) est traduite en francais, en arabe et
-  en anglais ; voir « Langues » pour le fonctionnement, le choix de la langue et l'ajout d'une
-  langue.
-- Entree « Langue » sur l'accueil : ecran dedie (`lib/pages/langue_page.dart`) proposant
-  Français / العربية / English ; le choix est applique aussitot et memorise sur le telephone
-  (`shared_preferences`). Sans choix, l'application suit la langue du telephone, puis celle du
-  profil (`GET /api/moi/profil`, « kab » etant accepte par l'API mais pas encore traduit).
-- Arabe de droite a gauche : `MaterialApp` recoit `locale`, `supportedLocales` et les
-  `localizationsDelegates` de `flutter_localizations` (`flutter_localizations: sdk: flutter`),
-  la direction venant de la locale ; alignements directionnels (`AlignmentDirectional`) pour
-  les bulles de la messagerie et les boutons alignes.
-- Dates : `intl: ^0.19.0` (`DateFormat`, `initializeDateFormatting`) avec la locale de la
-  langue courante ; `lib/utils/dates.dart` n'a plus de table de mois francais.
-- Erreurs de l'API : un message du serveur est affiche tel quel, un libelle par defaut (401,
-  403, 404, 409...) est desormais porte par une cle de traduction (`ApiException.cle`) et
-  affiche dans la langue courante (`messageApi(context, erreur)`).
-- Controle : `python3 tool/verifier_libelles.py` echoue si un ecran contient encore un libelle
-  francais ecrit en dur.
-- Tests : `test/i18n_test.dart` (memes cles dans les trois dictionnaires, aucune valeur vide,
-  parametres, pluriels — duel arabe compris, langue initiale, direction, choix de
-  l'utilisateur contre langue du profil) ; `test/widget_test.dart` bascule l'application en
-  arabe depuis l'ecran « Langue » et verifie les libelles arabes et
-  `Directionality.of(context) == TextDirection.rtl` ; les autres tests forcent le francais
-  (`preparerTests` dans `test/outils.dart`).

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
-import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
@@ -30,8 +27,6 @@ class MesConversationsPage extends StatefulWidget {
 
 class _MesConversationsPageState extends State<MesConversationsPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
-  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<Conversation> _conversations = [];
 
   /// Noms des praticiens deja resolus, par identifiant (texte).
@@ -51,7 +46,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -65,7 +60,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
       _erreur = null;
     });
     try {
-      final conversations = await _patient.mesConversations();
+      final conversations = await widget.api.mesConversations(token);
       final triees = trierParActivite(conversations.map(Conversation.fromJson).toList());
       await _chargerNomsMedecins(triees);
       if (!mounted) return;
@@ -74,9 +69,9 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -91,7 +86,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     for (final medecinId in conversations.map((c) => c.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await _prat.parId(medecinId))?['nomComplet'];
+        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
         // Fiche indisponible : libelle de repli ([libelleMedecin]).
@@ -99,8 +94,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     }
   }
 
-  String _nomMedecin(BuildContext context, Conversation c) =>
-      _nomsMedecins[c.medecinId] ?? libelleMedecin(langueDe(context), c.medecinId);
+  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? libelleMedecin(c.medecinId);
 
   /// Ouvre le fil ; au retour, les non lus ont pu changer (la lecture les marque lus).
   Future<void> _ouvrir(Conversation c) async {
@@ -131,11 +125,11 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'messagerie.titre')),
+        title: const Text('Messagerie'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -148,9 +142,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        icone: Icons.mail_outline,
-        titre: t(context, 'connexion.titreMessages'),
-        message: _erreur ?? t(context, 'messagerie.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour consulter vos conversations.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -158,10 +150,13 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_conversations.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(t(context, 'messagerie.aucune'), textAlign: TextAlign.center),
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Aucune conversation pour le moment. Ouvrez-en une depuis la fiche de votre médecin.',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
@@ -178,17 +173,16 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
 
   /// Praticien (en gras s'il reste des non lus), date du dernier message et pastille.
   Widget _tuile(BuildContext context, Conversation c) {
-    final langue = langueDe(context);
     final nonLus = c.nonLus > 0;
     return ListTile(
       leading: Icon(nonLus ? Icons.mark_chat_unread_outlined : Icons.chat_bubble_outline),
       title: Text(
-        _nomMedecin(context, c),
+        _nomMedecin(c),
         style: nonLus ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
-      subtitle: Text(libelleActivite(langue, c)),
+      subtitle: Text(libelleActivite(c)),
       trailing: nonLus
-          ? _pastille(context, libelleNonLus(langue, c.nonLus))
+          ? _pastille(context, libelleNonLus(c.nonLus))
           : const Icon(Icons.chevron_right),
       onTap: () => _ouvrir(c),
     );

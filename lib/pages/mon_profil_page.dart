@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/profil.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
-import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/profil.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+
+/// Message affiche quand le nom complet est vide (seul champ obligatoire).
+const String messageNomRequis = 'Indiquez votre nom complet.';
 
 /// Longueur maximale du nom complet acceptee par l'API.
 const int longueurMaxNom = 120;
@@ -19,11 +19,7 @@ const int anneeNaissanceMin = 1901;
 
 /// Mon profil : formulaire prerempli si un profil existe (`GET /api/moi/profil`), vide sinon
 /// (404) ; nom complet obligatoire, telephone algerien, date de naissance facultative, code de
-/// wilaya et langue ; « Enregistrer » (`PUT /api/moi/profil`, 400 affiche).
-///
-/// A l'ouverture, la langue du profil initialise celle de l'interface tant que l'utilisateur
-/// n'en a pas choisi une lui-meme (voir `ControleurLangue.suivreLeProfil` et l'ecran
-/// « Langue », qui reste le seul choix explicite).
+/// wilaya et langue de l'interface ; « Enregistrer » (`PUT /api/moi/profil`, 400 affiche).
 class MonProfilPage extends StatefulWidget {
   const MonProfilPage({super.key, this.api = const ApiService(), this.auth});
 
@@ -38,10 +34,6 @@ class MonProfilPage extends StatefulWidget {
 
 class _MonProfilPageState extends State<MonProfilPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
-
-  /// Connexion via Supabase (et non plus Keycloak).
-  bool get _connecte => sb.auth.currentSession != null;
   final _nomComplet = TextEditingController();
   final _telephone = TextEditingController();
   final _wilaya = TextEditingController();
@@ -59,7 +51,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
   @override
   void initState() {
     super.initState();
-    if (_connecte) _charger();
+    if (_auth.estConnecte) _charger();
   }
 
   @override
@@ -76,23 +68,22 @@ class _MonProfilPageState extends State<MonProfilPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
   /// Charge le profil (GET /api/moi/profil) et preremplit le formulaire ; un 404 (profil
   /// jamais renseigne) laisse simplement le formulaire vide.
   Future<void> _charger() async {
-    if (!_connecte) return;
+    final token = _auth.accessToken;
+    if (token == null) return;
     setState(() {
       _charge = true;
       _erreur = null;
     });
     try {
-      final profil = Profil.fromJson(await _patient.monProfil());
+      final profil = Profil.fromJson(await widget.api.monProfil(token));
       if (!mounted) return;
-      // Sans choix explicite de l'utilisateur, l'interface suit la langue du profil.
-      LangueScope.de(context).suivreLeProfil(profil.langue);
       setState(() => _remplir(profil));
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -101,10 +92,10 @@ class _MonProfilPageState extends State<MonProfilPage> {
         return;
       }
       // Jeton expire : retour au bouton « Se connecter ».
-      if (e.nonAutorise) await sb.auth.signOut();
-      setState(() => _erreur = messageApi(context, e));
+      if (e.nonAutorise) _auth.seDeconnecter();
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -130,7 +121,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
       initialDate: _dateNaissance ?? DateTime(aujourdHui.year - 30, aujourdHui.month, 1),
       firstDate: DateTime(anneeNaissanceMin),
       lastDate: hier,
-      helpText: t(context, 'profil.dateNaissance'),
+      helpText: 'Date de naissance',
     );
     if (choisie == null || !mounted) return;
     setState(() => _dateNaissance = DateTime(choisie.year, choisie.month, choisie.day));
@@ -142,15 +133,16 @@ class _MonProfilPageState extends State<MonProfilPage> {
   Future<void> _enregistrer() async {
     final nomComplet = _nomComplet.text.trim();
     if (nomComplet.isEmpty) {
-      _message(t(context, 'profil.nomRequis'));
+      _message(messageNomRequis);
       return;
     }
     if (!telephoneValide(_telephone.text)) {
-      _message(t(context, 'profil.telephoneInvalide'));
+      _message(messageTelephoneInvalide);
       return;
     }
     if (_envoi) return;
-    if (!_connecte) return;
+    final token = _auth.accessToken;
+    if (token == null) return;
     FocusScope.of(context).unfocus();
     setState(() => _envoi = true);
     Profil? enregistre;
@@ -163,18 +155,18 @@ class _MonProfilPageState extends State<MonProfilPage> {
         wilayaCode: wilayaCode.isEmpty ? null : wilayaCode,
         langue: _langue,
       );
-      enregistre = Profil.fromJson(await _patient.enregistrerProfil(profil.toJson()));
+      enregistre = Profil.fromJson(await widget.api.enregistrerProfil(profil.toJson(), token));
     } on ApiException catch (e) {
-      if (e.nonAutorise) await sb.auth.signOut();
-      if (mounted) _message(messageApi(context, e));
+      if (e.nonAutorise) _auth.seDeconnecter();
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
     }
     if (enregistre == null || !mounted) return;
     setState(() => _remplir(enregistre));
-    _message(t(context, 'profil.enregistre'));
+    _message('Profil enregistré.');
   }
 
   void _message(String texte) {
@@ -185,17 +177,15 @@ class _MonProfilPageState extends State<MonProfilPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t(context, 'profil.titre'))),
+      appBar: AppBar(title: const Text('Mon profil')),
       body: _corps(context),
     );
   }
 
   Widget _corps(BuildContext context) {
-    if (!_connecte) {
+    if (!_auth.estConnecte) {
       return VueConnexion(
-        icone: Icons.person_outline,
-        titre: t(context, 'connexion.titreCompte'),
-        message: _erreur ?? t(context, 'profil.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour renseigner votre profil.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -209,8 +199,8 @@ class _MonProfilPageState extends State<MonProfilPage> {
       children: [
         Text(
           profil == null
-              ? t(context, 'profil.renseignez')
-              : libelleMiseAJour(langueDe(context), profil),
+              ? 'Renseignez votre profil : il complète vos rendez-vous et vos demandes.'
+              : libelleMiseAJour(profil),
           style: texte.bodySmall,
         ),
         const SizedBox(height: 16),
@@ -218,38 +208,38 @@ class _MonProfilPageState extends State<MonProfilPage> {
           controller: _nomComplet,
           textCapitalization: TextCapitalization.words,
           maxLength: longueurMaxNom,
-          decoration: InputDecoration(
-            labelText: t(context, 'profil.nomComplet'),
+          decoration: const InputDecoration(
+            labelText: 'Nom complet *',
             counterText: '',
-            prefixIcon: const Icon(Icons.person_outline),
+            prefixIcon: Icon(Icons.person_outline),
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _telephone,
           keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: t(context, 'profil.telephone'),
+          decoration: const InputDecoration(
+            labelText: 'Téléphone',
             hintText: '0550123456',
-            prefixIcon: const Icon(Icons.phone_outlined),
+            prefixIcon: Icon(Icons.phone_outlined),
           ),
         ),
         const SizedBox(height: 8),
-        _champDateNaissance(context),
+        _champDateNaissance(),
         const SizedBox(height: 8),
         TextField(
           controller: _wilaya,
           keyboardType: TextInputType.number,
           maxLength: 2,
-          decoration: InputDecoration(
-            labelText: t(context, 'profil.wilaya'),
-            hintText: t(context, 'dawini.wilayaIndice'),
+          decoration: const InputDecoration(
+            labelText: 'Wilaya (code)',
+            hintText: '16 pour Alger',
             counterText: '',
-            prefixIcon: const Icon(Icons.map_outlined),
+            prefixIcon: Icon(Icons.map_outlined),
           ),
         ),
         const SizedBox(height: 8),
-        _champLangue(context),
+        _champLangue(),
         const SizedBox(height: 24),
         FilledButton(
           onPressed: _envoi ? null : _enregistrer,
@@ -259,11 +249,11 @@ class _MonProfilPageState extends State<MonProfilPage> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(t(context, 'profil.enregistrer')),
+              : const Text('Enregistrer'),
         ),
         const SizedBox(height: 8),
         Text(
-          t(context, 'profil.confidentialite'),
+          'Ces informations ne sont visibles que de vous et des praticiens que vous consultez.',
           style: texte.bodySmall,
           textAlign: TextAlign.center,
         ),
@@ -273,34 +263,33 @@ class _MonProfilPageState extends State<MonProfilPage> {
 
   /// Date de naissance (facultative) : champ en lecture seule ouvrant le selecteur de date,
   /// avec une icone pour effacer la date choisie.
-  Widget _champDateNaissance(BuildContext context) {
+  Widget _champDateNaissance() {
     final date = _dateNaissance;
     return InkWell(
       onTap: _choisirDate,
       child: InputDecorator(
         decoration: InputDecoration(
-          labelText: t(context, 'profil.dateNaissance'),
+          labelText: 'Date de naissance',
           prefixIcon: const Icon(Icons.cake_outlined),
           suffixIcon: date == null
               ? const Icon(Icons.calendar_today_outlined)
               : IconButton(
-                  tooltip: t(context, 'profil.effacerDate'),
+                  tooltip: 'Effacer la date',
                   onPressed: () => setState(() => _dateNaissance = null),
                   icon: const Icon(Icons.clear),
                 ),
         ),
-        child: Text(libelleDateNaissance(langueDe(context), date)),
+        child: Text(libelleDateNaissance(date)),
       ),
     );
   }
 
-  /// Langue du profil : menu deroulant parmi les langues acceptees par l'API (chaque langue
-  /// est ecrite dans sa propre langue, elle ne se traduit pas).
-  Widget _champLangue(BuildContext context) {
+  /// Langue de l'interface : menu deroulant parmi les langues acceptees par l'API.
+  Widget _champLangue() {
     return InputDecorator(
-      decoration: InputDecoration(
-        labelText: t(context, 'profil.langue'),
-        prefixIcon: const Icon(Icons.language_outlined),
+      decoration: const InputDecoration(
+        labelText: 'Langue',
+        prefixIcon: Icon(Icons.language_outlined),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(

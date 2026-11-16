@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/identifiants.dart';
@@ -27,7 +25,6 @@ class MesOrdonnancesPage extends StatefulWidget {
 
 class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
   List<Map<String, dynamic>> _ordonnances = [];
   bool _charge = false;
   String? _erreur;
@@ -44,7 +41,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -56,16 +53,16 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
       _erreur = null;
     });
     try {
-      final ordonnances = await _patient.mesOrdonnances();
+      final ordonnances = await widget.api.mesOrdonnances(token);
       if (!mounted) return;
       setState(() => _ordonnances = trierParEmission(ordonnances));
     } on ApiException catch (e) {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -92,32 +89,31 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'ordonnances.titre')),
+        title: const Text('Mes ordonnances'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
         ],
       ),
-      body: _corps(context),
+      body: _corps(),
     );
   }
 
-  Widget _corps(BuildContext context) {
+  Widget _corps() {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? t(context, 'ordonnances.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour consulter vos ordonnances.',
         onSeConnecter: _seConnecter,
       );
     }
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_ordonnances.isEmpty) return Center(child: Text(t(context, 'ordonnances.aucune')));
-    final langue = langueDe(context);
+    if (_ordonnances.isEmpty) return const Center(child: Text('Aucune ordonnance.'));
     return ListView.separated(
       itemCount: _ordonnances.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -125,13 +121,8 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
         final o = _ordonnances[i];
         return ListTile(
           leading: const Icon(Icons.description_outlined),
-          title: Text(t(context, 'ordonnances.emiseLe', params: {
-            'date': dateEmission(langue, o),
-          })),
-          subtitle: Text(t(context, 'ordonnances.codeStatut', params: {
-            'code': o['codeVerification'] ?? '-',
-            'statut': libelleStatut(langue, o['statut']),
-          })),
+          title: Text('Émise le ${dateEmission(o)}'),
+          subtitle: Text('Code ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _ouvrirDetail(o),
         );

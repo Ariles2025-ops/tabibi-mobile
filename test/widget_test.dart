@@ -1,9 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tabibi_mobile/i18n/langue.dart';
-import 'package:tabibi_mobile/i18n/traductions.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/models/besoin_medicament.dart';
 import 'package:tabibi_mobile/models/conversation.dart';
@@ -24,6 +20,7 @@ import 'package:tabibi_mobile/pages/reponses_besoin_page.dart';
 import 'package:tabibi_mobile/pages/verifier_ordonnance_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
+import 'package:tabibi_mobile/utils/profil.dart';
 
 import 'outils.dart';
 
@@ -114,12 +111,6 @@ class FakeApiService extends ApiService {
 
   @override
   Future<Map<String, dynamic>> ordonnance(String id, String token) async => _ordonnance(id);
-
-  /// Debut d'un document PDF (en-tete « %PDF-1.4 ») : seuls les premiers octets comptent.
-  static final Uint8List pdfDemo = Uint8List.fromList('%PDF-1.4\n%tabibi\n'.codeUnits);
-
-  @override
-  Future<Uint8List> ordonnancePdf(String id, String token) async => pdfDemo;
 
   @override
   Future<Map<String, dynamic>> verifierOrdonnance(String code) async => code == codeValide
@@ -429,11 +420,11 @@ class FakeApiService extends ApiService {
         'id': id,
         'destinataireId': sujetPatient,
         'canal': 'INTERNE',
-        'sujet': id == notificationNonLue ? 'Teleconsultation proposee' : 'Rendez-vous confirme',
+        'sujet': id == notificationNonLue ? 'Teleconsultation proposee' : 'Rendez-vous confirmé',
         'message': id == notificationNonLue
             ? 'Votre medecin vous propose une teleconsultation pour votre rendez-vous '
-                'du 3 dec. 2026 09:00.'
-            : 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.',
+                'du 3 déc. 2026 09:00.'
+            : 'Votre rendez-vous du 3 déc. 2026 09:00 est confirme.',
         'lue': lue,
         'creeLe': id == notificationNonLue ? '2026-12-03T10:15:00' : '2026-12-01T18:00:00',
       };
@@ -511,15 +502,6 @@ class FakeApiServiceSansFiche extends FakeApiService {
   @override
   Future<Map<String, dynamic>> medecin(String id) async =>
       throw const ApiException(404, 'Praticien introuvable');
-}
-
-/// Variante dont le PDF de l'ordonnance est indisponible (404 sur la version imprimable).
-class FakeApiServiceSansPdf extends FakeApiService {
-  const FakeApiServiceSansPdf();
-
-  @override
-  Future<Uint8List> ordonnancePdf(String id, String token) async =>
-      throw const ApiException(404, 'Ordonnance introuvable');
 }
 
 /// Variante qui conserve les avis deposes : « Mes rendez-vous » les voit au rechargement.
@@ -707,8 +689,6 @@ Future<void> laisserPasserLeMessage(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(preparerTests);
-
   testWidgets('affiche le champ de recherche et les acces aux ordonnances au demarrage',
       (tester) async {
     await tester.pumpWidget(const TabibiApp());
@@ -780,81 +760,8 @@ void main() {
     // Une carte par ligne : medicament, posologie, duree.
     expect(find.text('Paracetamol 1 g'), findsOneWidget);
     expect(find.text('Posologie : 1 comprime matin et soir'), findsOneWidget);
-    expect(find.text('Durée : 5 jours'), findsOneWidget);
+    expect(find.text('Duree : 5 jours'), findsOneWidget);
     expect(find.text('Amoxicilline 500 mg'), findsOneWidget);
-  });
-
-  testWidgets("le detail d'une ordonnance telecharge le PDF, l'enregistre sous son code et "
-      "l'ouvre avec l'application du telephone", (tester) async {
-    String? nomFichier;
-    Uint8List? octets;
-    await tester.pumpWidget(MaterialApp(
-      home: DetailOrdonnancePage(
-        ordonnanceId: FakeApiService.ordonnanceDemo,
-        api: const FakeApiService(),
-        auth: sessionConnectee(),
-        enregistrerEtOuvrir: (nom, contenu) async {
-          nomFichier = nom;
-          octets = contenu;
-          return true;
-        },
-      ),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.text('Ouvrir le PDF'), findsOneWidget);
-
-    await tester.tap(find.text('Ouvrir le PDF'));
-    await tester.pumpAndSettle();
-    expect(nomFichier, 'ordonnance-ABC123.pdf');
-    expect(String.fromCharCodes(octets!.take(4)), '%PDF');
-    expect(find.text(libelle('ordonnance.pdfImpossible')), findsNothing);
-    // Le bouton redevient actif une fois le document ouvert (OutlinedButton.icon : sous-type).
-    final bouton = tester.widget<OutlinedButton>(
-      find.ancestor(of: find.text('Ouvrir le PDF'), matching: find.bySubtype<OutlinedButton>()),
-    );
-    expect(bouton.onPressed, isNotNull);
-  });
-
-  testWidgets("le detail d'une ordonnance signale un PDF qu'aucune application n'ouvre, "
-      "puis l'erreur de l'API", (tester) async {
-    var appels = 0;
-    await tester.pumpWidget(MaterialApp(
-      home: DetailOrdonnancePage(
-        ordonnanceId: FakeApiService.ordonnanceDemo,
-        api: const FakeApiService(),
-        auth: sessionConnectee(),
-        enregistrerEtOuvrir: (nom, contenu) async {
-          appels++;
-          return false;
-        },
-      ),
-    ));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Ouvrir le PDF'));
-    await tester.pumpAndSettle();
-    expect(appels, 1);
-    expect(find.text(libelle('ordonnance.pdfImpossible')), findsOneWidget);
-    await laisserPasserLeMessage(tester); // laisse le premier message disparaitre avant le scenario suivant
-
-    // PDF indisponible cote serveur (404) : message de l'API, rien n'est ecrit ni ouvert.
-    await tester.pumpWidget(MaterialApp(
-      home: DetailOrdonnancePage(
-        ordonnanceId: FakeApiService.ordonnanceDemo,
-        api: const FakeApiServiceSansPdf(),
-        auth: sessionConnectee(),
-        enregistrerEtOuvrir: (nom, contenu) async {
-          appels++;
-          return true;
-        },
-      ),
-    ));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Ouvrir le PDF'));
-    await tester.pumpAndSettle();
-    expect(appels, 1);
-    expect(find.text('Ordonnance introuvable'), findsOneWidget);
-    expect(find.text('ABC123'), findsOneWidget);
   });
 
   testWidgets("la verification publique distingue un code authentique d'un code inconnu",
@@ -914,8 +821,8 @@ void main() {
 
     expect(find.text('Mes notifications'), findsOneWidget);
     expect(find.text('Teleconsultation proposee'), findsOneWidget);
-    expect(find.text('Rendez-vous confirme'), findsOneWidget);
-    expect(find.text('Votre rendez-vous du 3 dec. 2026 09:00 est confirme.'), findsOneWidget);
+    expect(find.text('Rendez-vous confirmé'), findsOneWidget);
+    expect(find.text('Votre rendez-vous du 3 déc. 2026 09:00 est confirme.'), findsOneWidget);
     expect(find.text('jeu. 3 déc. 10:15'), findsOneWidget);
     expect(find.text('mar. 1 déc. 18:00'), findsOneWidget);
     // Sujet en gras pour la non lue seulement.
@@ -923,7 +830,7 @@ void main() {
       tester.widget<Text>(find.text('Teleconsultation proposee')).style?.fontWeight,
       FontWeight.bold,
     );
-    expect(tester.widget<Text>(find.text('Rendez-vous confirme')).style?.fontWeight, isNull);
+    expect(tester.widget<Text>(find.text('Rendez-vous confirmé')).style?.fontWeight, isNull);
     // Une seule action « Marquer comme lue » (la non lue).
     expect(find.byTooltip('Marquer comme lue'), findsOneWidget);
 
@@ -943,7 +850,7 @@ void main() {
     await tester.tap(find.byTooltip('Tout marquer comme lu'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Marquer comme lue'), findsNothing);
-    expect(find.text('1 notification marquée lue'), findsOneWidget);
+    expect(find.text('1 notification(s) marquée(s) lue(s)'), findsOneWidget);
   });
 
   testWidgets('mes notifications affiche un etat vide sans notification', (tester) async {
@@ -964,7 +871,7 @@ void main() {
       home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Téléconsultations'), findsOneWidget);
+    expect(find.text('Téléconsultation · Bientôt'), findsOneWidget);
   });
 
   testWidgets('mes teleconsultations sans jeton propose de se connecter', (tester) async {
@@ -995,9 +902,9 @@ void main() {
 
     expect(find.text('Mes téléconsultations'), findsOneWidget);
     // Session planifiee sans consentement : carte de consentement, pas de lien.
-    expect(find.text('Proposée le jeu. 3 déc. 08:00'), findsOneWidget);
+    expect(find.text('Proposee le jeu. 3 déc. 08:00'), findsOneWidget);
     expect(find.text('Planifiée'), findsOneWidget);
-    expect(find.text(libelle('tele.consentement')), findsOneWidget);
+    expect(find.text(texteConsentement), findsOneWidget);
     expect(find.text('Je donne mon consentement'), findsOneWidget);
     expect(find.text('Rejoindre la téléconsultation'), findsNothing);
     // Session terminee (consentement donne, lien remis) : texte d'etat seulement.
@@ -1098,11 +1005,11 @@ void main() {
     expect(find.text('Conversation'), findsOneWidget);
     expect(find.text('mar. 1 déc. 09:00'), findsOneWidget);
     expect(find.text('mar. 1 déc. 09:05'), findsOneWidget);
-    AlignmentDirectional alignementDe(String contenu) => tester
+    Alignment alignementDe(String contenu) => tester
         .widget<Align>(find.ancestor(of: find.text(contenu), matching: find.byType(Align)).first)
-        .alignment as AlignmentDirectional;
-    expect(alignementDe('Bonjour, comment allez-vous ?'), AlignmentDirectional.centerStart);
-    expect(alignementDe('Bonjour docteur, mieux merci.'), AlignmentDirectional.centerEnd);
+        .alignment as Alignment;
+    expect(alignementDe('Bonjour, comment allez-vous ?'), Alignment.centerLeft);
+    expect(alignementDe('Bonjour docteur, mieux merci.'), Alignment.centerRight);
 
     // Bouton « Envoyer » desactive tant que la saisie est vide (ou blanche).
     FilledButton envoyer() =>
@@ -1120,7 +1027,7 @@ void main() {
     // Message envoye (contenu epure), fil recharge et champ vide.
     expect(api.envoyes.single['contenu'], 'Merci docteur, a bientot.');
     expect(find.text('Merci docteur, a bientot.'), findsOneWidget);
-    expect(alignementDe('Merci docteur, a bientot.'), AlignmentDirectional.centerEnd);
+    expect(alignementDe('Merci docteur, a bientot.'), Alignment.centerRight);
     expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, isEmpty);
     expect(envoyer().onPressed, isNull);
   });
@@ -1155,7 +1062,7 @@ void main() {
 
     await tester.tap(find.text('Ouvrir une conversation'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('fiche.conversationRefusee')), findsOneWidget);
+    expect(find.text(messageConversationRefusee), findsOneWidget);
     expect(find.text('Envoyer'), findsNothing);
   });
 
@@ -1282,7 +1189,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Envoyer mon avis'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('avis.dejaDonne')), findsOneWidget);
+    expect(find.text(messageAvisDejaDonne), findsOneWidget);
     expect(find.text('Mon avis'), findsOneWidget);
   });
 
@@ -1338,14 +1245,14 @@ void main() {
     final medicament = find.widgetWithText(TextField, 'Médicament recherché *');
     await tester.tap(find.text('Publier la demande'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('dawini.medicamentRequis')), findsOneWidget);
+    expect(find.text(messageMedicamentRequis), findsOneWidget);
     expect(api.publies, isEmpty);
     await laisserPasserLeMessage(tester);
 
     await tester.enterText(medicament, 'Insuline');
     await tester.tap(find.text('Publier la demande'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('dawini.wilayaRequise')), findsOneWidget);
+    expect(find.text(messageWilayaRequise), findsOneWidget);
     expect(api.publies, isEmpty);
     await laisserPasserLeMessage(tester);
 
@@ -1430,7 +1337,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Oui, clôturer'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('reponses.dejaCloturee')), findsOneWidget);
+    expect(find.text(messageDemandeDejaCloturee), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
     expect(find.text('Wilaya 16 · Clôturée'), findsOneWidget);
   });
@@ -1457,20 +1364,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text("Liste d'attente"), findsOneWidget);
-    expect(find.text(libelle('fiche.texteListeAttente')), findsOneWidget);
+    expect(find.text(texteListeAttente), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsOneWidget);
-    expect(find.text(libelle('fiche.inscrit')), findsNothing);
+    expect(find.text(texteInscrit), findsNothing);
 
     await tester.tap(find.text("M'inscrire sur la liste d'attente"));
     await tester.pumpAndSettle();
     expect(api.inscriptions, [FakeApiService.medecinDemo]);
-    expect(
-      find.text(libelle('fiche.inscriptionEnregistree',
-          params: {'texte': libelle('fiche.texteListeAttente')})),
-      findsOneWidget,
-    );
+    expect(find.text('Inscription enregistrée. $texteListeAttente'), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
-    expect(find.text(libelle('fiche.inscrit')), findsOneWidget);
+    expect(find.text(texteInscrit), findsOneWidget);
     // Les creneaux restent proposes.
     expect(find.text('Réserver'), findsOneWidget);
   });
@@ -1489,9 +1392,9 @@ void main() {
 
     await tester.tap(find.text("M'inscrire sur la liste d'attente"));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('fiche.dejaInscrit')), findsOneWidget);
+    expect(find.text(messageDejaInscrit), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
-    expect(find.text(libelle('fiche.inscrit')), findsOneWidget);
+    expect(find.text(texteInscrit), findsOneWidget);
   });
 
   testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {
@@ -1531,7 +1434,7 @@ void main() {
     await tester.tap(find.text('Oui, me retirer'));
     await tester.pumpAndSettle();
     expect(api.retraits, [FakeApiService.inscriptionDemo]);
-    expect(find.text(libelle('attente.retrait')), findsOneWidget);
+    expect(find.text(messageRetrait), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsNothing);
     expect(find.text('Me retirer'), findsNothing);
     expect(find.textContaining("Aucune inscription sur une liste d'attente."), findsOneWidget);
@@ -1628,13 +1531,13 @@ void main() {
     expect(find.text('Karim Haddad'), findsNothing);
     expect(find.text('Non renseignée'), findsOneWidget);
     expect(find.text('Français'), findsOneWidget);
-    expect(find.text('Réessayer'), findsNothing);
+    expect(find.text('Reessayer'), findsNothing);
     expect(find.textContaining('Renseignez votre profil'), findsOneWidget);
 
     // Nom obligatoire.
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('profil.nomRequis')), findsOneWidget);
+    expect(find.text(messageNomRequis), findsOneWidget);
     expect(api.enregistres, isEmpty);
     await laisserPasserLeMessage(tester);
 
@@ -1643,7 +1546,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Téléphone'), '12345');
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
-    expect(find.text(libelle('profil.telephoneInvalide')), findsOneWidget);
+    expect(find.text(messageTelephoneInvalide), findsOneWidget);
     expect(api.enregistres, isEmpty);
     await laisserPasserLeMessage(tester);
 
@@ -1681,54 +1584,5 @@ void main() {
     expect(find.text('Le nom complet doit compter de 2 a 120 caracteres.'), findsOneWidget);
     expect(find.text('Profil enregistré.'), findsNothing);
     expect(find.text('Mon profil'), findsOneWidget);
-  });
-
-  testWidgets("le selecteur de langue bascule l'interface en arabe, ecrite de droite a gauche",
-      (tester) async {
-    surfaceHaute(tester);
-    final controleur = ControleurLangue();
-    await tester.pumpWidget(TabibiApp(
-      controleur: controleur,
-      api: const FakeApiService(),
-      auth: AuthService(),
-    ));
-    await tester.pumpAndSettle();
-
-    // Par defaut, l'interface est en francais et s'ecrit de gauche a droite.
-    expect(find.text('Nom du médecin'), findsOneWidget);
-    expect(
-      Directionality.of(tester.element(find.text('Nom du médecin'))),
-      TextDirection.ltr,
-    );
-
-    await tester.tap(find.text('Langue'));
-    await tester.pumpAndSettle();
-    expect(find.text(nomsLangues['fr']!), findsOneWidget);
-    expect(find.text(nomsLangues['en']!), findsOneWidget);
-
-    await tester.tap(find.text(nomsLangues['ar']!));
-    await tester.pumpAndSettle();
-
-    // Langue retenue comme choix explicite de l'utilisateur.
-    expect(controleur.langue, 'ar');
-    expect(controleur.choisieManuellement, isTrue);
-    // Titre de l'ecran en arabe et direction d'ecriture inversee.
-    final titre = find.text(libelleArabe('langue.titre'));
-    expect(titre, findsWidgets);
-    expect(Directionality.of(tester.element(titre.first)), TextDirection.rtl);
-    await laisserPasserLeMessage(tester);
-
-    // Retour a l'accueil : les libelles y sont aussi en arabe.
-    // pageBack() cherche un bouton retour par son libelle anglais / Cupertino : introuvable en
-    // arabe. On tape directement le BackButton de la barre (icone, independant de la langue).
-    await tester.tap(find.byType(BackButton).first);
-    await tester.pumpAndSettle();
-    expect(find.text(libelleArabe('accueil.nomMedecin')), findsOneWidget);
-    expect(find.text(libelleArabe('accueil.mesAvis')), findsOneWidget);
-    expect(find.text('Nom du médecin'), findsNothing);
-    expect(
-      Directionality.of(tester.element(find.text(libelleArabe('accueil.nomMedecin')))),
-      TextDirection.rtl,
-    );
   });
 }

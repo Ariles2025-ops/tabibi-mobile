@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
-import '../services/praticiens_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
@@ -27,8 +24,6 @@ class MesAvisPage extends StatefulWidget {
 
 class _MesAvisPageState extends State<MesAvisPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
-  final PraticiensSupabase _prat = const PraticiensSupabase();
   List<Avis> _avis = [];
 
   /// Noms des praticiens deja resolus, par identifiant (texte).
@@ -48,7 +43,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -60,7 +55,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
       _erreur = null;
     });
     try {
-      final avis = (await _patient.mesAvis()).map(Avis.fromJson).toList();
+      final avis = (await widget.api.mesAvis(token)).map(Avis.fromJson).toList();
       await _chargerNomsMedecins(avis);
       if (!mounted) return;
       setState(() => _avis = avis);
@@ -68,9 +63,9 @@ class _MesAvisPageState extends State<MesAvisPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -83,7 +78,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
     for (final medecinId in avis.map((a) => a.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
-        final Object? nom = (await _prat.parId(medecinId))?['nomComplet'];
+        final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
         // Fiche indisponible : libelle de repli ([libelleMedecin]).
@@ -91,8 +86,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
     }
   }
 
-  String _nomMedecin(BuildContext context, Avis a) =>
-      _nomsMedecins[a.medecinId] ?? libelleMedecin(langueDe(context), a.medecinId);
+  String _nomMedecin(Avis a) => _nomsMedecins[a.medecinId] ?? libelleMedecin(a.medecinId);
 
   void _message(String texte) {
     if (!mounted) return;
@@ -103,11 +97,11 @@ class _MesAvisPageState extends State<MesAvisPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t(context, 'mesAvis.titre')),
+        title: const Text('Mes avis'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -120,7 +114,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? t(context, 'mesAvis.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour consulter vos avis.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -128,10 +122,13 @@ class _MesAvisPageState extends State<MesAvisPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_avis.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(t(context, 'mesAvis.aucun'), textAlign: TextAlign.center),
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Aucun avis pour le moment. Vous pourrez en donner un après un rendez-vous honoré.',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
@@ -143,7 +140,6 @@ class _MesAvisPageState extends State<MesAvisPage> {
 
   /// Une carte par avis : praticien, « 4 / 5 · Publié », commentaire puis date de depot.
   Widget _carte(BuildContext context, Avis a) {
-    final langue = langueDe(context);
     final texte = Theme.of(context).textTheme;
     final commentaire = a.commentaire;
     return Card(
@@ -156,21 +152,15 @@ class _MesAvisPageState extends State<MesAvisPage> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star_outline),
-              title: Text(_nomMedecin(context, a)),
-              subtitle: Text(t(context, 'mesAvis.noteStatut', params: {
-                'note': formaterNote(langue, a.note),
-                'statut': libelleStatutAvis(langue, a.statut),
-              })),
+              title: Text(_nomMedecin(a)),
+              subtitle: Text('${formaterNote(a.note)} · ${libelleStatutAvis(a.statut)}'),
             ),
             if (commentaire != null) ...[
               const SizedBox(height: 4),
               Text(commentaire),
             ],
             const SizedBox(height: 8),
-            Text(
-              t(context, 'mesAvis.deposeLe', params: {'date': dateAvis(langue, a)}),
-              style: texte.bodySmall,
-            ),
+            Text('Déposé le ${dateAvis(a)}', style: texte.bodySmall),
           ],
         ),
       ),

@@ -1,27 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'services/notifications_push.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'config/lancement.dart';
+import 'config/referentiel.dart';
+import 'config/theme.dart';
 
-import 'theme/theme_tabibi.dart';
-import 'pages/carte_medecins_page.dart';
-import 'utils/libelles.dart';
-
-import 'i18n/langue.dart';
-import 'i18n/traductions.dart';
-import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
-import 'pages/espace_admin_page.dart';
-import 'pages/accueil_medecin_page.dart';
-import 'pages/espace_medecin_page.dart';
-import 'pages/medecin_attente_page.dart';
 import 'pages/fiche_medecin_page.dart';
-import 'pages/langue_page.dart';
 import 'pages/mes_avis_page.dart';
 import 'pages/mes_conversations_page.dart';
 import 'pages/mes_listes_attente_page.dart';
@@ -33,60 +17,23 @@ import 'pages/mon_profil_page.dart';
 import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
-import 'services/admin_supabase.dart';
-import 'services/medecin_supabase.dart';
-import 'services/praticiens_supabase.dart';
 import 'services/session.dart';
-import 'services/supabase_service.dart';
-import 'utils/dates.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
+import 'utils/praticien.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await preparerDates(); // donnees de date de toutes les locales (intl)
-  await initialiserSupabase(); // auth + acces direct a la base
-  await NotificationsPush.initialiser(); // push/FCM (se desactive si non configure)
-  await langues.initialiser(); // defaut francais (sauf choix memorise de l'utilisateur)
-  runApp(const TabibiApp());
-}
+void main() => runApp(const TabibiApp());
 
-/// Application : la langue courante ([ControleurLangue]) est portee par [LangueScope] et
-/// donnee a [MaterialApp] (`locale`, `supportedLocales`, `localizationsDelegates`), afin que
-/// les widgets Material (selecteur de date, champs de saisie...) et la direction d'ecriture
-/// (RTL en arabe) suivent le meme choix. Changer de langue rebatit toute l'application.
 class TabibiApp extends StatelessWidget {
-  const TabibiApp({super.key, this.controleur, this.api = const ApiService(), this.auth});
-
-  /// Controleur de langue a utiliser ; par defaut le controleur partage [langues].
-  final ControleurLangue? controleur;
-
-  /// API et session de l'ecran d'accueil (injectables dans les tests).
-  final ApiService api;
-  final AuthService? auth;
+  const TabibiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controleurLangue = controleur ?? langues;
-    return LangueScope(
-      controleur: controleurLangue,
-      child: ListenableBuilder(
-        listenable: controleurLangue,
-        builder: (context, _) => MaterialApp(
-          onGenerateTitle: (context) => t(context, 'accueil.titre'),
-          locale: controleurLangue.locale,
-          supportedLocales: controleurLangue.localesPrisesEnCharge,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          navigatorKey: navigatorCle,
-          theme: themeTabibi(),
-          scrollBehavior: const _TabibiScrollBehavior(),
-          home: AccueilGate(api: api, auth: auth),
-        ),
-      ),
+    return MaterialApp(
+      title: 'Tabibi',
+      debugShowCheckedModeBanner: false,
+      theme: Charte.theme(),
+      home: const RecherchePage(),
     );
   }
 }
@@ -95,86 +42,7 @@ class TabibiApp extends StatelessWidget {
 /// aux ordonnances (les miennes, ou la verification publique d'un code), aux
 /// notifications (entree « Notifications (n) » avec le nombre de non lues), aux
 /// teleconsultations, a la messagerie avec mes medecins, a mes avis, a Dawini
-/// (demander un medicament aux pharmacies), a mes listes d'attente, a mon profil
-/// et au choix de la langue de l'interface.
-/// Porte d'entree : un compte administrateur ouvre la console d'admin ;
-/// tout le monde (anonyme, patient, medecin) voit l'accueil patient.
-/// Autorise le defilement au glissement souris/trackpad/tactile/stylet
-/// (Flutter web/desktop n'active le drag qu'au tactile par defaut).
-class _TabibiScrollBehavior extends MaterialScrollBehavior {
-  const _TabibiScrollBehavior();
-  @override
-  Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-      };
-}
-
-class AccueilGate extends StatefulWidget {
-  const AccueilGate({super.key, this.api = const ApiService(), this.auth});
-
-  final ApiService api;
-  final AuthService? auth;
-
-  @override
-  State<AccueilGate> createState() => _AccueilGateState();
-}
-
-class _AccueilGateState extends State<AccueilGate> {
-  final AdminSupabase _adm = const AdminSupabase();
-  final MedecinSupabase _medc = const MedecinSupabase();
-  String _etat = 'normal'; // admin | attente | normal
-  StreamSubscription<AuthState>? _sub;
-
-  @override
-  void initState() {
-    super.initState();
-    _verifier();
-    _sub = sb.auth.onAuthStateChange.listen((_) => _verifier());
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _verifier() async {
-    String etat = 'normal';
-    final uid = sb.auth.currentUser?.id;
-    if (uid != null) {
-      if (await _adm.estAdmin()) {
-        etat = 'admin';
-      } else {
-        final aFiche = await _medc.estMedecin();
-        String? role;
-        try {
-          final r = await sb.from('users').select('role').eq('id', uid).maybeSingle();
-          role = (r as Map?)?['role'] as String?;
-        } catch (_) {}
-        if (role == 'medecin') etat = aFiche ? 'medecin' : 'attente';
-      }
-    }
-    if (mounted && etat != _etat) setState(() => _etat = etat);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    switch (_etat) {
-      case 'admin':
-        return EspaceAdminPage(auth: widget.auth);
-      case 'attente':
-        return MedecinAttentePage(auth: widget.auth);
-      case 'medecin':
-        return AccueilMedecinPage(auth: widget.auth);
-      default:
-        return RecherchePage(api: widget.api, auth: widget.auth);
-    }
-  }
-}
-
+/// (demander un medicament aux pharmacies), a mes listes d'attente et a mon profil.
 class RecherchePage extends StatefulWidget {
   const RecherchePage({super.key, this.api = const ApiService(), this.auth});
 
@@ -191,91 +59,43 @@ class _RecherchePageState extends State<RecherchePage> {
   late final AuthService _auth = widget.auth ?? session;
   final _nom = TextEditingController();
   String? _specialite;
-  List<Map<String, dynamic>> _resultats = [];
-
-  /// Annuaire en direct via Supabase (aucun backend requis).
-  final PraticiensSupabase _prat = const PraticiensSupabase();
-  final MedecinSupabase _med = const MedecinSupabase();
-  final AdminSupabase _adm = const AdminSupabase();
-  bool _estMedecin = false;
-  bool _estAdmin = false;
-
-  /// Total reel de praticiens dans la base (null tant qu'inconnu).
-  int? _totalMedecins;
-
-  /// Wilayas et specialites reelles (filtres de recherche), chargees au demarrage.
-  List<Map<String, dynamic>> _wilayasRef = [];
-  List<Map<String, dynamic>> _specialitesRef = [];
-
-  /// Filtre wilaya selectionne (code officiel, ex. « 16 »).
   String? _wilaya;
-
-  /// Abonnement a l'etat d'authentification Supabase (met a jour l'icone profil).
-  StreamSubscription<AuthState>? _authSub;
-  Timer? _debRech;
-
-  /// Vrai si une session Supabase est ouverte.
-  bool get _connecteSb => sb.auth.currentSession != null;
+  List<Map<String, dynamic>> _resultats = [];
   bool _charge = false;
 
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
   int? _nonLues;
 
-  /// Onglet de la barre de navigation basse (0 = accueil).
-  int _ongletActif = 0;
-
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await _prat.rechercher(
-          specialite: _specialite, wilaya: _wilaya, q: _nom.text, limite: 30);
+      final r = await widget.api.rechercherMedecins(
+          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
-    } catch (_) {
-      if (mounted) _message('Recherche momentanément indisponible.');
+    } on Exception catch (e) {
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
   }
 
-  /// Charge, en un seul appel Supabase, le total reel de praticiens (tuile
-  /// « Medecins ») et les listes de wilayas / specialites (filtres de recherche).
-  Future<void> _chargerStats() async {
-    try {
-      final s = await _prat.stats();
-      if (!mounted) return;
-      setState(() {
-        final t = s['total'];
-        if (t is num) _totalMedecins = t.toInt();
-        _wilayasRef = ((s['wilayas'] as List?) ?? const [])
-            .map((n) => <String, dynamic>{'code': n, 'nom': n})
-            .toList();
-        _specialitesRef = ((s['specialites'] as List?) ?? const [])
-            .map((n) => <String, dynamic>{'slug': n, 'nom': n})
-            .toList();
-      });
-    } catch (_) {
-      // annuaire momentanement indisponible : les tuiles gardent leur repli.
-    }
-  }
-
-  /// Connexion Keycloak si necessaire, puis confirmation « Connecté ».
+  /// Connexion Keycloak si necessaire, puis confirmation « Connecte ».
   Future<void> _seConnecter() async {
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       setState(() {}); // met a jour l'icone de l'AppBar
       if (!ok) {
-        _message(t(context, 'commun.connexionAnnulee'));
+        _message('Connexion annulée');
         return;
       }
     }
     final token = _auth.accessToken;
     if (token == null) return;
-    var texte = t(context, 'commun.connecte');
+    var texte = 'Connecté';
     try {
       final moi = await widget.api.moi(token);
-      if (!mounted) return;
-      texte = t(context, 'commun.connecteNom', params: {'nom': moi['nom']});
+      texte = 'Connecté : ${moi['nom']}';
     } on Exception {
       // Identite indisponible : message generique.
     }
@@ -312,7 +132,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _ouvrirFiche(String medecinId) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
+        builder: (_) => FicheMedecinPage(
+            medecinId: medecinId, api: widget.api, auth: _auth),
       ),
     );
     await _apresRetour();
@@ -346,17 +167,16 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   Future<void> _ouvrirTeleconsultations() async {
+    if (!visioActive) {
+      _message('La téléconsultation arrive bientôt sur Tabibi.');
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MesTeleconsultationsPage(api: widget.api, auth: _auth),
       ),
     );
     await _apresRetour();
-  }
-
-  Future<void> _ouvrirCarte() async {
-    await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CarteMedecinsPage(prat: _prat)));
   }
 
   Future<void> _ouvrirMessagerie() async {
@@ -395,31 +215,6 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
-  /// Verifie si le compte connecte est un praticien (affiche l'entree Espace medecin).
-  Future<void> _verifierMedecin() async {
-    final est = await _med.estMedecin();
-    if (mounted) setState(() => _estMedecin = est);
-  }
-
-  Future<void> _verifierAdmin() async {
-    final est = await _adm.estAdmin();
-    if (mounted) setState(() => _estAdmin = est);
-  }
-
-  Future<void> _ouvrirEspaceAdmin() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => EspaceAdminPage(auth: _auth)),
-    );
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _ouvrirEspaceMedecin() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => EspaceMedecinPage(auth: _auth)),
-    );
-    if (mounted) setState(() {});
-  }
-
   Future<void> _ouvrirMonProfil() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -427,14 +222,6 @@ class _RecherchePageState extends State<RecherchePage> {
       ),
     );
     await _apresRetour();
-  }
-
-  /// Choix de la langue de l'interface (francais, arabe, anglais) : aucun jeton necessaire.
-  Future<void> _ouvrirLangue() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const LanguePage()),
-    );
-    if (mounted) setState(() {});
   }
 
   /// Verification publique d'un code d'ordonnance : aucun jeton necessaire.
@@ -455,1028 +242,217 @@ class _RecherchePageState extends State<RecherchePage> {
   void initState() {
     super.initState();
     _rechercher();
-    _chargerStats();
     _chargerNonLues();
-    _verifierMedecin();
-    _verifierAdmin();
-    _authSub = sb.auth.onAuthStateChange.listen((_) {
-      _verifierMedecin();
-      _verifierAdmin();
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _authSub?.cancel();
-    _debRech?.cancel();
     _nom.dispose();
     super.dispose();
   }
 
-  /// Icone profil : ouvre la connexion Supabase, ou le compte (+ deconnexion) si connecte.
-  Future<void> _ouvrirCompteSb() async {
-    if (sb.auth.currentSession == null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<bool>(builder: (_) => const ConnexionPage()),
-      );
-      if (mounted) setState(() {});
-      return;
-    }
-    final email = sb.auth.currentUser?.email ?? '';
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 18),
-          const Icon(Icons.account_circle, size: 52, color: Tabibi.vert),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(email,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: Tabibi.texte)),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Tabibi.rouge),
-            title: Text(t(context, 'connexion.deconnexion'),
-                style: const TextStyle(
-                    color: Tabibi.rouge, fontWeight: FontWeight.w600)),
-            onTap: () async {
-              await sb.auth.signOut();
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-          ),
-          const SizedBox(height: 8),
-        ]),
-      ),
-    );
-  }
-
-  /// Puce de langue dans la barre (globe + code) ouvrant le selecteur.
-  Widget _boutonLangue(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: () => _ouvrirLangues(context),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Tabibi.pastille,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Tabibi.pastilleBd),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.language, size: 16, color: Tabibi.vert),
-            const SizedBox(width: 5),
-            Text(langueDe(context).toUpperCase(),
-                style: const TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 13, color: Tabibi.vert)),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  /// Selecteur de langue (FR / AR / EN) en bas d'ecran, applique et memorise le choix.
-  Future<void> _ouvrirLangues(BuildContext context) async {
-    const langs = [
-      ['fr', 'Français', 'FR'],
-      ['ar', 'العربية', 'DZ'],
-      ['en', 'English', 'GB'],
-    ];
-    final courant = langueDe(context);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 10),
-          Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: Tabibi.bord, borderRadius: BorderRadius.circular(2))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(t(context, 'langue.titre'),
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Tabibi.ink)),
-            ),
-          ),
-          for (final l in langs)
-            ListTile(
-              leading: Container(
-                width: 38,
-                height: 38,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: Tabibi.pastille,
-                    borderRadius: BorderRadius.circular(9)),
-                child: Text(l[2],
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                        color: Tabibi.vert)),
-              ),
-              title: Text(l[1],
-                  style: TextStyle(
-                      fontWeight:
-                          courant == l[0] ? FontWeight.w700 : FontWeight.w500,
-                      color: courant == l[0] ? Tabibi.vert : Tabibi.texte)),
-              trailing: courant == l[0]
-                  ? const Icon(Icons.check, color: Tabibi.vert)
-                  : null,
-              onTap: () {
-                langues.choisir(l[0]);
-                Navigator.pop(ctx);
-              },
-            ),
-          const SizedBox(height: 8),
-        ]),
-      ),
-    );
-  }
-
-  /// Vrai des qu'un critere est saisi (texte, wilaya ou specialite) : on replie
-  /// l'accueil et on montre les resultats directement.
-  bool get _rechercheActive =>
-      _nom.text.trim().isNotEmpty || _wilaya != null || _specialite != null;
-
   @override
   Widget build(BuildContext context) {
+    final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 16,
-        title: Row(mainAxisSize: MainAxisSize.min, children: [
-          SvgPicture.asset('assets/logo-mark-vert.svg', width: 28, height: 28),
-          const SizedBox(width: 8),
-          const Text('Tabibi',
-              style: TextStyle(
-                  color: Tabibi.vert,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3)),
-        ]),
+        title:
+            const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
-          _boutonLangue(context),
-          if (_connecteSb) IconButton(
-            tooltip: t(context, 'accueil.notifications'),
-            onPressed: _ouvrirNotifications,
-            icon: Badge(
-              isLabelVisible: (_nonLues ?? 0) > 0,
-              label: Text('${_nonLues ?? 0}'),
-              child: const Icon(Icons.notifications_outlined),
-            ),
+          IconButton(
+            tooltip: 'Vérifier une ordonnance',
+            onPressed: _ouvrirVerification,
+            icon: const Icon(Icons.verified_outlined),
           ),
           IconButton(
-            tooltip: t(context,
-                _connecteSb ? 'connexion.deconnexion' : 'commun.seConnecter'),
-            onPressed: _ouvrirCompteSb,
-            icon: Icon(_connecteSb ? Icons.person : Icons.person_outline),
+            tooltip: 'Mes ordonnances',
+            onPressed: _ouvrirMesOrdonnances,
+            icon: const Icon(Icons.description_outlined),
           ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: RefreshIndicator(
-        color: Tabibi.vert,
-        onRefresh: () => Future.wait([_rechercher(), _chargerStats()]),
-        child: ListView(
-        padding: const EdgeInsets.only(bottom: 28),
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          _heroClair(context),
-          const SizedBox(height: 22),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!_rechercheActive) ...[
-                Text(t(context, 'accueil.services'),
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                      child: _tuileService(Icons.calendar_month,
-                          t(context, 'accueil.mesRendezVous'), _ouvrirMesRendezVous)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: _tuileService(Icons.videocam_outlined,
-                          t(context, 'accueil.teleconsultations'),
-                          _ouvrirTeleconsultations)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: _tuileService(Icons.local_pharmacy_outlined,
-                          t(context, 'accueil.dawini'), _ouvrirDawini)),
-                ]),
-                const SizedBox(height: 26),
-                ],
-                Text(
-                    _rechercheActive
-                        ? t(context, 'accueil.resultats')
-                        : t(context, 'accueil.praticiens'),
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
-                const SizedBox(height: 12),
-                if (_charge)
-                  for (int i = 0; i < 3; i++) _squeletteMedecin(),
-                for (final m in (_rechercheActive
-                    ? _resultats
-                    : _resultats.take(4).toList()))
-                  _carteMedecin(context, m),
-                if (!_charge && _resultats.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: Tabibi.ombreDouce),
-                    child: Column(children: [
-                      const Icon(Icons.search_off, size: 32, color: Tabibi.texte4),
-                      const SizedBox(height: 8),
-                      Text(t(context, 'accueil.aucunMedecin'),
-                          style: const TextStyle(color: Tabibi.texteDoux)),
-                    ]),
-                  ),
-                if (!_rechercheActive) ...[
-                  const SizedBox(height: 28),
-                  _blocMedecin(context),
-                  const SizedBox(height: 28),
-                  _faq(context),
-                  const SizedBox(height: 28),
-                  _miniFooter(context),
-                ],
-              ],
-            ),
+          IconButton(
+            tooltip: 'Mes rendez-vous',
+            onPressed: _ouvrirMesRendezVous,
+            icon: const Icon(Icons.calendar_month),
+          ),
+          IconButton(
+            tooltip: connecte ? 'Connecté' : 'Se connecter',
+            onPressed: _seConnecter,
+            icon: Icon(connecte ? Icons.person : Icons.person_outline),
           ),
         ],
-        ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _ongletActif,
-        onDestinationSelected: (i) {
-          if (i == 1) {
-            _ouvrirMesRendezVous();
-          } else if (i == 2) {
-            _ouvrirCarte();
-          } else if (i == 3) {
-            _ouvrirCompte();
-          } else {
-            setState(() => _ongletActif = 0);
-          }
-        },
-        destinations: [
-          NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
-              label: t(context, 'accueil.ongletAccueil')),
-          NavigationDestination(
-              icon: const Icon(Icons.calendar_month_outlined),
-              selectedIcon: const Icon(Icons.calendar_month),
-              label: t(context, 'accueil.mesRendezVous')),
-          NavigationDestination(
-              icon: const Icon(Icons.map_outlined),
-              selectedIcon: const Icon(Icons.map),
-              label: t(context, 'accueil.carte')),
-          NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: t(context, 'accueil.compte')),
-        ],
-      ),
-    );
-  }
-
-  /// Hero clair pleine largeur — copie fidele de tabibi.doctor (fond degrade doux).
-  Widget _heroClair(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOut,
-      builder: (context, v, child) => Opacity(
-        opacity: v.clamp(0.0, 1.0),
-        child: Transform.translate(offset: Offset(0, (1 - v) * 14), child: child),
-      ),
-      child: Container(
-      width: double.infinity,
-      color: Tabibi.bg,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-      child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
-      child: Column(
-        children: [
-          if (!_rechercheActive) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
-            decoration: BoxDecoration(
-              color: Tabibi.pastille,
-              border: Border.all(color: Tabibi.pastilleBd),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                    width: 7,
-                    height: 7,
-                    decoration:
-                        const BoxDecoration(color: Tabibi.or, shape: BoxShape.circle)),
-                const SizedBox(width: 7),
-                Flexible(
-                  child: Text(t(context, 'accueil.badge'),
-                      style: const TextStyle(
-                          color: Tabibi.ink,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            t(context, 'accueil.accroche'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: Tabibi.ink,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                height: 1.05,
-                letterSpacing: -0.7),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            t(context, 'accueil.sousTitre', params: {
-              'n': _wilayasRef.isNotEmpty ? '${_wilayasRef.length}' : '69',
-            }),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Tabibi.texteDoux, fontSize: 14, height: 1.5),
-          ),
-          ],
-          const SizedBox(height: 18),
-          TextField(
-            controller: _nom,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _rechercher(),
-            onChanged: (_) {
-              _debRech?.cancel();
-              _debRech = Timer(const Duration(milliseconds: 450), _rechercher);
-            },
-            decoration: InputDecoration(
-              hintText: t(context, 'accueil.recherchePlaceholder'),
-              prefixIcon: const Icon(Icons.search, color: Tabibi.vert),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Tabibi.r16),
-                borderSide: const BorderSide(color: Tabibi.bord),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Tabibi.r16),
-                borderSide: const BorderSide(color: Tabibi.bord),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Tabibi.r16),
-                borderSide: const BorderSide(color: Tabibi.vert, width: 1.5),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _pillFiltre(
-                  icone: Icons.location_on_outlined,
-                  libelle: _nomWilaya() ?? t(context, 'accueil.wilaya'),
-                  actif: _wilaya != null,
-                  onTap: () => _ouvrirSelecteur(
-                    titre: t(context, 'accueil.wilaya'),
-                    options: _wilayasRef,
-                    cleValeur: 'code',
-                    valeur: _wilaya,
-                    recherche: true,
-                    onChoisir: (v) {
-                      setState(() => _wilaya = v);
-                      _rechercher();
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _pillFiltre(
-                  icone: Icons.medical_services_outlined,
-                  libelle: _nomSpecialite() ?? t(context, 'accueil.specialite'),
-                  actif: _specialite != null,
-                  onTap: () => _ouvrirSelecteur(
-                    titre: t(context, 'accueil.specialite'),
-                    options: _specialitesRef,
-                    cleValeur: 'slug',
-                    valeur: _specialite,
-                    recherche: false,
-                    onChoisir: (v) {
-                      setState(() => _specialite = v);
-                      _rechercher();
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (!_rechercheActive) ...[
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.credit_card, size: 16, color: Tabibi.or),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(t(context, 'accueil.paiement'),
-                    textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: Tabibi.texteDoux, fontSize: 13)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                  child: _statTile(
-                      _totalMedecins != null
-                          ? _formatMilliers(_totalMedecins!)
-                          : '…',
-                      t(context, 'accueil.statMedecins'))),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: _statTile(
-                      _wilayasRef.isNotEmpty ? '${_wilayasRef.length}' : '69',
-                      t(context, 'accueil.statWilayas'))),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: _statTile('24/7', t(context, 'accueil.statReservation'))),
-            ],
-          ),
-          ],
-        ],
-      ),
-      ),
-      ),
-    );
-  }
-
-  /// Pastille de filtre (wilaya / specialite) ouvrant un selecteur en bas d'ecran.
-  Widget _pillFiltre({
-    required IconData icone,
-    required String libelle,
-    required bool actif,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(Tabibi.r16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          color: actif ? Tabibi.pastille : Colors.white,
-          borderRadius: BorderRadius.circular(Tabibi.r16),
-          border: Border.all(
-              color: actif ? Tabibi.vert : Tabibi.bord, width: actif ? 1.5 : 1),
-        ),
-        child: Row(children: [
-          Icon(icone, size: 18, color: actif ? Tabibi.vert : Tabibi.texte3),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(libelle,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: actif ? Tabibi.vert : Tabibi.texteDoux)),
-          ),
-          Icon(Icons.expand_more,
-              size: 18, color: actif ? Tabibi.vert : Tabibi.texte3),
-        ]),
-      ),
-    );
-  }
-
-  String? _nomWilaya() {
-    for (final w in _wilayasRef) {
-      if (w['code']?.toString() == _wilaya) return w['nom']?.toString();
-    }
-    return null;
-  }
-
-  String? _nomSpecialite() {
-    for (final s in _specialitesRef) {
-      if (s['slug']?.toString() == _specialite) return s['nom']?.toString();
-    }
-    return null;
-  }
-
-  /// Selecteur en bas d'ecran (liste + recherche) pour une wilaya ou une specialite.
-  Future<void> _ouvrirSelecteur({
-    required String titre,
-    required List<Map<String, dynamic>> options,
-    required String cleValeur,
-    required String? valeur,
-    required bool recherche,
-    required ValueChanged<String?> onChoisir,
-  }) async {
-    final ctrl = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setSheet) {
-          final q = ctrl.text.trim().toLowerCase();
-          final filtres = q.isEmpty
-              ? options
-              : options
-                  .where((o) =>
-                      (o['nom']?.toString().toLowerCase() ?? '').contains(q))
-                  .toList();
-          return Padding(
-            padding:
-                EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: SizedBox(
-              height: MediaQuery.of(ctx).size.height * 0.72,
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: Tabibi.bord,
-                          borderRadius: BorderRadius.circular(2))),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 8, 6),
-                    child: Row(children: [
-                      Text(titre,
-                          style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Tabibi.ink)),
-                      const Spacer(),
-                      IconButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          icon: const Icon(Icons.close, color: Tabibi.texte3)),
-                    ]),
-                  ),
-                  if (recherche)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                      child: TextField(
-                        controller: ctrl,
-                        onChanged: (_) => setSheet(() {}),
-                        decoration: InputDecoration(
-                          hintText: t(context, 'accueil.rechercheWilaya'),
-                          prefixIcon:
-                              const Icon(Icons.search, color: Tabibi.texte3),
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _ligneSelecteur(
-                            t(context, 'accueil.tout'), valeur == null, () {
-                          Navigator.pop(ctx);
-                          onChoisir(null);
-                        }),
-                        for (final o in filtres)
-                          _ligneSelecteur(
-                            o['nom']?.toString() ?? '',
-                            valeur == o[cleValeur]?.toString(),
-                            () {
-                              Navigator.pop(ctx);
-                              onChoisir(o[cleValeur]?.toString());
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        });
-      },
-    );
-  }
-
-  Widget _ligneSelecteur(String texte, bool choisi, VoidCallback onTap) {
-    return ListTile(
-      title: Text(texte,
-          style: TextStyle(
-              fontWeight: choisi ? FontWeight.w700 : FontWeight.w500,
-              color: choisi ? Tabibi.vert : Tabibi.texte)),
-      trailing: choisi ? const Icon(Icons.check, color: Tabibi.vert) : null,
-      onTap: onTap,
-    );
-  }
-
-  /// 75035 -> « 75K », 5 -> « 5 » : total lisible dans une petite tuile.
-  String _formatMilliers(int n) => n >= 1000 ? '${n ~/ 1000}K' : '$n';
-
-  /// Bloc recrutement medecin (comme le site).
-  Widget _blocMedecin(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      child: Column(children: [
-        Container(
-          width: 52,
-          height: 52,
-          alignment: Alignment.center,
-          decoration:
-              const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
-          child: const Icon(Icons.medical_information_outlined,
-              color: Tabibi.vert, size: 26),
-        ),
-        const SizedBox(height: 14),
-        Text(t(context, 'accueil.medecinTitre'),
-            style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w800, color: Tabibi.ink)),
-        const SizedBox(height: 8),
-        Text(
-          t(context, 'accueil.medecinTexte'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Tabibi.texteDoux, height: 1.4),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => _message(t(context, 'accueil.medecinBientot')),
-            icon: const Icon(Icons.person_add_alt_1, size: 18),
-            label: Text(t(context, 'accueil.medecinBouton')),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  /// Foire aux questions (accordeon).
-  Widget _faq(BuildContext context) {
-    final items = <List<String>>[
-      [t(context, 'accueil.faqQ1'), t(context, 'accueil.faqR1')],
-      [t(context, 'accueil.faqQ2'), t(context, 'accueil.faqR2')],
-      [t(context, 'accueil.faqQ3'), t(context, 'accueil.faqR3')],
-      [t(context, 'accueil.faqQ4'), t(context, 'accueil.faqR4')],
-    ];
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(t(context, 'accueil.faqTitre'),
-          style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w800, color: Tabibi.ink)),
-      const SizedBox(height: 12),
-      Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Tabibi.bord),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Theme(
-          data: Theme.of(context)
-              .copyWith(dividerColor: Tabibi.bord, splashColor: Colors.transparent),
-          child: Column(children: [
-            for (int i = 0; i < items.length; i++) ...[
-              if (i > 0) const Divider(height: 1, color: Tabibi.bord),
-              ExpansionTile(
-                shape: const Border(),
-                collapsedShape: const Border(),
-                iconColor: Tabibi.vert,
-                collapsedIconColor: Tabibi.texte3,
-                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                title: Text(items[i][0],
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Tabibi.texte,
-                        fontSize: 14)),
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(items[i][1],
-                        style: const TextStyle(
-                            color: Tabibi.texteDoux, height: 1.5, fontSize: 13)),
-                  ),
-                ],
-              ),
-            ],
-          ]),
-        ),
-      ),
-    ]);
-  }
-
-  /// Mini pied de page.
-  Widget _miniFooter(BuildContext context) {
-    return Column(children: [
-      const Divider(color: Tabibi.bord, height: 1),
-      const SizedBox(height: 18),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        SvgPicture.asset('assets/logo-mark-vert.svg', width: 22, height: 22),
-        const SizedBox(width: 8),
-        const Text('Tabibi',
-            style: TextStyle(
-                color: Tabibi.vert, fontWeight: FontWeight.w800, fontSize: 16)),
-      ]),
-      const SizedBox(height: 8),
-      Text(
-        t(context, 'accueil.footerTagline', params: {
-          'n': _totalMedecins != null ? _formatMilliers(_totalMedecins!) : '75K',
-          'w': _wilayasRef.isNotEmpty ? '${_wilayasRef.length}' : '69',
-        }),
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: Tabibi.texte3, fontSize: 12, height: 1.5),
-      ),
-      const SizedBox(height: 12),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-        Icon(Icons.mail_outline, size: 14, color: Tabibi.texte3),
-        SizedBox(width: 6),
-        Text('contact@tabibi.doctor',
-            style: TextStyle(
-                color: Tabibi.texteDoux,
-                fontSize: 12,
-                fontWeight: FontWeight.w600)),
-      ]),
-      const SizedBox(height: 12),
-      Wrap(alignment: WrapAlignment.center, spacing: 16, runSpacing: 6, children: [
-        Text(t(context, 'accueil.footerApropos'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        Text(t(context, 'accueil.footerCgu'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        Text(t(context, 'accueil.footerConfid'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
-        Text(t(context, 'accueil.footerMentions'), style: const TextStyle(color: Tabibi.texte3, fontSize: 12)),
-      ]),
-      const SizedBox(height: 12),
-      Text(t(context, 'accueil.footerCopyright'),
-          style: const TextStyle(color: Tabibi.texte4, fontSize: 11)),
-    ]);
-  }
-
-  Widget _statTile(String valeur, String libelle) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      child: Column(
-        children: [
-          Text(valeur,
-              style: const TextStyle(
-                  color: Tabibi.vert,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3)),
-          const SizedBox(height: 2),
-          Text(libelle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Tabibi.texte3,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2)),
-        ],
-      ),
-    );
-  }
-
-  /// Carte medecin (resultat) facon Doctolib : avatar, nom, specialite/ville, chevron.
-  Widget _carteMedecin(BuildContext context, Map<String, dynamic> m) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        leading: AvatarInitiales(m['nomComplet'] as String),
-        title: Row(
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            Flexible(
-              child: Text(m['nomComplet'] as String,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, color: Tabibi.texte)),
+            if (prelancement) const _BandeauLancement(),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _nom,
+                  decoration:
+                      const InputDecoration(labelText: 'Nom du médecin'),
+                  onSubmitted: (_) => _rechercher(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                tooltip: 'Rechercher',
+                onPressed: _rechercher,
+                icon: const Icon(Icons.search),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _specialite,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Spécialité'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                        value: null, child: Text('Toutes')),
+                    for (final sp in specialites)
+                      DropdownMenuItem(
+                          value: sp.slug,
+                          child: Text(sp.nom, overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _specialite = v);
+                    _rechercher();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _wilaya,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Wilaya'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                        value: null, child: Text('Toutes')),
+                    for (final w in wilayas)
+                      DropdownMenuItem(
+                          value: w.code,
+                          child: Text('${w.code} - ${w.nom}',
+                              overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _wilaya = v);
+                    _rechercher();
+                  },
+                ),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            _entrees(),
+            const SizedBox(height: 12),
+            if (_charge) const CircularProgressIndicator(),
+            Expanded(
+              child: ListView.separated(
+                itemCount: _resultats.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (_, i) {
+                  final m = _resultats[i];
+                  return ListTile(
+                    title: Text(m['nomComplet'] as String),
+                    subtitle: Text(sousTitrePraticien(m)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _ouvrirFiche(identifiant(m['id'])),
+                  );
+                },
+              ),
             ),
-            if (m['verifie'] == true) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                  color: Tabibi.orClair,
-                  borderRadius: BorderRadius.circular(999)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.verified, size: 12, color: Tabibi.or),
-                const SizedBox(width: 3),
-                Text(t(context, 'accueil.verifie'),
-                    style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Tabibi.orTexte)),
-              ]),
-            ),
-            ],
           ],
         ),
-        subtitle: Text(
-          medecinSousTitre(m),
-          style: const TextStyle(color: Tabibi.texteDoux),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: Tabibi.bordFort),
-        onTap: () => _ouvrirFiche(identifiant(m['id'])),
-      ),
       ),
     );
   }
 
   /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
   /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
-  /// « Téléconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
-  /// « Liste d'attente », « Mon profil » et « Langue ».
-  /// Squelette de chargement (placeholder gris) pour une carte medecin.
-  Widget _squeletteMedecin() {
-    Widget bloc(double w, double h) => Container(
-          width: w,
-          height: h,
-          decoration: BoxDecoration(
-              color: Tabibi.bg2, borderRadius: BorderRadius.circular(6)),
-        );
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Tabibi.ombreDouce,
-      ),
-      child: Row(
+  /// « Teleconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
+  /// « Liste d'attente » et « Mon profil ».
+  Widget _entrees() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
         children: [
-          Container(
-              width: 48,
-              height: 48,
-              decoration:
-                  const BoxDecoration(color: Tabibi.bg2, shape: BoxShape.circle)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                bloc(150, 12),
-                const SizedBox(height: 8),
-                bloc(90, 10),
-              ],
-            ),
+          ActionChip(
+            avatar: const Icon(Icons.notifications_outlined, size: 18),
+            label: Text(libelleNotifications(_nonLues)),
+            onPressed: _ouvrirNotifications,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.videocam_outlined, size: 18),
+            label: Text(visioActive
+                ? 'Téléconsultations'
+                : 'Téléconsultation · Bientôt'),
+            onPressed: _ouvrirTeleconsultations,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.chat_bubble_outline, size: 18),
+            label: const Text('Messagerie'),
+            onPressed: _ouvrirMessagerie,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.star_outline, size: 18),
+            label: const Text('Mes avis'),
+            onPressed: _ouvrirMesAvis,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.local_pharmacy_outlined, size: 18),
+            label: const Text('Dawini (pharmacies)'),
+            onPressed: _ouvrirDawini,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.hourglass_top_outlined, size: 18),
+            label: const Text("Liste d'attente"),
+            onPressed: _ouvrirListesAttente,
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.badge_outlined, size: 18),
+            label: const Text('Mon profil'),
+            onPressed: _ouvrirMonProfil,
           ),
         ],
       ),
     );
   }
+}
 
-  /// Tuile service (accueil) : icone pastille + libelle, facon Doctolib.
-  Widget _tuileService(IconData icone, String libelle, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(Tabibi.r16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: Tabibi.ombreDouce,
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              alignment: Alignment.center,
-              decoration:
-                  const BoxDecoration(color: Tabibi.pastille, shape: BoxShape.circle),
-              child: Icon(icone, color: Tabibi.vert, size: 22),
-            ),
-            const SizedBox(height: 8),
-            Text(libelle,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600, color: Tabibi.texte)),
-          ],
-        ),
+/// Bandeau de pré-lancement, identique à celui du site.
+class _BandeauLancement extends StatelessWidget {
+  const _BandeauLancement();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Charte.vert, Charte.vertFonce]),
+        borderRadius: BorderRadius.circular(16),
       ),
-    );
-  }
-
-  /// Panneau « Compte » (feuille du bas) : profil, ordonnances, avis, liste d'attente,
-  /// verification, langue — tout le secondaire, hors de l'accueil.
-  void _ouvrirCompte() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (pageCtx) => Scaffold(
-        appBar: AppBar(title: Text(t(context, 'accueil.compte'))),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              if (_estAdmin)
-                _ligneMenu(Icons.admin_panel_settings_outlined, 'Espace admin',
-                    () => _ouvrirEspaceAdmin()),
-              if (_estMedecin)
-                _ligneMenu(Icons.medical_services_outlined, 'Espace médecin',
-                    () => _ouvrirEspaceMedecin()),
-              _ligneMenu(Icons.badge_outlined, t(context, 'accueil.monProfil'),
-                  () => _ouvrirMonProfil()),
-              _ligneMenu(Icons.chat_bubble_outline, t(context, 'accueil.messagerie'),
-                  () => _ouvrirMessagerie()),
-              _ligneMenu(Icons.description_outlined, t(context, 'accueil.mesOrdonnances'),
-                  () => _ouvrirMesOrdonnances()),
-              _ligneMenu(Icons.star_outline, t(context, 'accueil.mesAvis'),
-                  () => _ouvrirMesAvis()),
-              _ligneMenu(Icons.hourglass_top_outlined, t(context, 'accueil.listeAttente'),
-                  () => _ouvrirListesAttente()),
-              _ligneMenu(Icons.verified_outlined, t(context, 'accueil.verifierOrdonnance'),
-                  () => _ouvrirVerification()),
-              _ligneMenu(Icons.language_outlined, t(context, 'accueil.langue'),
-                  () => _ouvrirLangue()),
-            ],
+      child: const Row(children: [
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(
+                  text: 'Lancement prochainement',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+              TextSpan(
+                  text:
+                      " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins."),
+            ]),
+            style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
           ),
         ),
-      ),
-    ));
-  }
-
-  /// Une ligne de menu : pastille verte + icone, libelle, chevron.
-  Widget _ligneMenu(IconData icone, String libelle, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                  color: Tabibi.pastille, shape: BoxShape.circle),
-              child: Icon(icone, size: 18, color: Tabibi.vert),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(libelle,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Tabibi.texte)),
-            ),
-            const Icon(Icons.chevron_right, size: 20, color: Tabibi.bordFort),
-          ],
-        ),
-      ),
+      ]),
     );
   }
-
 }

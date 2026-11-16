@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
 import '../widgets/vue_connexion.dart';
+
+/// Message affiche quand un avis existe deja pour le rendez-vous (409).
+const String messageAvisDejaDonne = 'Vous avez déjà donné votre avis pour ce rendez-vous.';
 
 /// Longueur maximale du commentaire acceptee par l'API.
 const int longueurMaxCommentaire = 500;
@@ -41,7 +42,6 @@ class DeposerAvisPage extends StatefulWidget {
 
 class _DeposerAvisPageState extends State<DeposerAvisPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
   final _commentaire = TextEditingController();
 
   /// Note choisie ; null tant que le patient n'a rien selectionne.
@@ -57,11 +57,11 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   Future<void> _seConnecter() async {
     final ok = await _auth.seConnecter();
     if (!mounted) return;
-    if (!ok) _message(t(context, 'commun.connexionAnnulee'));
+    if (!ok) _message('Connexion annulée');
     setState(() {});
   }
 
-  /// Envoie la note et le commentaire (POST /api/avis) ; 409 -> « avis.dejaDonne »,
+  /// Envoie la note et le commentaire (POST /api/avis) ; 409 -> [messageAvisDejaDonne],
   /// autres erreurs affichees telles quelles ; succes -> message puis fermeture.
   Future<void> _envoyer() async {
     final note = _note;
@@ -73,29 +73,29 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
     var depose = false;
     try {
       final commentaire = _commentaire.text.trim();
-      await _patient.deposerAvis(
+      await widget.api.deposerAvis(
         widget.rendezVousId,
         note!,
         commentaire.isEmpty ? null : commentaire,
+        token,
       );
       depose = true;
     } on ApiException catch (e) {
-      if (!mounted) return;
       if (e.conflit) {
-        _message(t(context, 'avis.dejaDonne'));
+        _message(messageAvisDejaDonne);
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message(t(context, 'commun.sessionExpiree'));
+        _message('Session expirée : reconnectez-vous puis réessayez');
       } else {
-        _message(messageApi(context, e));
+        _message(e.message);
       }
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
     }
     if (!depose || !mounted) return;
-    _message(t(context, 'avis.merci'));
+    _message('Merci pour votre avis.');
     Navigator.of(context).pop(true);
   }
 
@@ -107,7 +107,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t(context, 'avis.titre'))),
+      appBar: AppBar(title: const Text('Mon avis')),
       body: _corps(context),
     );
   }
@@ -115,7 +115,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: t(context, 'avis.connectezVous'),
+        message: 'Connectez-vous pour donner votre avis.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -129,13 +129,13 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event_available_outlined),
-            title: Text(nomMedecin ?? t(context, 'avis.rdvHonore')),
+            title: Text(nomMedecin ?? 'Rendez-vous honoré'),
             subtitle: dateRendezVous == null ? null : Text(dateRendezVous),
           ),
         const SizedBox(height: 8),
-        Text(t(context, 'avis.votreNote'), style: texte.titleMedium),
+        Text('Votre note', style: texte.titleMedium),
         const SizedBox(height: 4),
-        Text(t(context, 'avis.echelle'), style: texte.bodySmall),
+        Text('1 = insatisfait, 5 = excellent', style: texte.bodySmall),
         const SizedBox(height: 8),
         _choixNote(),
         const SizedBox(height: 24),
@@ -145,10 +145,10 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
           maxLines: 6,
           maxLength: longueurMaxCommentaire,
           textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            labelText: t(context, 'avis.commentaire'),
-            hintText: t(context, 'avis.commentaireIndice'),
-            border: const OutlineInputBorder(),
+          decoration: const InputDecoration(
+            labelText: 'Commentaire (facultatif)',
+            hintText: 'Accueil, écoute, explications...',
+            border: OutlineInputBorder(),
             alignLabelWithHint: true,
           ),
         ),
@@ -161,11 +161,11 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(t(context, 'avis.envoyer')),
+              : const Text('Envoyer mon avis'),
         ),
         const SizedBox(height: 8),
         Text(
-          t(context, 'avis.anonyme'),
+          'Votre avis est publié anonymement sur la fiche du praticien.',
           style: texte.bodySmall,
           textAlign: TextAlign.center,
         ),

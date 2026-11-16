@@ -34,6 +34,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Meme version que celle qui construit le .aab publie (evite les nouveaux avertissements bloquants).
+          flutter-version: 3.47.5
           cache: true
 
       - name: Versions
@@ -48,11 +50,7 @@ jobs:
       - name: Tests
         run: flutter test
 
-      # Le projet android/ n'est pas versionne : il est genere puis configure (identifiant
-      # dz.tabibi.app, schema de redirection OAuth, requetes https) par le script.
-      - name: Projet Android
-        run: tool/preparer_android.sh
-
+      # Le projet android/ est versionne (dz.tabibi.app, redirection OAuth, cle d'upload hors depot).
       - name: APK de debogage (Android)
         run: flutter build apk --debug
 

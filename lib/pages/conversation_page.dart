@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
-import '../services/patient_supabase.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/messagerie.dart';
@@ -14,9 +12,8 @@ import '../widgets/vue_erreur.dart';
 /// Longueur maximale d'un message acceptee par l'API.
 const int longueurMaxMessage = 2000;
 
-/// Fil d'une conversation avec un praticien : bulles alignees du cote de la fin de ligne pour
-/// mes messages, du cote du debut pour ceux du praticien (alignement directionnel : l'arabe
-/// s'ecrit de droite a gauche), avec leur date ; champ de saisie et bouton « Envoyer »
+/// Fil d'une conversation avec un praticien : bulles alignees a droite pour mes messages,
+/// a gauche pour ceux du praticien, avec leur date ; champ de saisie et bouton « Envoyer »
 /// (desactive tant que le message est vide), fil rafraichi apres chaque envoi.
 class ConversationPage extends StatefulWidget {
   const ConversationPage({
@@ -42,7 +39,6 @@ class ConversationPage extends StatefulWidget {
 
 class _ConversationPageState extends State<ConversationPage> {
   late final AuthService _auth = widget.auth ?? session;
-  final PatientSupabase _patient = const PatientSupabase();
   final _saisie = TextEditingController();
   List<Message> _messages = [];
   bool _charge = false;
@@ -70,7 +66,7 @@ class _ConversationPageState extends State<ConversationPage> {
     if (ok) {
       await _charger();
     } else {
-      _message(t(context, 'commun.connexionAnnulee'));
+      _message('Connexion annulée');
     }
   }
 
@@ -84,16 +80,16 @@ class _ConversationPageState extends State<ConversationPage> {
       _erreur = null;
     });
     try {
-      final messages = await _patient.messages(widget.conversation.id);
+      final messages = await widget.api.messages(widget.conversation.id, token);
       if (!mounted) return;
       setState(() => _messages = messages.map(Message.fromJson).toList());
     } on ApiException catch (e) {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = messageApi(context, e));
+      setState(() => _erreur = e.message);
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageApi(context, e));
+      if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -108,15 +104,15 @@ class _ConversationPageState extends State<ConversationPage> {
     if (token == null) return;
     setState(() => _envoi = true);
     try {
-      await _patient.envoyerMessage(widget.conversation.id, contenu);
+      await widget.api.envoyerMessage(widget.conversation.id, contenu, token);
       if (!mounted) return;
       _saisie.clear();
       await _charger(discret: true);
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      if (mounted) _message(messageApi(context, e));
+      _message(e.message);
     } on Exception catch (e) {
-      if (mounted) _message(messageApi(context, e));
+      _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
     }
@@ -131,11 +127,11 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.nomMedecin ?? t(context, 'conversation.titre')),
+        title: Text(widget.nomMedecin ?? 'Conversation'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: t(context, 'commun.actualiser'),
+              tooltip: 'Actualiser',
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -148,7 +144,7 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? t(context, 'conversation.connectezVous'),
+        message: _erreur ?? 'Connectez-vous pour consulter cette conversation.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -166,10 +162,13 @@ class _ConversationPageState extends State<ConversationPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_messages.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(t(context, 'conversation.vide'), textAlign: TextAlign.center),
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Aucun message pour le moment. Écrivez le premier.',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
@@ -182,8 +181,8 @@ class _ConversationPageState extends State<ConversationPage> {
     );
   }
 
-  /// Bulle d'un message : du cote de la fin de ligne (couleur primaire) pour les miens, du
-  /// cote du debut pour ceux du praticien ; contenu puis date d'envoi.
+  /// Bulle d'un message : a droite (couleur primaire) pour les miens, a gauche pour ceux
+  /// du praticien ; contenu puis date d'envoi.
   Widget _bulle(BuildContext context, Message m) {
     final deMoi = estDeMoi(m, _moi);
     final couleurs = Theme.of(context).colorScheme;
@@ -204,7 +203,7 @@ class _ConversationPageState extends State<ConversationPage> {
           children: [
             Text(m.contenu),
             const SizedBox(height: 4),
-            Text(dateMessage(langueDe(context), m), style: texte.bodySmall),
+            Text(dateMessage(m), style: texte.bodySmall),
           ],
         ),
       ),
@@ -228,10 +227,10 @@ class _ConversationPageState extends State<ConversationPage> {
                 maxLines: 4,
                 maxLength: longueurMaxMessage,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: t(context, 'conversation.votreMessage'),
+                decoration: const InputDecoration(
+                  hintText: 'Votre message',
                   counterText: '',
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -249,7 +248,7 @@ class _ConversationPageState extends State<ConversationPage> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(t(context, 'conversation.envoyer')),
+                      : const Text('Envoyer'),
                 );
               },
             ),
