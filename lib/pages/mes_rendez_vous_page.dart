@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/theme.dart';
 import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
@@ -9,6 +10,7 @@ import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
 import '../utils/libelles.dart';
+import '../widgets/composants.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'deposer_avis_page.dart';
@@ -233,15 +235,33 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_rdvs.isEmpty) return Center(child: Text(t('Aucun rendez-vous.', 'لا توجد مواعيد.')));
     return ListView.separated(
+      padding: const EdgeInsets.all(16),
       itemCount: _rdvs.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final rdv = _rdvs[i];
-        return ListTile(
-          leading: const Icon(Icons.event),
-          title: Text(_dateRdv(rdv)),
-          subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
-          trailing: _action(rdv),
+        final texte = Theme.of(context).textTheme;
+        final action = _action(rdv);
+        return CarteTabibi(
+          child: Row(children: [
+            AvatarInitiales(nom: _nomMedecin(rdv)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_dateRdv(rdv),
+                      style: texte.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(_nomMedecin(rdv),
+                      style: texte.bodyMedium?.copyWith(color: Charte.doux)),
+                  const SizedBox(height: 6),
+                  PastilleStatut(libelle: _libelleStatut(rdv), statut: rdv['statut']),
+                ],
+              ),
+            ),
+            if (action != null) action,
+          ]),
         );
       },
     );

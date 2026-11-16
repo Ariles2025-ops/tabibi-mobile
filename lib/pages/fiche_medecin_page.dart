@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/theme.dart';
 import '../i18n/langue.dart';
 import '../utils/praticien.dart';
 import '../models/avis.dart';
@@ -11,6 +12,7 @@ import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
+import '../widgets/composants.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 
@@ -280,19 +282,40 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(medecin['nomComplet'] as String, style: texte.titleLarge),
-        const SizedBox(height: 4),
-        Text(sousTitrePraticien(medecin)),
-        const SizedBox(height: 8),
-        _ligneMoyenne(context),
-        const SizedBox(height: 16),
-        _boutonConversation(),
+        CarteTabibi(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                AvatarInitiales(nom: medecin['nomComplet'] as String, rayon: 30),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(medecin['nomComplet'] as String,
+                          style: texte.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text(sousTitrePraticien(medecin),
+                          style: texte.bodyMedium?.copyWith(color: Charte.doux)),
+                    ],
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              _ligneMoyenne(context),
+              const SizedBox(height: 12),
+              _boutonConversation(),
+            ],
+          ),
+        ),
         const SizedBox(height: 24),
         Text(t('Créneaux disponibles', 'المواعيد المتاحة'), style: texte.titleMedium),
         const SizedBox(height: 8),
         if (_creneaux.isEmpty)
           Text(t('Aucun créneau disponible pour le moment.', 'لا توجد مواعيد متاحة حاليًا.')),
-        for (final c in _creneaux) _creneauTile(c),
+        Wrap(spacing: 10, runSpacing: 10, children: [for (final c in _creneaux) _creneauTile(c)]),
         const SizedBox(height: 24),
         _listeAttente(context),
         const SizedBox(height: 24),
@@ -333,9 +356,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   Widget _carteAvis(BuildContext context, Avis a) {
     final texte = Theme.of(context).textTheme;
     final commentaire = a.commentaire;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CarteTabibi(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,22 +433,43 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     );
   }
 
+  /// Creneau en pastille : date, duree et bouton « Réserver ».
   Widget _creneauTile(Map<String, dynamic> creneau) {
     final enCours = _enCours == identifiant(creneau['id']);
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.schedule),
-      title: Text(formaterDateIso(creneau['debut'] as String)),
-      subtitle: Text(t('${creneau['dureeMinutes']} min', '${creneau['dureeMinutes']} دقيقة')),
-      trailing: FilledButton(
-        onPressed: _enCours == null ? () => _reserver(creneau) : null,
-        child: enCours
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(t('Réserver', 'احجز')),
+    final texte = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: Charte.pastille,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.schedule, size: 18, color: Charte.vertFonce),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(formaterDateIso(creneau['debut'] as String),
+                  style: texte.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(t('${creneau['dureeMinutes']} min', '${creneau['dureeMinutes']} دقيقة'),
+                  style: texte.bodySmall?.copyWith(color: Charte.doux)),
+            ],
+          ),
+          const SizedBox(width: 12),
+          FilledButton(
+            onPressed: _enCours == null ? () => _reserver(creneau) : null,
+            child: enCours
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(t('Réserver', 'احجز')),
+          ),
+        ],
       ),
     );
   }
