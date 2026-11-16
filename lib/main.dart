@@ -559,18 +559,19 @@ class _BandeauLancement extends StatelessWidget {
         gradient: Charte.degrade,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text.rich(
-        TextSpan(children: [
-          TextSpan(
-              text: t('Lancement prochainement', 'الإطلاق قريبًا'),
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          TextSpan(
-              text: t(
-                  " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins.",
-                  ' — حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. تصفّح دليل الأطباء من الآن.')),
-        ]),
+      child: DefaultTextStyle.merge(
         style: TextStyle(
             color: Theme.of(context).colorScheme.onPrimary, fontSize: 13, height: 1.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(t('Lancement prochainement', 'الإطلاق قريبًا'),
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text(t(
+                "La prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins.",
+                'حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. تصفّح دليل الأطباء من الآن.')),
+          ],
+        ),
       ),
     );
   }
