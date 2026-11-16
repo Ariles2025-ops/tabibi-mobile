@@ -101,7 +101,7 @@ void main() {
   test('dateMessage formate envoyeLe et signale une date absente', () {
     expect(
       dateMessage(Message.fromJson({'envoyeLe': '2026-12-03T10:15:00'})),
-      'jeu. 3 dec. 10:15',
+      'jeu. 3 déc. 10:15',
     );
     expect(dateMessage(Message.fromJson({})), 'date inconnue');
   });
@@ -112,7 +112,7 @@ void main() {
         'creeLe': '2026-11-20T09:00:00',
         'dernierMessageLe': '2026-12-01T09:05:00',
       })),
-      'Dernier message le mar. 1 dec. 09:05',
+      'Dernier message le mar. 1 déc. 09:05',
     );
     expect(
       libelleActivite(Conversation.fromJson({'creeLe': '2026-11-20T09:00:00'})),

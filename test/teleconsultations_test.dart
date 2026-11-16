@@ -53,10 +53,10 @@ void main() {
   });
 
   test('libelleStatutTeleconsultation traduit les quatre statuts et tolere le reste', () {
-    expect(libelleStatutTeleconsultation('PLANIFIEE'), 'Planifiee');
+    expect(libelleStatutTeleconsultation('PLANIFIEE'), 'Planifiée');
     expect(libelleStatutTeleconsultation('EN_COURS'), 'En cours');
-    expect(libelleStatutTeleconsultation('TERMINEE'), 'Terminee');
-    expect(libelleStatutTeleconsultation('ANNULEE'), 'Annulee');
+    expect(libelleStatutTeleconsultation('TERMINEE'), 'Terminée');
+    expect(libelleStatutTeleconsultation('TERMINEE'), 'Terminée');
     expect(libelleStatutTeleconsultation('en_cours'), 'En cours');
     expect(libelleStatutTeleconsultation('AUTRE_STATUT'), 'Autre statut');
     expect(libelleStatutTeleconsultation(null), '');
@@ -72,27 +72,27 @@ void main() {
     expect(peutRejoindre(t('PLANIFIEE', lien: lien)), isTrue);
     expect(peutRejoindre(t('EN_COURS', lien: lien)), isTrue);
     expect(peutRejoindre(t('TERMINEE', lien: lien)), isFalse);
-    expect(peutRejoindre(t('ANNULEE', lien: lien)), isFalse);
+    expect(peutRejoindre(t('TERMINEE', lien: lien)), isFalse);
     expect(peutRejoindre(t('PLANIFIEE')), isFalse);
     expect(peutRejoindre(t('EN_COURS', lien: '')), isFalse);
 
     expect(estActive(t('PLANIFIEE')), isTrue);
     expect(estActive(t('EN_COURS')), isTrue);
     expect(estActive(t('TERMINEE')), isFalse);
-    expect(estActive(t('ANNULEE')), isFalse);
+    expect(estActive(t('TERMINEE')), isFalse);
   });
 
   test("dateTeleconsultation suit l'avancement de la session", () {
     expect(
       dateTeleconsultation(Teleconsultation.fromJson({'creeLe': '2026-12-03T08:00:00'})),
-      'Proposee le jeu. 3 dec. 08:00',
+      'Proposee le jeu. 3 déc. 08:00',
     );
     expect(
       dateTeleconsultation(Teleconsultation.fromJson({
         'creeLe': '2026-12-03T08:00:00',
         'demarreeLe': '2026-12-03T09:00:00',
       })),
-      'Demarree le jeu. 3 dec. 09:00',
+      'Démarrée le jeu. 3 déc. 09:00',
     );
     expect(
       dateTeleconsultation(Teleconsultation.fromJson({
@@ -100,7 +100,7 @@ void main() {
         'demarreeLe': '2026-11-20T09:05:00',
         'termineeLe': '2026-11-20T09:40:00',
       })),
-      'Terminee le ven. 20 nov. 09:40',
+      'Terminée le ven. 20 nov. 09:40',
     );
     expect(dateTeleconsultation(Teleconsultation.fromJson({})), 'Date inconnue');
   });

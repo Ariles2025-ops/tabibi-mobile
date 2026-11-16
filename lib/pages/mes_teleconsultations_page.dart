@@ -60,7 +60,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message('Connexion annulée');
     }
   }
 
@@ -104,7 +104,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
           for (final autre in _teleconsultations) autre.id == t.id ? consentie : autre,
         ];
       });
-      _message('Consentement enregistre');
+      _message('Consentement enregistré');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.message);
@@ -144,7 +144,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes teleconsultations'),
+        title: const Text('Mes téléconsultations'),
         actions: [
           if (_auth.estConnecte)
             IconButton(
@@ -161,7 +161,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos teleconsultations.',
+        message: _erreur ?? 'Connectez-vous pour consulter vos téléconsultations.',
         onSeConnecter: _seConnecter,
       );
     }
@@ -169,7 +169,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_teleconsultations.isEmpty) {
-      return const Center(child: Text('Aucune teleconsultation pour le moment.'));
+      return const Center(child: Text('Aucune téléconsultation pour le moment.'));
     }
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -207,7 +207,7 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
       return FilledButton.icon(
         onPressed: () => _rejoindre(t),
         icon: const Icon(Icons.video_call_outlined),
-        label: const Text('Rejoindre la teleconsultation'),
+        label: const Text('Rejoindre la téléconsultation'),
       );
     }
     return Text(_texteEtat(t), style: Theme.of(context).textTheme.bodyMedium);
@@ -249,8 +249,8 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   /// Texte d'etat quand aucune action n'est possible (session terminee, annulee ou lien absent).
   String _texteEtat(Teleconsultation t) {
     return switch (t.statut) {
-      'TERMINEE' => 'Cette teleconsultation est terminee.',
-      'ANNULEE' => 'Cette teleconsultation a ete annulee.',
+      'TERMINEE' => 'Cette téléconsultation est terminée.',
+      'ANNULEE' => 'Cette téléconsultation a été annulée.',
       _ => 'Le lien de la salle sera disponible prochainement.',
     };
   }

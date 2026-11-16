@@ -10,10 +10,10 @@ import 'libelles.dart';
 /// toute autre valeur suit la mise en forme generique ([libelleStatut]).
 String libelleStatutTeleconsultation(Object? statut) {
   return switch (statut?.toString().trim().toUpperCase()) {
-    'PLANIFIEE' => 'Planifiee',
+    'PLANIFIEE' => 'Planifiée',
     'EN_COURS' => 'En cours',
-    'TERMINEE' => 'Terminee',
-    'ANNULEE' => 'Annulee',
+    'TERMINEE' => 'Terminée',
+    'ANNULEE' => 'Annulée',
     _ => libelleStatut(statut),
   };
 }
@@ -30,9 +30,9 @@ bool peutRejoindre(Teleconsultation t) => t.lienSalle != null && estActive(t);
 /// « Date inconnue » si aucune date n'est lisible.
 String dateTeleconsultation(Teleconsultation t) {
   final termineeLe = t.termineeLe;
-  if (termineeLe != null) return 'Terminee le ${formaterDateHeure(termineeLe)}';
+  if (termineeLe != null) return 'Terminée le ${formaterDateHeure(termineeLe)}';
   final demarreeLe = t.demarreeLe;
-  if (demarreeLe != null) return 'Demarree le ${formaterDateHeure(demarreeLe)}';
+  if (demarreeLe != null) return 'Démarrée le ${formaterDateHeure(demarreeLe)}';
   final creeLe = t.creeLe;
   if (creeLe != null) return 'Proposee le ${formaterDateHeure(creeLe)}';
   return 'Date inconnue';

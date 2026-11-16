@@ -68,7 +68,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verifier une ordonnance')),
+      appBar: AppBar(title: const Text('Vérifier une ordonnance')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -77,7 +77,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
             autofocus: true,
             textInputAction: TextInputAction.search,
             decoration: const InputDecoration(
-              labelText: 'Code de verification',
+              labelText: 'Code de vérification',
               hintText: "Code figurant sur l'ordonnance",
               prefixIcon: Icon(Icons.tag),
             ),
@@ -87,7 +87,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           FilledButton.icon(
             onPressed: _charge ? null : _verifier,
             icon: const Icon(Icons.verified_outlined),
-            label: const Text('Verifier'),
+            label: const Text('Vérifier'),
           ),
           const SizedBox(height: 24),
           _zoneResultat(context),
@@ -107,7 +107,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
     final resultat = _resultat;
     if (resultat == null) {
       return Text(
-        "Saisissez le code figurant sur l'ordonnance pour verifier son authenticite.",
+        "Saisissez le code figurant sur l'ordonnance pour vérifier son authenticité.",
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium,
       );
@@ -131,7 +131,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
         leading: Icon(Icons.verified, color: couleurs.primary),
         title: Text(
           emiseLe is String && emiseLe.isNotEmpty
-              ? 'Ordonnance authentique, emise le ${formaterDateIso(emiseLe)}'
+              ? 'Ordonnance authentique, émise le ${formaterDateIso(emiseLe)}'
               : 'Ordonnance authentique',
         ),
         subtitle: statut.isEmpty ? null : Text('Statut : $statut'),

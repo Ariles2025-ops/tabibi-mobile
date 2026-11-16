@@ -420,11 +420,11 @@ class FakeApiService extends ApiService {
         'id': id,
         'destinataireId': sujetPatient,
         'canal': 'INTERNE',
-        'sujet': id == notificationNonLue ? 'Teleconsultation proposee' : 'Rendez-vous confirme',
+        'sujet': id == notificationNonLue ? 'Teleconsultation proposee' : 'Rendez-vous confirmé',
         'message': id == notificationNonLue
             ? 'Votre medecin vous propose une teleconsultation pour votre rendez-vous '
-                'du 3 dec. 2026 09:00.'
-            : 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.',
+                'du 3 déc. 2026 09:00.'
+            : 'Votre rendez-vous du 3 déc. 2026 09:00 est confirme.',
         'lue': lue,
         'creeLe': id == notificationNonLue ? '2026-12-03T10:15:00' : '2026-12-01T18:00:00',
       };
@@ -704,13 +704,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fiche medecin'), findsOneWidget);
+    expect(find.text('Fiche médecin'), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('Cardiologue · Alger (Alger)'), findsOneWidget);
     // Seul le creneau disponible est propose a la reservation.
-    expect(find.text('jeu. 3 dec. 09:00'), findsOneWidget);
-    expect(find.text('jeu. 3 dec. 09:30'), findsNothing);
-    expect(find.text('Reserver'), findsOneWidget);
+    expect(find.text('jeu. 3 déc. 09:00'), findsOneWidget);
+    expect(find.text('jeu. 3 déc. 09:30'), findsNothing);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets('mes ordonnances sans jeton propose de se connecter', (tester) async {
@@ -731,10 +731,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mes ordonnances'), findsOneWidget);
-    expect(find.text('Emise le jeu. 3 dec. 10:15'), findsOneWidget);
-    expect(find.text('Code ABC123 · Emise'), findsOneWidget);
+    expect(find.text('Émise le jeu. 3 déc. 10:15'), findsOneWidget);
+    expect(find.text('Code ABC123 · Émise'), findsOneWidget);
 
-    await tester.tap(find.text('Code ABC123 · Emise'));
+    await tester.tap(find.text('Code ABC123 · Émise'));
     await tester.pumpAndSettle();
     expect(find.text('Ordonnance'), findsOneWidget);
     expect(find.text('Paracetamol 1 g'), findsOneWidget);
@@ -753,7 +753,7 @@ void main() {
 
     expect(find.text('Ordonnance'), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
-    expect(find.text('Emise le jeu. 3 dec. 10:15 · Emise'), findsOneWidget);
+    expect(find.text('Émise le jeu. 3 déc. 10:15 · Émise'), findsOneWidget);
     // Code de verification bien visible (SelectableText).
     expect(find.text('ABC123'), findsOneWidget);
     expect(find.byType(SelectableText), findsOneWidget);
@@ -771,13 +771,13 @@ void main() {
     ));
 
     await tester.enterText(find.byType(TextField), 'ABC123');
-    await tester.tap(find.text('Verifier'));
+    await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
-    expect(find.text('Ordonnance authentique, emise le jeu. 3 dec. 10:15'), findsOneWidget);
-    expect(find.text('Statut : Emise'), findsOneWidget);
+    expect(find.text('Ordonnance authentique, émise le jeu. 3 déc. 10:15'), findsOneWidget);
+    expect(find.text('Statut : Émise'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'ZZZ999');
-    await tester.tap(find.text('Verifier'));
+    await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
     expect(find.text('Code inconnu'), findsOneWidget);
     expect(find.textContaining('Ordonnance authentique'), findsNothing);
@@ -821,16 +821,16 @@ void main() {
 
     expect(find.text('Mes notifications'), findsOneWidget);
     expect(find.text('Teleconsultation proposee'), findsOneWidget);
-    expect(find.text('Rendez-vous confirme'), findsOneWidget);
-    expect(find.text('Votre rendez-vous du 3 dec. 2026 09:00 est confirme.'), findsOneWidget);
-    expect(find.text('jeu. 3 dec. 10:15'), findsOneWidget);
-    expect(find.text('mar. 1 dec. 18:00'), findsOneWidget);
+    expect(find.text('Rendez-vous confirmé'), findsOneWidget);
+    expect(find.text('Votre rendez-vous du 3 déc. 2026 09:00 est confirme.'), findsOneWidget);
+    expect(find.text('jeu. 3 déc. 10:15'), findsOneWidget);
+    expect(find.text('mar. 1 déc. 18:00'), findsOneWidget);
     // Sujet en gras pour la non lue seulement.
     expect(
       tester.widget<Text>(find.text('Teleconsultation proposee')).style?.fontWeight,
       FontWeight.bold,
     );
-    expect(tester.widget<Text>(find.text('Rendez-vous confirme')).style?.fontWeight, isNull);
+    expect(tester.widget<Text>(find.text('Rendez-vous confirmé')).style?.fontWeight, isNull);
     // Une seule action « Marquer comme lue » (la non lue).
     expect(find.byTooltip('Marquer comme lue'), findsOneWidget);
 
@@ -850,7 +850,7 @@ void main() {
     await tester.tap(find.byTooltip('Tout marquer comme lu'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Marquer comme lue'), findsNothing);
-    expect(find.text('1 notification(s) marquee(s) lue(s)'), findsOneWidget);
+    expect(find.text('1 notification(s) marquée(s) lue(s)'), findsOneWidget);
   });
 
   testWidgets('mes notifications affiche un etat vide sans notification', (tester) async {
@@ -900,25 +900,25 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Mes teleconsultations'), findsOneWidget);
+    expect(find.text('Mes téléconsultations'), findsOneWidget);
     // Session planifiee sans consentement : carte de consentement, pas de lien.
-    expect(find.text('Proposee le jeu. 3 dec. 08:00'), findsOneWidget);
-    expect(find.text('Planifiee'), findsOneWidget);
+    expect(find.text('Proposee le jeu. 3 déc. 08:00'), findsOneWidget);
+    expect(find.text('Planifiée'), findsOneWidget);
     expect(find.text(texteConsentement), findsOneWidget);
     expect(find.text('Je donne mon consentement'), findsOneWidget);
-    expect(find.text('Rejoindre la teleconsultation'), findsNothing);
+    expect(find.text('Rejoindre la téléconsultation'), findsNothing);
     // Session terminee (consentement donne, lien remis) : texte d'etat seulement.
-    expect(find.text('Terminee le ven. 20 nov. 09:40'), findsOneWidget);
-    expect(find.text('Terminee'), findsOneWidget);
-    expect(find.text('Cette teleconsultation est terminee.'), findsOneWidget);
+    expect(find.text('Terminée le ven. 20 nov. 09:40'), findsOneWidget);
+    expect(find.text('Terminée'), findsOneWidget);
+    expect(find.text('Cette téléconsultation est terminée.'), findsOneWidget);
 
     await tester.tap(find.text('Je donne mon consentement'));
     await tester.pumpAndSettle();
     expect(find.text('Je donne mon consentement'), findsNothing);
-    expect(find.text('Consentement enregistre'), findsOneWidget);
-    expect(find.text('Rejoindre la teleconsultation'), findsOneWidget);
+    expect(find.text('Consentement enregistré'), findsOneWidget);
+    expect(find.text('Rejoindre la téléconsultation'), findsOneWidget);
 
-    await tester.tap(find.text('Rejoindre la teleconsultation'));
+    await tester.tap(find.text('Rejoindre la téléconsultation'));
     await tester.pumpAndSettle();
     expect(ouvert, Uri.parse(FakeApiService.lienSalle));
   });
@@ -955,7 +955,7 @@ void main() {
       tester.widget<Text>(find.text('Dr Amina Benali')).style?.fontWeight,
       FontWeight.bold,
     );
-    expect(find.text('Dernier message le mar. 1 dec. 09:05'), findsOneWidget);
+    expect(find.text('Dernier message le mar. 1 déc. 09:05'), findsOneWidget);
     expect(find.text('2 non lus'), findsOneWidget);
 
     await tester.tap(find.text('Dr Amina Benali'));
@@ -1003,8 +1003,8 @@ void main() {
 
     // Sans nom de praticien, le titre est generique.
     expect(find.text('Conversation'), findsOneWidget);
-    expect(find.text('mar. 1 dec. 09:00'), findsOneWidget);
-    expect(find.text('mar. 1 dec. 09:05'), findsOneWidget);
+    expect(find.text('mar. 1 déc. 09:00'), findsOneWidget);
+    expect(find.text('mar. 1 déc. 09:05'), findsOneWidget);
     Alignment alignementDe(String contenu) => tester
         .widget<Align>(find.ancestor(of: find.text(contenu), matching: find.byType(Align)).first)
         .alignment as Alignment;
@@ -1090,7 +1090,7 @@ void main() {
     expect(find.text('4 / 5'), findsOneWidget);
     expect(find.text('jeu. 5 nov. 16:30'), findsOneWidget);
     // Les creneaux restent proposes au-dessus des avis.
-    expect(find.text('Reserver'), findsOneWidget);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets('la fiche medecin sans avis publie le signale', (tester) async {
@@ -1155,8 +1155,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Trois rendez-vous du meme praticien : le libelle de repli, jamais l'UUID entier.
-    expect(find.text('Médecin 00000000 · Confirme'), findsOneWidget);
-    expect(find.text('Médecin 00000000 · Honore'), findsNWidgets(2));
+    expect(find.text('Médecin 00000000 · Confirmé'), findsOneWidget);
+    expect(find.text('Médecin 00000000 · Honoré'), findsNWidgets(2));
     expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
     // Les actions restent disponibles (identifiants en texte).
     expect(find.text('Donner mon avis'), findsOneWidget);
@@ -1203,7 +1203,7 @@ void main() {
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('4 / 5 · Publié'), findsOneWidget);
     expect(find.text('Explications claires, merci.'), findsOneWidget);
-    expect(find.text('Déposé le mar. 11 aout 18:00'), findsOneWidget);
+    expect(find.text('Déposé le mar. 11 août 18:00'), findsOneWidget);
   });
 
   testWidgets("l'accueil propose l'entree Dawini (pharmacies)", (tester) async {
@@ -1375,7 +1375,7 @@ void main() {
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
     expect(find.text(texteInscrit), findsOneWidget);
     // Les creneaux restent proposes.
-    expect(find.text('Reserver'), findsOneWidget);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets('la fiche medecin explique le conflit (409) si le patient est deja inscrit',
@@ -1511,7 +1511,7 @@ void main() {
     });
     expect(find.text('Profil enregistré.'), findsOneWidget);
     // Le formulaire suit la vue renvoyee par le serveur (nouvelle date de mise a jour).
-    expect(find.text('Mis à jour le mar. 1 dec. 10:00'), findsOneWidget);
+    expect(find.text('Mis à jour le mar. 1 déc. 10:00'), findsOneWidget);
     expect(find.text('Non renseignée'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
   });
@@ -1568,7 +1568,7 @@ void main() {
     expect(envoye['langue'], 'fr');
     expect(envoye['dateNaissance'], matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
     expect(find.text('Profil enregistré.'), findsOneWidget);
-    expect(find.text('Mis à jour le mar. 1 dec. 10:00'), findsOneWidget);
+    expect(find.text('Mis à jour le mar. 1 déc. 10:00'), findsOneWidget);
   });
 
   testWidgets("mon profil affiche tel quel le refus (400) de l'API", (tester) async {

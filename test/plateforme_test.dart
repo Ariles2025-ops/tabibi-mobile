@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/config/lancement.dart';
 import 'package:tabibi_mobile/config/referentiel.dart';
-import 'package:tabibi_mobile/main.dart';
+import 'package:tabibi_mobile/utils/praticien.dart';
 
 void main() {
   test('memes drapeaux que le site : pre-lancement actif, visio fermee', () {

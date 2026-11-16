@@ -4,17 +4,17 @@ const List<String> _jours = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'di
 
 const List<String> _mois = [
   'janv.',
-  'fevr.',
+  'févr.',
   'mars',
   'avr.',
   'mai',
   'juin',
   'juil.',
-  'aout',
+  'août',
   'sept.',
   'oct.',
   'nov.',
-  'dec.',
+  'déc.',
 ];
 
 /// « jeu. 4 dec. 09:00 » : jour de la semaine, jour, mois et heure locale.

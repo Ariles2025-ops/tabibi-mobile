@@ -50,7 +50,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message('Connexion annulée');
     }
   }
 
@@ -156,7 +156,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (token == null) return;
     try {
       await widget.api.annuler(identifiant(rdv['id']), token);
-      _message('Rendez-vous annule');
+      _message('Rendez-vous annulé');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.message);

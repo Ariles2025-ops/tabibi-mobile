@@ -4,14 +4,14 @@ import 'package:tabibi_mobile/utils/ordonnances.dart';
 
 void main() {
   test('libelleStatut met en forme un statut brut et tolere une valeur absente', () {
-    expect(libelleStatut('EMISE'), 'Emise');
+    expect(libelleStatut('EMISE'), 'Émise');
     expect(libelleStatut('EN_ATTENTE'), 'En attente');
     expect(libelleStatut(null), '');
     expect(libelleStatut(''), '');
   });
 
   test('dateEmission formate emiseLe et signale une date absente', () {
-    expect(dateEmission({'emiseLe': '2026-12-03T10:15:00'}), 'jeu. 3 dec. 10:15');
+    expect(dateEmission({'emiseLe': '2026-12-03T10:15:00'}), 'jeu. 3 déc. 10:15');
     expect(dateEmission({}), 'date inconnue');
     expect(dateEmission({'emiseLe': null}), 'date inconnue');
   });

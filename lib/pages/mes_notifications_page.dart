@@ -43,7 +43,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message('Connexion annulée');
     }
   }
 
@@ -116,7 +116,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         _notifications = [for (final n in _notifications) n.marquerLue()];
       });
       _message(nombre > 0
-          ? '$nombre notification(s) marquee(s) lue(s)'
+          ? '$nombre notification(s) marquée(s) lue(s)'
           : 'Aucune notification a marquer');
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();

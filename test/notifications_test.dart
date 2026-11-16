@@ -8,16 +8,16 @@ void main() {
       'id': 'b7f1e2c4-0000-4000-8000-000000000001',
       'destinataireId': 'a1a1a1a1-0000-4000-8000-000000000007',
       'canal': 'INTERNE',
-      'sujet': 'Rendez-vous confirme',
-      'message': 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.',
+      'sujet': 'Rendez-vous confirmé',
+      'message': 'Votre rendez-vous du 3 déc. 2026 09:00 est confirme.',
       'lue': false,
       'creeLe': '2026-12-01T18:00:00',
     });
     expect(n.id, 'b7f1e2c4-0000-4000-8000-000000000001');
     expect(n.destinataireId, 'a1a1a1a1-0000-4000-8000-000000000007');
     expect(n.canal, 'INTERNE');
-    expect(n.sujet, 'Rendez-vous confirme');
-    expect(n.message, 'Votre rendez-vous du 3 dec. 2026 09:00 est confirme.');
+    expect(n.sujet, 'Rendez-vous confirmé');
+    expect(n.message, 'Votre rendez-vous du 3 déc. 2026 09:00 est confirme.');
     expect(n.lue, isFalse);
     expect(n.creeLe, DateTime(2026, 12, 1, 18));
   });
@@ -65,7 +65,7 @@ void main() {
   test('dateNotification formate creeLe et signale une date absente', () {
     expect(
       dateNotification(NotificationUtilisateur.fromJson({'creeLe': '2026-12-03T10:15:00'})),
-      'jeu. 3 dec. 10:15',
+      'jeu. 3 déc. 10:15',
     );
     expect(dateNotification(NotificationUtilisateur.fromJson({})), 'date inconnue');
   });

@@ -41,7 +41,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message('Connexion annulée');
     }
   }
 
@@ -121,7 +121,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
         final o = _ordonnances[i];
         return ListTile(
           leading: const Icon(Icons.description_outlined),
-          title: Text('Emise le ${dateEmission(o)}'),
+          title: Text('Émise le ${dateEmission(o)}'),
           subtitle: Text('Code ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _ouvrirDetail(o),

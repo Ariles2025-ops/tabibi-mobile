@@ -20,6 +20,7 @@ import 'services/auth_service.dart';
 import 'services/session.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
+import 'utils/praticien.dart';
 
 void main() => runApp(const TabibiApp());
 
@@ -68,7 +69,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await widget.api.rechercherMedecins(specialite: _specialite, wilaya: _wilaya, q: _nom.text);
+      final r = await widget.api.rechercherMedecins(
+          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
       _message(messageErreur(e));
@@ -130,7 +132,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _ouvrirFiche(String medecinId) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
+        builder: (_) => FicheMedecinPage(
+            medecinId: medecinId, api: widget.api, auth: _auth),
       ),
     );
     await _apresRetour();
@@ -253,7 +256,8 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
+        title:
+            const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
             tooltip: 'Vérifier une ordonnance',
@@ -286,7 +290,8 @@ class _RecherchePageState extends State<RecherchePage> {
               Expanded(
                 child: TextField(
                   controller: _nom,
-                  decoration: const InputDecoration(labelText: 'Nom du médecin'),
+                  decoration:
+                      const InputDecoration(labelText: 'Nom du médecin'),
                   onSubmitted: (_) => _rechercher(),
                 ),
               ),
@@ -305,9 +310,12 @@ class _RecherchePageState extends State<RecherchePage> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Spécialité'),
                   items: [
-                    const DropdownMenuItem<String>(value: null, child: Text('Toutes')),
+                    const DropdownMenuItem<String>(
+                        value: null, child: Text('Toutes')),
                     for (final sp in specialites)
-                      DropdownMenuItem(value: sp.slug, child: Text(sp.nom, overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(
+                          value: sp.slug,
+                          child: Text(sp.nom, overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     setState(() => _specialite = v);
@@ -322,9 +330,13 @@ class _RecherchePageState extends State<RecherchePage> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Wilaya'),
                   items: [
-                    const DropdownMenuItem<String>(value: null, child: Text('Toutes')),
+                    const DropdownMenuItem<String>(
+                        value: null, child: Text('Toutes')),
                     for (final w in wilayas)
-                      DropdownMenuItem(value: w.code, child: Text('${w.code} - ${w.nom}', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(
+                          value: w.code,
+                          child: Text('${w.code} - ${w.nom}',
+                              overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     setState(() => _wilaya = v);
@@ -376,7 +388,9 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
           ActionChip(
             avatar: const Icon(Icons.videocam_outlined, size: 18),
-            label: Text(visioActive ? 'Téléconsultations' : 'Téléconsultation · Bientôt'),
+            label: Text(visioActive
+                ? 'Téléconsultations'
+                : 'Téléconsultation · Bientôt'),
             onPressed: _ouvrirTeleconsultations,
           ),
           ActionChip(
@@ -410,15 +424,6 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 }
 
-/// Ligne « spécialité · ville (wilaya) » d'un praticien, sans « null » quand une donnée manque.
-String sousTitrePraticien(Map<String, dynamic> m) {
-  final specialite = (m['specialiteFr'] as String?) ?? '';
-  final ville = m['ville'] as String?;
-  final wilaya = (m['wilayaFr'] as String?) ?? '';
-  final lieu = (ville == null || ville.isEmpty) ? wilaya : '$ville ($wilaya)';
-  return [specialite, lieu].where((x) => x.isNotEmpty).join(' · ');
-}
-
 /// Bandeau de pré-lancement, identique à celui du site.
 class _BandeauLancement extends StatelessWidget {
   const _BandeauLancement();
@@ -437,8 +442,12 @@ class _BandeauLancement extends StatelessWidget {
         Expanded(
           child: Text.rich(
             TextSpan(children: [
-              TextSpan(text: 'Lancement prochainement', style: TextStyle(fontWeight: FontWeight.w800)),
-              TextSpan(text: " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins."),
+              TextSpan(
+                  text: 'Lancement prochainement',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+              TextSpan(
+                  text:
+                      " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins."),
             ]),
             style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
           ),

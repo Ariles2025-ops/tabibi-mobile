@@ -52,7 +52,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulee');
+      _message('Connexion annulée');
     }
   }
 
@@ -144,7 +144,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
         const SizedBox(height: 24),
         Text('Medicaments', style: texte.titleMedium),
         const SizedBox(height: 8),
-        if (lignes.isEmpty) const Text('Aucun medicament sur cette ordonnance.'),
+        if (lignes.isEmpty) const Text('Aucun médicament sur cette ordonnance.'),
         for (final ligne in lignes) _carteLigne(context, ligne),
       ],
     );
@@ -152,7 +152,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
 
   /// « Emise le jeu. 4 dec. 09:00 · Emise » (statut omis s'il est absent).
   String _sousTitre(Map<String, dynamic> ordonnance) {
-    final date = 'Emise le ${dateEmission(ordonnance)}';
+    final date = 'Émise le ${dateEmission(ordonnance)}';
     final statut = libelleStatut(ordonnance['statut']);
     return statut.isEmpty ? date : '$date · $statut';
   }

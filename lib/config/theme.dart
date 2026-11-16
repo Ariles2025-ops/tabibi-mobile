@@ -38,7 +38,7 @@ class Charte {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: vert,
-          minimumSize: const Size.fromHeight(44),
+          minimumSize: const Size(64, 44),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),

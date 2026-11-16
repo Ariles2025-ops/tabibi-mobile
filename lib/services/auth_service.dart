@@ -32,6 +32,8 @@ class AuthService {
           scopes: ['openid', 'profile'],
           // Comme le site : mot de passe (ou code) exige a chaque connexion.
           promptValues: ['login'],
+          // Developpement local uniquement (http://localhost) ; la production est en https.
+          allowInsecureConnections: Configuration.issuer.startsWith('http://'),
         ),
       );
       accessToken = result.accessToken;

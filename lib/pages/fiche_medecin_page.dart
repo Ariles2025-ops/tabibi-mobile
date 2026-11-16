@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/praticien.dart';
 import '../models/avis.dart';
 import '../models/conversation.dart';
 import '../models/synthese_avis.dart';
@@ -127,7 +128,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       await widget.api.reserverCreneau(creneauId, token);
       if (!mounted) return;
       setState(() => _retirerCreneau(creneauId));
-      _message('Rendez-vous confirme');
+      _message('Rendez-vous confirmé');
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.conflit) {
@@ -136,7 +137,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         _message("Ce creneau vient d'etre pris");
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expiree : reconnectez-vous puis reessayez');
+        _message('Session expirée : reconnectez-vous puis réessayez');
       } else {
         _message(e.message);
       }
@@ -177,7 +178,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         _message(messageConversationRefusee);
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expiree : reconnectez-vous puis reessayez');
+        _message('Session expirée : reconnectez-vous puis réessayez');
       } else {
         _message(e.message);
       }
@@ -252,7 +253,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Fiche medecin')),
+      appBar: AppBar(title: const Text('Fiche médecin')),
       body: _corps(context),
     );
   }
@@ -262,7 +263,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     final erreur = _erreur;
     final medecin = _medecin;
     if (erreur != null || medecin == null) {
-      return VueErreur(message: erreur ?? 'Medecin introuvable', onReessayer: _charger);
+      return VueErreur(message: erreur ?? 'Médecin introuvable', onReessayer: _charger);
     }
     final texte = Theme.of(context).textTheme;
     return ListView(
@@ -270,15 +271,15 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       children: [
         Text(medecin['nomComplet'] as String, style: texte.titleLarge),
         const SizedBox(height: 4),
-        Text('${medecin['specialiteFr']} · ${medecin['ville']} (${medecin['wilayaFr']})'),
+        Text(sousTitrePraticien(medecin)),
         const SizedBox(height: 8),
         _ligneMoyenne(context),
         const SizedBox(height: 16),
         _boutonConversation(),
         const SizedBox(height: 24),
-        Text('Creneaux disponibles', style: texte.titleMedium),
+        Text('Créneaux disponibles', style: texte.titleMedium),
         const SizedBox(height: 8),
-        if (_creneaux.isEmpty) const Text('Aucun creneau disponible pour le moment.'),
+        if (_creneaux.isEmpty) const Text('Aucun créneau disponible pour le moment.'),
         for (final c in _creneaux) _creneauTile(c),
         const SizedBox(height: 24),
         _listeAttente(context),
@@ -408,7 +409,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Reserver'),
+            : const Text('Réserver'),
       ),
     );
   }
