@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Charte Tabibi (identique au site) : vert #0F7560, or #D4A437, Plus Jakarta Sans.
+/// Charte Tabibi (identique au site) : vert #0F7560, or #D4A437, Plus Jakarta Sans ;
+/// en arabe, IBM Plex Sans Arabic (repli Plus Jakarta Sans).
 class Charte {
   const Charte._();
   static const vert = Color(0xFF0F7560);
@@ -13,12 +14,18 @@ class Charte {
   static const doux = Color(0xFF475569);
   static const fond = Color(0xFFF8FAFC);
   static const bordure = Color(0xFFE2E8F0);
+  static const rouge = Color(0xFFD21010); // erreur et suppression uniquement
 
-  static ThemeData theme() {
+  static const policeLatine = 'PlusJakartaSans';
+  static const policeArabe = 'IBMPlexSansArabic';
+
+  static ThemeData theme({bool arabe = false}) {
     final base = ThemeData(
       useMaterial3: true,
-      fontFamily: 'PlusJakartaSans',
-      colorScheme: ColorScheme.fromSeed(seedColor: vert, primary: vert, surface: Colors.white),
+      fontFamily: arabe ? policeArabe : policeLatine,
+      fontFamilyFallback: arabe ? const [policeLatine] : const [policeArabe],
+      colorScheme:
+          ColorScheme.fromSeed(seedColor: vert, primary: vert, surface: Colors.white, error: rouge),
       scaffoldBackgroundColor: fond,
     );
     final bord = OutlineInputBorder(
