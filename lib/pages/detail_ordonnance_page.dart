@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
@@ -52,7 +53,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -99,7 +100,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
 
   Future<void> _copier(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
-    _message('Code copie');
+    _message(t('Code copié', 'تم نسخ الرمز'));
   }
 
   void _message(String texte) {
@@ -110,7 +111,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ordonnance')),
+      appBar: AppBar(title: Text(t('Ordonnance', 'الوصفة الطبية'))),
       body: _corps(context),
     );
   }
@@ -118,7 +119,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter cette ordonnance.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter cette ordonnance.',
+                'سجّل الدخول للاطلاع على هذه الوصفة.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -126,7 +129,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
     final erreur = _erreur;
     final ordonnance = _ordonnance;
     if (erreur != null || ordonnance == null) {
-      return VueErreur(message: erreur ?? 'Ordonnance introuvable', onReessayer: _charger);
+      return VueErreur(
+          message: erreur ?? t('Ordonnance introuvable', 'الوصفة غير موجودة'),
+          onReessayer: _charger);
     }
     final texte = Theme.of(context).textTheme;
     final lignes = lignesOrdonnance(ordonnance);
@@ -142,9 +147,10 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
         const SizedBox(height: 8),
         _carteCode(context, '${ordonnance['codeVerification'] ?? ''}'),
         const SizedBox(height: 24),
-        Text('Medicaments', style: texte.titleMedium),
+        Text(t('Médicaments', 'الأدوية'), style: texte.titleMedium),
         const SizedBox(height: 8),
-        if (lignes.isEmpty) const Text('Aucun médicament sur cette ordonnance.'),
+        if (lignes.isEmpty)
+          Text(t('Aucun médicament sur cette ordonnance.', 'لا يوجد أي دواء في هذه الوصفة.')),
         for (final ligne in lignes) _carteLigne(context, ligne),
       ],
     );
@@ -152,7 +158,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
 
   /// « Emise le jeu. 4 dec. 09:00 · Emise » (statut omis s'il est absent).
   String _sousTitre(Map<String, dynamic> ordonnance) {
-    final date = 'Émise le ${dateEmission(ordonnance)}';
+    final date = '${t('Émise le', 'صدرت في')} ${dateEmission(ordonnance)}';
     final statut = libelleStatut(ordonnance['statut']);
     return statut.isEmpty ? date : '$date · $statut';
   }
@@ -168,7 +174,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Code de verification', style: texte.labelLarge),
+            Text(t('Code de vérification', 'رمز التحقق'), style: texte.labelLarge),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -183,7 +189,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Copier le code',
+                  tooltip: t('Copier le code', 'نسخ الرمز'),
                   onPressed: code.isEmpty ? null : () => _copier(code),
                   icon: const Icon(Icons.copy),
                 ),
@@ -191,7 +197,8 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
             ),
             const SizedBox(height: 4),
             Text(
-              'A presenter en pharmacie ; verifiable sans compte via « Verifier une ordonnance ».',
+              t('À présenter en pharmacie ; vérifiable sans compte via « Vérifier une ordonnance ».',
+                  'يُقدَّم في الصيدلية؛ ويمكن التحقق منه دون حساب عبر « التحقق من وصفة ».'),
               style: texte.bodySmall,
             ),
           ],
@@ -220,9 +227,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
               ],
             ),
             const SizedBox(height: 8),
-            Text('Posologie : ${ligne['posologie'] ?? '-'}'),
+            Text('${t('Posologie', 'الجرعة')} : ${ligne['posologie'] ?? '-'}'),
             const SizedBox(height: 4),
-            Text('Duree : ${ligne['duree'] ?? '-'}'),
+            Text('${t('Durée', 'المدة')} : ${ligne['duree'] ?? '-'}'),
           ],
         ),
       ),

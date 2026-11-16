@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../models/conversation.dart';
 import '../models/message.dart';
+import '../i18n/langue.dart';
 import 'dates.dart';
 
 /// Vrai si le message a ete ecrit par l'utilisateur connecte, [moi] etant son identifiant
@@ -12,14 +13,15 @@ import 'dates.dart';
 bool estDeMoi(Message message, String? moi) =>
     moi != null && moi.isNotEmpty && message.auteurId == moi;
 
-/// Alignement de la bulle : a droite pour mes messages, a gauche pour ceux du praticien.
-Alignment alignementMessage(Message message, String? moi) =>
-    estDeMoi(message, moi) ? Alignment.centerRight : Alignment.centerLeft;
+/// Alignement de la bulle : en fin de ligne pour mes messages (a droite en francais, a gauche en
+/// arabe), en debut de ligne pour ceux du praticien.
+AlignmentDirectional alignementMessage(Message message, String? moi) =>
+    estDeMoi(message, moi) ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart;
 
 /// Date d'envoi formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
 String dateMessage(Message message) {
   final envoyeLe = message.envoyeLe;
-  return envoyeLe == null ? 'date inconnue' : formaterDateHeure(envoyeLe);
+  return envoyeLe == null ? t('date inconnue', 'تاريخ غير معروف') : formaterDateHeure(envoyeLe);
 }
 
 /// Activite d'une conversation : « Dernier message le jeu. 4 dec. 09:00 », sinon
@@ -27,17 +29,22 @@ String dateMessage(Message message) {
 String libelleActivite(Conversation conversation) {
   final dernierMessageLe = conversation.dernierMessageLe;
   if (dernierMessageLe != null) {
-    return 'Dernier message le ${formaterDateHeure(dernierMessageLe)}';
+    return t('Dernier message le ${formaterDateHeure(dernierMessageLe)}',
+        'آخر رسالة في ${formaterDateHeure(dernierMessageLe)}');
   }
   final creeLe = conversation.creeLe;
-  if (creeLe != null) return 'Ouverte le ${formaterDateHeure(creeLe)}';
-  return 'Aucun message';
+  if (creeLe != null) {
+    return t('Ouverte le ${formaterDateHeure(creeLe)}', 'فُتحت في ${formaterDateHeure(creeLe)}');
+  }
+  return t('Aucun message', 'لا توجد رسائل');
 }
 
 /// Pastille textuelle des non lus : « 1 non lu », « 3 non lus » ; chaine vide sans non lu.
 String libelleNonLus(int nonLus) {
   if (nonLus <= 0) return '';
-  return nonLus == 1 ? '1 non lu' : '$nonLus non lus';
+  return nonLus == 1
+      ? t('1 non lu', 'رسالة واحدة غير مقروءة')
+      : t('$nonLus non lus', '$nonLus غير مقروءة');
 }
 
 /// Copie triee de l'activite la plus recente a la plus ancienne ([Conversation.derniereActivite]) ;

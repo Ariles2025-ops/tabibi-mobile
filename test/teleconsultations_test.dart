@@ -85,7 +85,7 @@ void main() {
   test("dateTeleconsultation suit l'avancement de la session", () {
     expect(
       dateTeleconsultation(Teleconsultation.fromJson({'creeLe': '2026-12-03T08:00:00'})),
-      'Proposee le jeu. 3 déc. 08:00',
+      'Proposée le jeu. 3 déc. 08:00',
     );
     expect(
       dateTeleconsultation(Teleconsultation.fromJson({

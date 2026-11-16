@@ -152,9 +152,9 @@ void main() {
   test('lieuBesoin et dateBesoin decrivent la demande', () {
     expect(
       lieuBesoin(BesoinMedicament.fromJson({'wilayaCode': '16', 'commune': 'Alger-Centre'})),
-      'Wilaya 16 · Alger-Centre',
+      '16 - Alger · Alger-Centre',
     );
-    expect(lieuBesoin(BesoinMedicament.fromJson({'wilayaCode': '31'})), 'Wilaya 31');
+    expect(lieuBesoin(BesoinMedicament.fromJson({'wilayaCode': '31'})), '31 - Oran');
     expect(
       dateBesoin(BesoinMedicament.fromJson({'publieLe': '2026-11-20T09:00:00'})),
       'Publiée le ven. 20 nov. 09:00',

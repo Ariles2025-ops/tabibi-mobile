@@ -14,6 +14,10 @@ class AuthService {
 
   String? accessToken;
 
+  /// Jeton d'identite conserve a la connexion : il designe la session Keycloak a fermer
+  /// lors de la deconnexion ([seDeconnecterCompletement]).
+  String? idToken;
+
   /// Vrai si un jeton d'acces est disponible.
   bool get estConnecte => accessToken != null;
 
@@ -37,6 +41,7 @@ class AuthService {
         ),
       );
       accessToken = result.accessToken;
+      idToken = result.idToken;
     } on Exception {
       // Annulation par l'utilisateur ou erreur de plateforme : non connecte.
       return false;
@@ -44,5 +49,36 @@ class AuthService {
     return accessToken != null;
   }
 
-  void seDeconnecter() => accessToken = null;
+  /// Oublie les jetons locaux (jeton expire, par exemple) sans fermer la session Keycloak.
+  void seDeconnecter() {
+    accessToken = null;
+    idToken = null;
+  }
+
+  /// Deconnexion demandee par l'utilisateur : efface les jetons puis ferme la session Keycloak
+  /// (fin de session OIDC avec l'idToken, retour sur `dz.tabibi.app:/oauthredirect`), pour que
+  /// la prochaine connexion redemande le mot de passe. Les jetons sont effaces meme si la fin de
+  /// session echoue (hors ligne, navigateur ferme).
+  Future<void> seDeconnecterCompletement() async {
+    final jeton = idToken;
+    seDeconnecter();
+    if (jeton == null) return;
+    try {
+      await finDeSession(jeton);
+    } on Exception {
+      // Session Keycloak non fermee : elle expirera d'elle-meme ; l'appli est deconnectee.
+    }
+  }
+
+  /// Fin de session Keycloak (surchargeable dans les tests).
+  Future<void> finDeSession(String jeton) async {
+    await _appAuth.endSession(
+      EndSessionRequest(
+        idTokenHint: jeton,
+        postLogoutRedirectUrl: Configuration.redirect,
+        issuer: Configuration.issuer,
+        allowInsecureConnections: Configuration.issuer.startsWith('http://'),
+      ),
+    );
+  }
 }

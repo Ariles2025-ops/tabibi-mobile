@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/besoin_medicament.dart';
 import '../models/reponse_pharmacie.dart';
 import '../services/api_service.dart';
@@ -10,7 +11,8 @@ import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 
 /// Message affiche quand la demande est deja cloturee cote serveur (409).
-const String messageDemandeDejaCloturee = 'Cette demande est déjà clôturée.';
+String get messageDemandeDejaCloturee =>
+    t('Cette demande est déjà clôturée.', 'هذا الطلب مغلق من قبل.');
 
 /// Reponses des pharmacies a une demande de medicament : nom de la pharmacie,
 /// « Disponible » / « Indisponible », prix (« 850 DA ») s'il est indique, commentaire et
@@ -55,7 +57,7 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -89,16 +91,17 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clôturer cette demande ?'),
-        content: Text('${_besoin.medicament}\nLes pharmacies ne pourront plus y répondre.'),
+        title: Text(t('Clôturer cette demande ?', 'إغلاق هذا الطلب؟')),
+        content: Text(t('${_besoin.medicament}\nLes pharmacies ne pourront plus y répondre.',
+            '${_besoin.medicament}\nلن تتمكن الصيدليات من الرد عليه بعد الآن.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Non'),
+            child: Text(t('Non', 'لا')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Oui, clôturer'),
+            child: Text(t('Oui, clôturer', 'نعم، أغلق')),
           ),
         ],
       ),
@@ -111,14 +114,15 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
     try {
       await widget.api.cloturerBesoin(_besoin.id, token);
       cloturee = true;
-      _message('Demande clôturée.');
+      _message(t('Demande clôturée.', 'تم إغلاق الطلب.'));
     } on ApiException catch (e) {
       if (e.conflit) {
         cloturee = true;
         _message(messageDemandeDejaCloturee);
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expirée : reconnectez-vous puis réessayez');
+        _message(t('Session expirée : reconnectez-vous puis réessayez',
+            'انتهت الجلسة: سجّل الدخول من جديد ثم أعد المحاولة'));
       } else {
         _message(e.message);
       }
@@ -143,11 +147,11 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Réponses des pharmacies'),
+        title: Text(t('Réponses des pharmacies', 'ردود الصيدليات')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -160,7 +164,9 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter les réponses à votre demande.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter les réponses à votre demande.',
+                'سجّل الدخول للاطلاع على الردود على طلبك.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -174,7 +180,7 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
           _boutonCloture(),
           const SizedBox(height: 12),
         ],
-        Text('Réponses', style: texte.titleMedium),
+        Text(t('Réponses', 'الردود'), style: texte.titleMedium),
         const SizedBox(height: 8),
         ..._listeReponses(context),
       ],
@@ -216,7 +222,7 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.check_circle_outline),
-      label: const Text('Clôturer la demande'),
+      label: Text(t('Clôturer la demande', 'إغلاق الطلب')),
     );
   }
 
@@ -230,7 +236,9 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
     }
     final erreur = _erreur;
     if (erreur != null) return [VueErreur(message: erreur, onReessayer: _charger)];
-    if (_reponses.isEmpty) return const [Text('Aucune réponse pour le moment.')];
+    if (_reponses.isEmpty) {
+      return [Text(t('Aucune réponse pour le moment.', 'لا توجد ردود حاليًا.'))];
+    }
     return [for (final r in _reponses) _carte(context, r)];
   }
 

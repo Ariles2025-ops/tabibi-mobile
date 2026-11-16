@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
@@ -66,7 +67,7 @@ class _ConversationPageState extends State<ConversationPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -127,11 +128,11 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.nomMedecin ?? 'Conversation'),
+        title: Text(widget.nomMedecin ?? t('Conversation', 'محادثة')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -144,7 +145,9 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter cette conversation.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter cette conversation.',
+                'سجّل الدخول للاطلاع على هذه المحادثة.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -162,11 +165,12 @@ class _ConversationPageState extends State<ConversationPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'Aucun message pour le moment. Écrivez le premier.',
+            t('Aucun message pour le moment. Écrivez le premier.',
+                'لا توجد رسائل حاليًا. اكتب أول رسالة.'),
             textAlign: TextAlign.center,
           ),
         ),
@@ -227,10 +231,10 @@ class _ConversationPageState extends State<ConversationPage> {
                 maxLines: 4,
                 maxLength: longueurMaxMessage,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Votre message',
+                decoration: InputDecoration(
+                  hintText: t('Votre message', 'رسالتك'),
                   counterText: '',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -248,7 +252,7 @@ class _ConversationPageState extends State<ConversationPage> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Envoyer'),
+                      : Text(t('Envoyer', 'إرسال')),
                 );
               },
             ),

@@ -4,6 +4,8 @@
 // Un identifiant n'est donc jamais lu comme un nombre (`as int`, `int.parse`) ni compare ou
 // trie numeriquement : il est conserve en texte de bout en bout.
 
+import '../i18n/langue.dart';
+
 /// Nombre de caracteres conserves par [abreger] : le premier groupe d'un UUID.
 const int longueurAbregee = 8;
 
@@ -18,4 +20,5 @@ String abreger(String id) => id.length <= longueurAbregee ? id : id.substring(0,
 
 /// Libelle d'un praticien dont la fiche est indisponible : « Médecin 00000000 »
 /// (identifiant abrege) ; « Médecin inconnu » sans identifiant.
-String libelleMedecin(String id) => id.isEmpty ? 'Médecin inconnu' : 'Médecin ${abreger(id)}';
+String libelleMedecin(String id) =>
+    id.isEmpty ? t('Médecin inconnu', 'طبيب غير معروف') : '${t('Médecin', 'طبيب')} ${abreger(id)}';

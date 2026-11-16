@@ -723,8 +723,7 @@ void main() {
     expect(find.textContaining('ABC123'), findsNothing);
   });
 
-  testWidgets('mes ordonnances liste date, code et statut, puis ouvre le detail',
-      (tester) async {
+  testWidgets('mes ordonnances liste date, code et statut, puis ouvre le detail', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesOrdonnancesPage(api: const FakeApiService(), auth: sessionConnectee()),
     ));
@@ -760,7 +759,7 @@ void main() {
     // Une carte par ligne : medicament, posologie, duree.
     expect(find.text('Paracetamol 1 g'), findsOneWidget);
     expect(find.text('Posologie : 1 comprime matin et soir'), findsOneWidget);
-    expect(find.text('Duree : 5 jours'), findsOneWidget);
+    expect(find.text('Durée : 5 jours'), findsOneWidget);
     expect(find.text('Amoxicilline 500 mg'), findsOneWidget);
   });
 
@@ -792,8 +791,7 @@ void main() {
     expect(find.text('Notifications (1)'), findsOneWidget);
   });
 
-  testWidgets("l'accueil sans jeton affiche l'entree Notifications sans compteur",
-      (tester) async {
+  testWidgets("l'accueil sans jeton affiche l'entree Notifications sans compteur", (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
     ));
@@ -884,8 +882,7 @@ void main() {
     expect(find.text('Je donne mon consentement'), findsNothing);
   });
 
-  testWidgets(
-      'mes teleconsultations demande le consentement, puis propose de rejoindre la salle',
+  testWidgets('mes teleconsultations demande le consentement, puis propose de rejoindre la salle',
       (tester) async {
     Uri? ouvert;
     await tester.pumpWidget(MaterialApp(
@@ -902,7 +899,7 @@ void main() {
 
     expect(find.text('Mes téléconsultations'), findsOneWidget);
     // Session planifiee sans consentement : carte de consentement, pas de lien.
-    expect(find.text('Proposee le jeu. 3 déc. 08:00'), findsOneWidget);
+    expect(find.text('Proposée le jeu. 3 déc. 08:00'), findsOneWidget);
     expect(find.text('Planifiée'), findsOneWidget);
     expect(find.text(texteConsentement), findsOneWidget);
     expect(find.text('Je donne mon consentement'), findsOneWidget);
@@ -941,7 +938,8 @@ void main() {
     expect(find.text('Dr Amina Benali'), findsNothing);
   });
 
-  testWidgets('mes conversations liste le praticien, la date du dernier message et les non lus, '
+  testWidgets(
+      'mes conversations liste le praticien, la date du dernier message et les non lus, '
       'puis ouvre le fil', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesConversationsPage(api: const FakeApiService(), auth: sessionConnectee()),
@@ -966,7 +964,8 @@ void main() {
     expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
   });
 
-  testWidgets("mes conversations affiche « Médecin » et l'identifiant abrege si la fiche du "
+  testWidgets(
+      "mes conversations affiche « Médecin » et l'identifiant abrege si la fiche du "
       'praticien est indisponible', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesConversationsPage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
@@ -985,7 +984,8 @@ void main() {
     expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
   });
 
-  testWidgets('le fil aligne mes messages a droite et ceux du medecin a gauche, '
+  testWidgets(
+      'le fil aligne mes messages a droite et ceux du medecin a gauche, '
       "n'envoie pas un message vide et se rafraichit apres un envoi", (tester) async {
     final api = FakeApiServiceMessagerie();
     await tester.pumpWidget(MaterialApp(
@@ -1005,11 +1005,11 @@ void main() {
     expect(find.text('Conversation'), findsOneWidget);
     expect(find.text('mar. 1 déc. 09:00'), findsOneWidget);
     expect(find.text('mar. 1 déc. 09:05'), findsOneWidget);
-    Alignment alignementDe(String contenu) => tester
+    AlignmentDirectional alignementDe(String contenu) => tester
         .widget<Align>(find.ancestor(of: find.text(contenu), matching: find.byType(Align)).first)
-        .alignment as Alignment;
-    expect(alignementDe('Bonjour, comment allez-vous ?'), Alignment.centerLeft);
-    expect(alignementDe('Bonjour docteur, mieux merci.'), Alignment.centerRight);
+        .alignment as AlignmentDirectional;
+    expect(alignementDe('Bonjour, comment allez-vous ?'), AlignmentDirectional.centerStart);
+    expect(alignementDe('Bonjour docteur, mieux merci.'), AlignmentDirectional.centerEnd);
 
     // Bouton « Envoyer » desactive tant que la saisie est vide (ou blanche).
     FilledButton envoyer() =>
@@ -1027,7 +1027,7 @@ void main() {
     // Message envoye (contenu epure), fil recharge et champ vide.
     expect(api.envoyes.single['contenu'], 'Merci docteur, a bientot.');
     expect(find.text('Merci docteur, a bientot.'), findsOneWidget);
-    expect(alignementDe('Merci docteur, a bientot.'), Alignment.centerRight);
+    expect(alignementDe('Merci docteur, a bientot.'), AlignmentDirectional.centerEnd);
     expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, isEmpty);
     expect(envoyer().onPressed, isNull);
   });
@@ -1105,7 +1105,8 @@ void main() {
     expect(find.textContaining('/ 5'), findsNothing);
   });
 
-  testWidgets('mes rendez-vous propose de donner mon avis sur un rendez-vous honore, '
+  testWidgets(
+      'mes rendez-vous propose de donner mon avis sur un rendez-vous honore, '
       "exige une note, puis affiche l'avis comme donne", (tester) async {
     final api = FakeApiServiceAvis();
     await tester.pumpWidget(MaterialApp(
@@ -1147,7 +1148,8 @@ void main() {
     expect(find.text('Avis donné'), findsNWidgets(2));
   });
 
-  testWidgets("mes rendez-vous et le detail d'une ordonnance replient sur « Médecin » et "
+  testWidgets(
+      "mes rendez-vous et le detail d'une ordonnance replient sur « Médecin » et "
       "l'identifiant abrege si la fiche du praticien est indisponible", (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesRendezVousPage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
@@ -1224,7 +1226,8 @@ void main() {
     expect(find.text('Publier la demande'), findsNothing);
   });
 
-  testWidgets('dawini refuse une demande sans medicament ni wilaya, puis publie et liste '
+  testWidgets(
+      'dawini refuse une demande sans medicament ni wilaya, puis publie et liste '
       'mes demandes avec leur statut et leurs reponses', (tester) async {
     surfaceHaute(tester);
     final api = FakeApiServiceDawini();
@@ -1235,10 +1238,10 @@ void main() {
 
     // Mes demandes : statut et nombre de reponses.
     expect(find.text('Doliprane 1000'), findsOneWidget);
-    expect(find.text('Wilaya 16 · Alger-Centre · Ouverte'), findsOneWidget);
+    expect(find.text('16 - Alger · Alger-Centre · Ouverte'), findsOneWidget);
     expect(find.text('2 réponses'), findsOneWidget);
     expect(find.text('Ventoline'), findsOneWidget);
-    expect(find.text('Wilaya 16 · Alger-Centre · Clôturée'), findsOneWidget);
+    expect(find.text('16 - Alger · Alger-Centre · Clôturée'), findsOneWidget);
     expect(find.text('0 réponse'), findsOneWidget);
 
     // Formulaire vide : refus sans medicament, puis sans wilaya.
@@ -1249,14 +1252,9 @@ void main() {
     expect(api.publies, isEmpty);
     await laisserPasserLeMessage(tester);
 
+    // La wilaya est preremplie avec celle du profil (16).
     await tester.enterText(medicament, 'Insuline');
-    await tester.tap(find.text('Publier la demande'));
-    await tester.pumpAndSettle();
-    expect(find.text(messageWilayaRequise), findsOneWidget);
-    expect(api.publies, isEmpty);
-    await laisserPasserLeMessage(tester);
-
-    await tester.enterText(find.widgetWithText(TextField, 'Wilaya (code) *'), '16');
+    expect(find.text('16 - Alger'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextField, 'Commune'), 'Bab Ezzouar');
     await tester.tap(find.text('Publier la demande'));
     await tester.pumpAndSettle();
@@ -1267,11 +1265,12 @@ void main() {
     expect(find.text('Demande publiée.'), findsOneWidget);
     // La nouvelle demande apparait dans la liste, le formulaire est vide.
     expect(find.text('Insuline'), findsOneWidget);
-    expect(find.text('Wilaya 16 · Bab Ezzouar · Ouverte'), findsOneWidget);
+    expect(find.text('16 - Alger · Bab Ezzouar · Ouverte'), findsOneWidget);
     expect(tester.widget<TextField>(medicament).controller?.text, isEmpty);
   });
 
-  testWidgets("les reponses d'une demande affichent la pharmacie, la disponibilite, le prix "
+  testWidgets(
+      "les reponses d'une demande affichent la pharmacie, la disponibilite, le prix "
       'et la date, puis permettent de cloturer la demande', (tester) async {
     surfaceHaute(tester);
     final api = FakeApiServiceDawini();
@@ -1295,7 +1294,7 @@ void main() {
 
     expect(find.text('Réponses des pharmacies'), findsOneWidget);
     expect(find.text('Doliprane 1000'), findsOneWidget);
-    expect(find.text('Wilaya 16 · Alger-Centre · Ouverte'), findsOneWidget);
+    expect(find.text('16 - Alger · Alger-Centre · Ouverte'), findsOneWidget);
     expect(find.text('Boite de 8, urgent'), findsOneWidget);
     expect(find.text('Publiée le ven. 20 nov. 09:00'), findsOneWidget);
     expect(find.text('Pharmacie El Amel'), findsOneWidget);
@@ -1315,7 +1314,7 @@ void main() {
     expect(api.clotures, [FakeApiService.besoinOuvert]);
     expect(find.text('Demande clôturée.'), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
-    expect(find.text('Wilaya 16 · Alger-Centre · Clôturée'), findsOneWidget);
+    expect(find.text('16 - Alger · Alger-Centre · Clôturée'), findsOneWidget);
   });
 
   testWidgets('cloturer une demande deja cloturee explique le conflit (409)', (tester) async {
@@ -1339,7 +1338,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(messageDemandeDejaCloturee), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
-    expect(find.text('Wilaya 16 · Clôturée'), findsOneWidget);
+    expect(find.text('16 - Alger · Clôturée'), findsOneWidget);
   });
 
   testWidgets("l'accueil propose l'entree Liste d'attente", (tester) async {
@@ -1407,7 +1406,8 @@ void main() {
     expect(find.text('Me retirer'), findsNothing);
   });
 
-  testWidgets("mes listes d'attente liste le praticien et la date d'inscription, puis permet "
+  testWidgets(
+      "mes listes d'attente liste le praticien et la date d'inscription, puis permet "
       'de me retirer avec confirmation', (tester) async {
     final api = FakeApiServiceListeAttente();
     await tester.pumpWidget(MaterialApp(
@@ -1440,7 +1440,8 @@ void main() {
     expect(find.textContaining("Aucune inscription sur une liste d'attente."), findsOneWidget);
   });
 
-  testWidgets("mes listes d'attente replient sur « Médecin » et l'identifiant abrege si la "
+  testWidgets(
+      "mes listes d'attente replient sur « Médecin » et l'identifiant abrege si la "
       'fiche du praticien est indisponible', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesListesAttentePage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
@@ -1470,7 +1471,8 @@ void main() {
     expect(find.text('Enregistrer'), findsNothing);
   });
 
-  testWidgets('mon profil preremplit le formulaire avec le profil existant, puis enregistre '
+  testWidgets(
+      'mon profil preremplit le formulaire avec le profil existant, puis enregistre '
       'la date effacee et la langue choisie', (tester) async {
     surfaceHaute(tester);
     final api = FakeApiServiceProfil();
@@ -1485,16 +1487,17 @@ void main() {
         tester.widget<TextField>(find.widgetWithText(TextField, libelle)).controller?.text ?? '';
     expect(champ('Nom complet *'), 'Karim Haddad');
     expect(champ('Téléphone'), '0550123456');
-    expect(champ('Wilaya (code)'), '16');
+    expect(find.text('16 - Alger'), findsOneWidget);
     expect(find.text('14 mai 1990'), findsOneWidget);
-    expect(find.text('Français'), findsOneWidget);
+    // « Français » : langue de l'appli (boutons) puis langue preferee du profil (menu).
+    expect(find.text('Français'), findsNWidgets(2));
 
     // Date effacee, langue passee a l'anglais.
     await tester.tap(find.byTooltip('Effacer la date'));
     await tester.pump();
     expect(find.text('14 mai 1990'), findsNothing);
     expect(find.text('Non renseignée'), findsOneWidget);
-    await tester.tap(find.text('Français'));
+    await tester.tap(find.text('Français').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('English').last);
     await tester.pumpAndSettle();
@@ -1516,7 +1519,8 @@ void main() {
     expect(find.text('English'), findsOneWidget);
   });
 
-  testWidgets('mon profil non renseigne (404) affiche un formulaire vide, exige le nom et un '
+  testWidgets(
+      'mon profil non renseigne (404) affiche un formulaire vide, exige le nom et un '
       'telephone valide, puis enregistre avec une date choisie', (tester) async {
     surfaceHaute(tester);
     final api = FakeApiServiceSansProfil();
@@ -1530,8 +1534,8 @@ void main() {
     expect(tester.widget<TextField>(nom).controller?.text, isEmpty);
     expect(find.text('Karim Haddad'), findsNothing);
     expect(find.text('Non renseignée'), findsOneWidget);
-    expect(find.text('Français'), findsOneWidget);
-    expect(find.text('Reessayer'), findsNothing);
+    expect(find.text('Français'), findsNWidgets(2));
+    expect(find.text('Réessayer'), findsNothing);
     expect(find.textContaining('Renseignez votre profil'), findsOneWidget);
 
     // Nom obligatoire.
@@ -1552,7 +1556,10 @@ void main() {
 
     // Date choisie dans le selecteur (date proposee par defaut), telephone avec espaces.
     await tester.enterText(find.widgetWithText(TextField, 'Téléphone'), '05 50 12 34 56');
-    await tester.enterText(find.widgetWithText(TextField, 'Wilaya (code)'), '31');
+    await tester.tap(find.text('Aucune'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2 - Chlef').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Non renseignée'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));
@@ -1564,7 +1571,7 @@ void main() {
     final envoye = api.enregistres.single;
     expect(envoye['nomComplet'], 'Amina Ait Ahmed');
     expect(envoye['telephone'], '0550123456');
-    expect(envoye['wilayaCode'], '31');
+    expect(envoye['wilayaCode'], '2');
     expect(envoye['langue'], 'fr');
     expect(envoye['dateNaissance'], matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
     expect(find.text('Profil enregistré.'), findsOneWidget);

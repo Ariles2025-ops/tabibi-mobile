@@ -90,12 +90,12 @@ void main() {
     final sien = Message.fromJson({'id': 'm-2', 'auteurId': 'medecin-1', 'contenu': 'Bonjour'});
     expect(estDeMoi(mien, 'patient-7'), isTrue);
     expect(estDeMoi(sien, 'patient-7'), isFalse);
-    expect(alignementMessage(mien, 'patient-7'), Alignment.centerRight);
-    expect(alignementMessage(sien, 'patient-7'), Alignment.centerLeft);
+    expect(alignementMessage(mien, 'patient-7'), AlignmentDirectional.centerEnd);
+    expect(alignementMessage(sien, 'patient-7'), AlignmentDirectional.centerStart);
     // Identifiant inconnu : rien n'est attribue au patient.
     expect(estDeMoi(mien, null), isFalse);
     expect(estDeMoi(mien, ''), isFalse);
-    expect(alignementMessage(mien, null), Alignment.centerLeft);
+    expect(alignementMessage(mien, null), AlignmentDirectional.centerStart);
   });
 
   test('dateMessage formate envoyeLe et signale une date absente', () {
