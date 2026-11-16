@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/configuration.dart';
+import '../i18n/langue.dart';
 
 /// Erreur renvoyee par l'API Tabibi : statut HTTP et message lisible.
 ///
@@ -31,8 +32,9 @@ class ApiException implements Exception {
 }
 
 /// Message a afficher a l'utilisateur pour une erreur survenue lors d'un appel API.
-String messageErreur(Object erreur) =>
-    erreur is ApiException ? erreur.message : 'Impossible de joindre le serveur';
+String messageErreur(Object erreur) => erreur is ApiException
+    ? erreur.message
+    : t('Impossible de joindre le serveur', 'تعذّر الاتصال بالخادم');
 
 /// Appels a l'API Tabibi.
 ///
@@ -380,7 +382,155 @@ class ApiService {
     return _objet(res, '/api/moi/profil');
   }
 
+  /// Supprime le compte de l'utilisateur connecte (204) : exige par Google Play.
+  Future<void> supprimerMonCompte(String token) async {
+    final res = await http.delete(Uri.parse('$base/api/moi'), headers: _bearer(token));
+    _verifier(res, '/api/moi');
+  }
+
+  // --- Espace medecin ---
+
+  /// Agenda du medecin connecte : {id, patientId, medecinId, creneauId, debut, statut}.
+  Future<List<Map<String, dynamic>>> agendaMedecin(String token) =>
+      _get('/api/medecin/rendezvous', token);
+
+  /// Le patient est venu : rendez-vous HONORE (409 s'il n'est pas confirme).
+  Future<void> honorerRendezVous(String rdvId, String token) =>
+      _post('/api/rendezvous/${Uri.encodeComponent(rdvId)}/honorer', token);
+
+  /// Le patient n'est pas venu : rendez-vous ABSENT.
+  Future<void> marquerAbsentMedecin(String rdvId, String token) =>
+      _post('/api/medecin/rendezvous/${Uri.encodeComponent(rdvId)}/absent', token);
+
+  /// Annulation par le medecin : creneau libere, patient prevenu.
+  Future<void> annulerParMedecin(String rdvId, String token) =>
+      _post('/api/medecin/rendezvous/${Uri.encodeComponent(rdvId)}/annuler', token);
+
+  /// Creneaux a venir du medecin connecte : {id, medecinId, debut, dureeMinutes, disponible}.
+  Future<List<Map<String, dynamic>>> creneauxMedecin(String token) =>
+      _get('/api/medecin/creneaux', token);
+
+  /// Ouvre un creneau (201) ; [debut] est envoye en UTC (ISO 8601), 400 si passe ou duree invalide.
+  Future<Map<String, dynamic>> ouvrirCreneauMedecin(
+          DateTime debut, int dureeMinutes, String token) =>
+      _postJson('/api/medecin/creneaux', token, corpsCreneau(debut, dureeMinutes));
+
+  /// Supprime un creneau libre (204 ; 409 s'il est reserve).
+  Future<void> supprimerCreneauMedecin(String creneauId, String token) =>
+      _delete('/api/medecin/creneaux/${Uri.encodeComponent(creneauId)}', token);
+
+  /// Liste d'attente du medecin connecte : {id, patientId, medecinId, inscritLe}.
+  Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) =>
+      _get('/api/medecin/liste-attente', token);
+
+  /// Patients du medecin connecte : {patientId, nomComplet, telephone, email}.
+  Future<List<Map<String, dynamic>>> patientsMedecin(String token) =>
+      _get('/api/medecin/patients', token);
+
+  // --- Espace secretaire ---
+
+  /// Patients du cabinet d'un medecin, pour une secretaire rattachee (memes champs).
+  Future<List<Map<String, dynamic>>> patientsCabinet(String medecinId, String token) =>
+      _get('/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/patients', token);
+
+  /// Cabinets de la secretaire connectee : {id, medecinId, secretaireId, creeLe, accepte}.
+  Future<List<Map<String, dynamic>>> cabinetsSecretaire(String token) =>
+      _get('/api/secretaire/medecins', token);
+
+  /// Agenda d'un medecin pour une secretaire rattachee.
+  Future<List<Map<String, dynamic>>> agendaSecretaire(String medecinId, String token) =>
+      _get('/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/rendezvous', token);
+
+  Future<List<Map<String, dynamic>>> creneauxSecretaire(String medecinId, String token) =>
+      _get('/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/creneaux', token);
+
+  Future<Map<String, dynamic>> ouvrirCreneauSecretaire(
+          String medecinId, DateTime debut, int dureeMinutes, String token) =>
+      _postJson('/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/creneaux', token,
+          corpsCreneau(debut, dureeMinutes));
+
+  Future<void> supprimerCreneauSecretaire(String medecinId, String creneauId, String token) => _delete(
+      '/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/creneaux/${Uri.encodeComponent(creneauId)}',
+      token);
+
+  Future<void> honorerParSecretaire(String rdvId, String token) =>
+      _post('/api/secretaire/rendezvous/${Uri.encodeComponent(rdvId)}/honorer', token);
+
+  Future<void> absentParSecretaire(String rdvId, String token) =>
+      _post('/api/secretaire/rendezvous/${Uri.encodeComponent(rdvId)}/absent', token);
+
+  Future<void> annulerParSecretaire(String rdvId, String token) =>
+      _post('/api/secretaire/rendezvous/${Uri.encodeComponent(rdvId)}/annuler', token);
+
+  // --- Invitations a rejoindre un cabinet (tout compte connecte) ---
+
+  /// Invitations en attente : {id, medecinId, creeLe}.
+  Future<List<Map<String, dynamic>>> invitationsCabinet(String token) =>
+      _get('/api/moi/invitations-cabinet', token);
+
+  /// Accepter : le compte recoit le role SECRETAIRE (effectif a la prochaine connexion).
+  Future<void> accepterInvitation(String invitationId, String token) =>
+      _post('/api/moi/invitations-cabinet/${Uri.encodeComponent(invitationId)}/accepter', token);
+
+  Future<void> refuserInvitation(String invitationId, String token) =>
+      _post('/api/moi/invitations-cabinet/${Uri.encodeComponent(invitationId)}/refuser', token);
+
+  // --- Espace pharmacie ---
+
+  /// Besoins ouverts d'une wilaya : {id, medicament, wilayaCode, commune, precision, statut,
+  /// publieLe, nombreReponses, dejaRepondu}.
+  Future<List<Map<String, dynamic>>> besoinsWilaya(String wilayaCode, String token) async {
+    final uri =
+        Uri.parse('$base/api/dawini/besoins').replace(queryParameters: {'wilaya': wilayaCode});
+    final res = await http.get(uri, headers: _bearer(token));
+    return _liste(res, '/api/dawini/besoins');
+  }
+
+  /// Reponse de la pharmacie connectee a un besoin (201) ; le nom affiche est celui de son profil.
+  Future<Map<String, dynamic>> repondreBesoin(
+    String besoinId,
+    bool disponible,
+    String token, {
+    int? prixDa,
+    String? commentaire,
+  }) =>
+      _postJson('/api/dawini/besoins/${Uri.encodeComponent(besoinId)}/reponses', token, {
+        'disponible': disponible,
+        'prixDa': prixDa,
+        'commentaire': commentaire,
+      });
+
+  /// Marque delivree l'ordonnance de ce code : {valide, emiseLe, statut, delivreeLe}
+  /// (409 si deja delivree ou annulee, 404 si code inconnu).
+  Future<Map<String, dynamic>> delivrerOrdonnance(String code, String token) async {
+    final chemin = '/api/pharmacie/ordonnances/${Uri.encodeComponent(code)}/delivrer';
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
+    return _objet(res, chemin);
+  }
+
   // --- Outils internes ---
+
+  Future<List<Map<String, dynamic>>> _get(String chemin, String token) async {
+    final res = await http.get(Uri.parse('$base$chemin'), headers: _bearer(token));
+    return _liste(res, chemin);
+  }
+
+  Future<void> _post(String chemin, String token) async {
+    final res = await http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
+    _verifier(res, chemin);
+  }
+
+  Future<Map<String, dynamic>> _postJson(
+      String chemin, String token, Map<String, dynamic> corps) async {
+    final res = await http.post(Uri.parse('$base$chemin'),
+        headers: _bearerJson(token), body: jsonEncode(corps));
+    return _objet(res, chemin);
+  }
+
+  Future<void> _delete(String chemin, String token) async {
+    final res = await http.delete(Uri.parse('$base$chemin'), headers: _bearer(token));
+    _verifier(res, chemin);
+  }
 
   Map<String, String> _bearer(String token) => {'Authorization': 'Bearer $token'};
 
@@ -423,11 +573,19 @@ class ApiService {
       // Corps vide ou non JSON : libelle par defaut ci-dessous.
     }
     return switch (res.statusCode) {
-      401 => 'Connexion requise',
-      403 => 'Acces refuse : un compte patient est necessaire',
-      404 => 'Ressource introuvable',
-      409 => "Ce creneau vient d'etre pris",
-      _ => 'Echec $chemin : ${res.statusCode}',
+      401 => t('Connexion requise', 'يجب تسجيل الدخول'),
+      403 => t('Accès refusé : ce compte n\'a pas les droits nécessaires',
+          'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة'),
+      404 => t('Ressource introuvable', 'العنصر غير موجود'),
+      409 => t('Action impossible : la situation a changé entre-temps',
+          'تعذّر الإجراء: تغيّر الوضع في الأثناء'),
+      _ => t('Échec $chemin : ${res.statusCode}', 'فشل $chemin : ${res.statusCode}'),
     };
   }
 }
+
+/// Corps d'ouverture de creneau : `{"debut": "<instant UTC ISO 8601>", "dureeMinutes": n}`.
+Map<String, dynamic> corpsCreneau(DateTime debut, int dureeMinutes) => {
+      'debut': debut.toUtc().toIso8601String(),
+      'dureeMinutes': dureeMinutes,
+    };
