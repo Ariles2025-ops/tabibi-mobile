@@ -8,6 +8,7 @@ import 'package:tabibi_mobile/pages/espace/agenda_page.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet_pages.dart';
 import 'package:tabibi_mobile/pages/espace/creneaux_page.dart';
+import 'package:tabibi_mobile/pages/espace/fiche_semaine_pages.dart';
 import 'package:tabibi_mobile/pages/espace/mon_espace_page.dart';
 import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
 import 'package:tabibi_mobile/pages/mon_profil_page.dart';
@@ -24,6 +25,41 @@ class FakeEspaceApi extends ApiService {
   final List<String> roles;
   final String? wilayaProfil;
   final appels = <String>[];
+
+  /// Quand vrai, les routes semaine type / fiche / RDV telephone repondent 404.
+  bool routesAbsentes = false;
+
+  @override
+  Future<Map<String, dynamic>> ficheMedecin(String token) async {
+    if (routesAbsentes) throw const ApiException(404, 'absent');
+    return {'adresse': 'Rue 1', 'telephoneCabinet': '023 45 67 89', 'langues': ['fr', 'ar']};
+  }
+
+  @override
+  Future<Map<String, dynamic>> modifierFicheMedecin(
+      Map<String, dynamic> corps, String token) async {
+    appels.add('fiche ${corps['adresse']} ${corps['langues']}');
+    return corps;
+  }
+
+  @override
+  Future<Map<String, dynamic>> semaineTypeMedecin(Map<String, dynamic> corps, String token) async {
+    if (routesAbsentes) throw const ApiException(404, 'absent');
+    appels.add('semaine ${corps['jours']} ${corps['nombreSemaines']}');
+    return {'crees': 12, 'ignores': 2};
+  }
+
+  @override
+  Future<Map<String, dynamic>> rdvTelephoneSecretaire(
+      String medecinId, Map<String, dynamic> corps, String token) async {
+    if (routesAbsentes) throw const ApiException(404, 'absent');
+    appels.add('tel ${corps['creneauId']} ${corps['nomPatient']}');
+    return {};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> creneauxSecretaire(String medecinId, String token) =>
+      creneauxMedecin(token);
 
   @override
   Future<List<Map<String, dynamic>>> rechercherMedecins(
@@ -294,6 +330,66 @@ void main() {
     await tester.tap(find.text('Créer'));
     await tester.pumpAndSettle();
     expect(api.appels.where((a) => a.startsWith('ouvrir')), hasLength(30));
+  });
+
+  testWidgets('semaine type : envoie le contrat et affiche crees / ignores', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, CreneauxPage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Semaine type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Créer les créneaux'));
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'semaine [LUNDI, MARDI, MERCREDI, JEUDI, DIMANCHE] 4');
+    expect(find.text('12 créneaux créés, 2 ignorés'), findsOneWidget);
+  });
+
+  testWidgets('semaine type : un 404 cache le bouton sans erreur', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
+    await afficher(tester, CreneauxPage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Semaine type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Créer les créneaux'));
+    await tester.pumpAndSettle();
+    expect(find.text('Semaine type'), findsNothing);
+    expect(find.text('absent'), findsNothing);
+  });
+
+  testWidgets('RDV pris au telephone : seulement pour la secretaire, sur un creneau libre',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['SECRETAIRE']);
+    await afficher(
+        tester,
+        CreneauxPage(
+            cabinet: const Cabinet.pourSecretaire(medecinId, nomMedecin: 'Dr Amina Benali'),
+            api: api,
+            auth: SessionTest()));
+    await tester.tap(find.byTooltip('RDV pris au téléphone'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Karim');
+    await tester.enterText(find.byType(TextField).at(1), '0555 12 34 56');
+    await tester.tap(find.text('Réserver'));
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'tel c1 Karim');
+    expect(find.text('Rendez-vous enregistré'), findsOneWidget);
+  });
+
+  testWidgets('RDV pris au telephone : absent pour le medecin et cache sur 404', (tester) async {
+    await afficher(tester, CreneauxPage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    expect(find.byTooltip('RDV pris au téléphone'), findsNothing);
+  });
+
+  testWidgets('ma fiche : enregistre ; un 404 cache l\'entree de Mon espace', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, MaFichePage(api: api, auth: SessionTest()));
+    expect(find.text('Rue 1'), findsOneWidget);
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'fiche Rue 1 [fr, ar]');
+
+    final absent = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
+    await afficher(tester, MonEspacePage(api: absent, auth: SessionTest()));
+    expect(find.text('Mes créneaux'), findsOneWidget);
+    expect(find.text('Ma fiche'), findsNothing);
   });
 
   testWidgets("ma liste d'attente affiche les patients inscrits", (tester) async {

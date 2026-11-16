@@ -419,6 +419,23 @@ class ApiService {
   Future<void> supprimerCreneauMedecin(String creneauId, String token) =>
       _delete('/api/medecin/creneaux/${Uri.encodeComponent(creneauId)}', token);
 
+  /// Semaine type (POST, 404 tant que la route n'existe pas) : {crees, ignores}.
+  Future<Map<String, dynamic>> semaineTypeMedecin(Map<String, dynamic> corps, String token) =>
+      _postJson('/api/medecin/creneaux/semaine-type', token, corps);
+
+  /// Fiche publique du medecin connecte (404 tant que la route n'existe pas).
+  Future<Map<String, dynamic>> ficheMedecin(String token) async {
+    final res = await http.get(Uri.parse('$base/api/medecin/fiche'), headers: _bearer(token));
+    return _objet(res, '/api/medecin/fiche');
+  }
+
+  /// Modifie adresse, telephone du cabinet, horaires, presentation et langues.
+  Future<Map<String, dynamic>> modifierFicheMedecin(Map<String, dynamic> corps, String token) async {
+    final res = await http.put(Uri.parse('$base/api/medecin/fiche'),
+        headers: _bearerJson(token), body: jsonEncode(corps));
+    return _objet(res, '/api/medecin/fiche');
+  }
+
   /// Liste d'attente du medecin connecte : {id, patientId, medecinId, inscritLe}.
   Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) =>
       _get('/api/medecin/liste-attente', token);
@@ -448,6 +465,19 @@ class ApiService {
           String medecinId, DateTime debut, int dureeMinutes, String token) =>
       _postJson('/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/creneaux', token,
           corpsCreneau(debut, dureeMinutes));
+
+  Future<Map<String, dynamic>> semaineTypeSecretaire(
+          String medecinId, Map<String, dynamic> corps, String token) =>
+      _postJson(
+          '/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/creneaux/semaine-type',
+          token,
+          corps);
+
+  /// RDV pris au telephone sur un creneau libre (404 tant que la route n'existe pas).
+  Future<Map<String, dynamic>> rdvTelephoneSecretaire(
+          String medecinId, Map<String, dynamic> corps, String token) =>
+      _postJson('/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/rendezvous', token,
+          corps);
 
   Future<void> supprimerCreneauSecretaire(String medecinId, String creneauId, String token) => _delete(
       '/api/secretaire/medecins/${Uri.encodeComponent(medecinId)}/creneaux/${Uri.encodeComponent(creneauId)}',
