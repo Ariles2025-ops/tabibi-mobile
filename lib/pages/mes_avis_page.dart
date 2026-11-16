@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -43,7 +44,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -97,11 +98,11 @@ class _MesAvisPageState extends State<MesAvisPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes avis'),
+        title: Text(t('Mes avis', 'آرائي')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -114,7 +115,8 @@ class _MesAvisPageState extends State<MesAvisPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos avis.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter vos avis.', 'سجّل الدخول للاطلاع على آرائك.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -122,11 +124,12 @@ class _MesAvisPageState extends State<MesAvisPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_avis.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'Aucun avis pour le moment. Vous pourrez en donner un après un rendez-vous honoré.',
+            t('Aucun avis pour le moment. Vous pourrez en donner un après un rendez-vous honoré.',
+                'لا توجد آراء حاليًا. يمكنك إبداء رأيك بعد موعد تم حضوره.'),
             textAlign: TextAlign.center,
           ),
         ),
@@ -160,7 +163,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
               Text(commentaire),
             ],
             const SizedBox(height: 8),
-            Text('Déposé le ${dateAvis(a)}', style: texte.bodySmall),
+            Text(t('Déposé le ${dateAvis(a)}', 'نُشر في ${dateAvis(a)}'), style: texte.bodySmall),
           ],
         ),
       ),

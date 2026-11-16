@@ -2,13 +2,15 @@
 // tri dans l'ordre de la file.
 
 import '../models/inscription_attente.dart';
+import '../i18n/langue.dart';
 import 'dates.dart';
 
 /// « Inscription le jeu. 4 dec. 09:00 » ; « Date d'inscription inconnue » si absente.
 String dateInscription(InscriptionAttente inscription) {
   final inscritLe = inscription.inscritLe;
-  if (inscritLe == null) return "Date d'inscription inconnue";
-  return 'Inscription le ${formaterDateHeure(inscritLe)}';
+  if (inscritLe == null) return t("Date d'inscription inconnue", 'تاريخ التسجيل غير معروف');
+  return t(
+      'Inscription le ${formaterDateHeure(inscritLe)}', 'سُجّل في ${formaterDateHeure(inscritLe)}');
 }
 
 /// Copie triee de la plus ancienne a la plus recente (`inscritLe`), c'est-a-dire dans l'ordre

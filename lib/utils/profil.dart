@@ -1,6 +1,7 @@
 // Lecture et validation du profil (voir `Profil`) : telephone algerien, langues de
 // l'interface, dates affichees.
 
+import '../i18n/langue.dart';
 import '../models/profil.dart';
 import 'dates.dart';
 
@@ -14,8 +15,9 @@ const Map<String, String> libellesLangues = {
 };
 
 /// Message affiche quand le telephone saisi n'est pas un numero algerien valide.
-const String messageTelephoneInvalide =
-    'Le téléphone doit compter 9 à 10 chiffres et commencer par 0 (ex. 0550123456).';
+String get messageTelephoneInvalide => t(
+    'Le téléphone doit compter 9 à 10 chiffres et commencer par 0 (ex. 0550123456).',
+    'يجب أن يتكوّن رقم الهاتف من 9 إلى 10 أرقام وأن يبدأ بـ 0 (مثال: 0550123456).');
 
 /// Numero algerien, mobile (« 0550123456 ») ou fixe (« 021123456 ») : chiffres seulement,
 /// 9 a 10 chiffres commencant par 0 (meme regle que l'API).
@@ -41,12 +43,13 @@ bool telephoneValide(String? telephone) {
 
 /// « 14 mai 1990 » ; « Non renseignée » sans date.
 String libelleDateNaissance(DateTime? dateNaissance) =>
-    dateNaissance == null ? 'Non renseignée' : formaterJour(dateNaissance);
+    dateNaissance == null ? t('Non renseignée', 'غير محدّد') : formaterJour(dateNaissance);
 
 /// « Mis à jour le jeu. 4 dec. 09:00 » ; « Profil non enregistré » tant que le serveur n'a
 /// jamais date le profil.
 String libelleMiseAJour(Profil profil) {
   final misAJourLe = profil.misAJourLe;
-  if (misAJourLe == null) return 'Profil non enregistré';
-  return 'Mis à jour le ${formaterDateHeure(misAJourLe)}';
+  if (misAJourLe == null) return t('Profil non enregistré', 'الملف غير محفوظ');
+  return t('Mis à jour le ${formaterDateHeure(misAJourLe)}',
+      'آخر تحديث في ${formaterDateHeure(misAJourLe)}');
 }

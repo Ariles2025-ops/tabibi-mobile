@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
@@ -41,7 +42,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -89,11 +90,11 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes ordonnances'),
+        title: Text(t('Mes ordonnances', 'وصفاتي الطبية')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -106,14 +107,18 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   Widget _corps() {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos ordonnances.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter vos ordonnances.',
+                'سجّل الدخول للاطلاع على وصفاتك الطبية.'),
         onSeConnecter: _seConnecter,
       );
     }
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_ordonnances.isEmpty) return const Center(child: Text('Aucune ordonnance.'));
+    if (_ordonnances.isEmpty) {
+      return Center(child: Text(t('Aucune ordonnance.', 'لا توجد وصفات طبية.')));
+    }
     return ListView.separated(
       itemCount: _ordonnances.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -121,8 +126,9 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
         final o = _ordonnances[i];
         return ListTile(
           leading: const Icon(Icons.description_outlined),
-          title: Text('Émise le ${dateEmission(o)}'),
-          subtitle: Text('Code ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'),
+          title: Text('${t('Émise le', 'صدرت في')} ${dateEmission(o)}'),
+          subtitle: Text(
+              '${t('Code', 'الرمز')} ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _ouvrirDetail(o),
         );

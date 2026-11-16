@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../utils/dates.dart';
 import '../utils/libelles.dart';
@@ -27,7 +28,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
   Future<void> _verifier() async {
     final code = _code.text.trim();
     if (code.isEmpty) {
-      _message('Saisissez le code de verification');
+      _message(t('Saisissez le code de vérification', 'أدخل رمز التحقق'));
       return;
     }
     FocusScope.of(context).unfocus();
@@ -68,7 +69,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Vérifier une ordonnance')),
+      appBar: AppBar(title: Text(t('Vérifier une ordonnance', 'التحقق من وصفة'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -76,10 +77,10 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
             controller: _code,
             autofocus: true,
             textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              labelText: 'Code de vérification',
-              hintText: "Code figurant sur l'ordonnance",
-              prefixIcon: Icon(Icons.tag),
+            decoration: InputDecoration(
+              labelText: t('Code de vérification', 'رمز التحقق'),
+              hintText: t("Code figurant sur l'ordonnance", 'الرمز المدوّن على الوصفة'),
+              prefixIcon: const Icon(Icons.tag),
             ),
             onSubmitted: (_) => _verifier(),
           ),
@@ -87,7 +88,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           FilledButton.icon(
             onPressed: _charge ? null : _verifier,
             icon: const Icon(Icons.verified_outlined),
-            label: const Text('Vérifier'),
+            label: Text(t('Vérifier', 'تحقق')),
           ),
           const SizedBox(height: 24),
           _zoneResultat(context),
@@ -107,7 +108,8 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
     final resultat = _resultat;
     if (resultat == null) {
       return Text(
-        "Saisissez le code figurant sur l'ordonnance pour vérifier son authenticité.",
+        t("Saisissez le code figurant sur l'ordonnance pour vérifier son authenticité.",
+            'أدخل الرمز المدوّن على الوصفة للتحقق من صحتها.'),
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium,
       );
@@ -118,8 +120,9 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
         color: couleurs.errorContainer,
         child: ListTile(
           leading: Icon(Icons.error_outline, color: couleurs.onErrorContainer),
-          title: const Text('Code inconnu'),
-          subtitle: const Text('Aucune ordonnance ne correspond a ce code.'),
+          title: Text(t('Code inconnu', 'رمز غير معروف')),
+          subtitle: Text(
+              t('Aucune ordonnance ne correspond à ce code.', 'لا توجد وصفة مطابقة لهذا الرمز.')),
         ),
       );
     }
@@ -131,10 +134,10 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
         leading: Icon(Icons.verified, color: couleurs.primary),
         title: Text(
           emiseLe is String && emiseLe.isNotEmpty
-              ? 'Ordonnance authentique, émise le ${formaterDateIso(emiseLe)}'
-              : 'Ordonnance authentique',
+              ? '${t('Ordonnance authentique, émise le', 'وصفة صحيحة، صدرت في')} ${formaterDateIso(emiseLe)}'
+              : t('Ordonnance authentique', 'وصفة صحيحة'),
         ),
-        subtitle: statut.isEmpty ? null : Text('Statut : $statut'),
+        subtitle: statut.isEmpty ? null : Text('${t('Statut', 'الحالة')} : $statut'),
       ),
     );
   }

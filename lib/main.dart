@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'config/lancement.dart';
 import 'config/referentiel.dart';
 import 'config/theme.dart';
+import 'i18n/langue.dart';
 
 import 'pages/dawini_page.dart';
+import 'pages/espace/mon_espace_page.dart';
 import 'pages/fiche_medecin_page.dart';
 import 'pages/mes_avis_page.dart';
 import 'pages/mes_conversations_page.dart';
@@ -18,22 +21,65 @@ import 'pages/verifier_ordonnance_page.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/session.dart';
+import 'utils/espace_pro.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
 import 'utils/praticien.dart';
+import 'widgets/selecteur_langue.dart';
 
-void main() => runApp(const TabibiApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Langue.initialiser();
+  runApp(const TabibiApp());
+}
 
-class TabibiApp extends StatelessWidget {
-  const TabibiApp({super.key});
+/// Appli : francais ou arabe (RTL) selon [Langue.courante] ; tout l'arbre se reconstruit
+/// quand la langue change, ecrans ouverts compris.
+class TabibiApp extends StatefulWidget {
+  const TabibiApp({super.key, this.api = const ApiService(), this.auth});
+
+  final ApiService api;
+  final AuthService? auth;
+
+  @override
+  State<TabibiApp> createState() => _TabibiAppState();
+}
+
+class _TabibiAppState extends State<TabibiApp> {
+  @override
+  void initState() {
+    super.initState();
+    Langue.courante.addListener(_changement);
+  }
+
+  @override
+  void dispose() {
+    Langue.courante.removeListener(_changement);
+    super.dispose();
+  }
+
+  /// Les textes passent par `t()` sans dependance d'heritage : chaque element est marque a
+  /// reconstruire pour que les ecrans deja ouverts changent aussi de langue.
+  void _changement() {
+    setState(() {});
+    void reconstruire(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(reconstruire);
+    }
+
+    (context as Element).visitChildren(reconstruire);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tabibi',
       debugShowCheckedModeBanner: false,
-      theme: Charte.theme(),
-      home: const RecherchePage(),
+      theme: Charte.theme(arabe: Langue.estArabe),
+      locale: Langue.locale,
+      supportedLocales: const [Locale('fr'), Locale('ar')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: RecherchePage(api: widget.api, auth: widget.auth),
     );
   }
 }
@@ -66,11 +112,14 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
   int? _nonLues;
 
+  /// Roles du compte connecte (GET /api/moi) ; vide hors connexion.
+  Set<String> _roles = {};
+
   Future<void> _rechercher() async {
     setState(() => _charge = true);
     try {
-      final r = await widget.api.rechercherMedecins(
-          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
+      final r = await widget.api
+          .rechercherMedecins(specialite: _specialite, wilaya: _wilaya, q: _nom.text);
       if (mounted) setState(() => _resultats = r);
     } on Exception catch (e) {
       _message(messageErreur(e));
@@ -86,21 +135,36 @@ class _RecherchePageState extends State<RecherchePage> {
       if (!mounted) return;
       setState(() {}); // met a jour l'icone de l'AppBar
       if (!ok) {
-        _message('Connexion annulée');
+        _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
         return;
       }
     }
     final token = _auth.accessToken;
     if (token == null) return;
-    var texte = 'Connecté';
+    var texte = t('Connecté', 'تم تسجيل الدخول');
     try {
       final moi = await widget.api.moi(token);
-      texte = 'Connecté : ${moi['nom']}';
+      texte = t('Connecté : ${moi['nom']}', 'تم تسجيل الدخول: ${moi['nom']}');
+      if (mounted) setState(() => _roles = rolesDe(moi));
     } on Exception {
       // Identite indisponible : message generique.
     }
     _message(texte);
     await _chargerNonLues();
+  }
+
+  /// Roles du compte (entree « Mon espace ») ; vides hors connexion ou en cas d'echec.
+  Future<void> _chargerRoles() async {
+    final token = _auth.accessToken;
+    var roles = <String>{};
+    if (token != null) {
+      try {
+        roles = rolesDe(await widget.api.moi(token));
+      } on Exception {
+        roles = _roles;
+      }
+    }
+    if (mounted) setState(() => _roles = roles);
   }
 
   /// Nombre de notifications non lues (jeton requis) ; inconnu hors connexion ou en cas d'echec.
@@ -126,14 +190,23 @@ class _RecherchePageState extends State<RecherchePage> {
     if (!mounted) return;
     setState(() {});
     await _chargerNonLues();
+    await _chargerRoles();
+  }
+
+  Future<void> _ouvrirMonEspace() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MonEspacePage(api: widget.api, auth: _auth),
+      ),
+    );
+    await _apresRetour();
   }
 
   /// Ouvre la fiche d'un praticien ([medecinId] : UUID en texte).
   Future<void> _ouvrirFiche(String medecinId) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => FicheMedecinPage(
-            medecinId: medecinId, api: widget.api, auth: _auth),
+        builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
       ),
     );
     await _apresRetour();
@@ -167,10 +240,7 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   Future<void> _ouvrirTeleconsultations() async {
-    if (!visioActive) {
-      _message('La téléconsultation arrive bientôt sur Tabibi.');
-      return;
-    }
+    if (!visioActive) return; // entree desactivee « Bientôt »
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MesTeleconsultationsPage(api: widget.api, auth: _auth),
@@ -243,6 +313,7 @@ class _RecherchePageState extends State<RecherchePage> {
     super.initState();
     _rechercher();
     _chargerNonLues();
+    _chargerRoles();
   }
 
   @override
@@ -256,26 +327,26 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
+          const SelecteurLangue(),
           IconButton(
-            tooltip: 'Vérifier une ordonnance',
+            tooltip: t('Vérifier une ordonnance', 'التحقق من وصفة طبية'),
             onPressed: _ouvrirVerification,
             icon: const Icon(Icons.verified_outlined),
           ),
           IconButton(
-            tooltip: 'Mes ordonnances',
+            tooltip: t('Mes ordonnances', 'وصفاتي الطبية'),
             onPressed: _ouvrirMesOrdonnances,
             icon: const Icon(Icons.description_outlined),
           ),
           IconButton(
-            tooltip: 'Mes rendez-vous',
+            tooltip: t('Mes rendez-vous', 'مواعيدي'),
             onPressed: _ouvrirMesRendezVous,
             icon: const Icon(Icons.calendar_month),
           ),
           IconButton(
-            tooltip: connecte ? 'Connecté' : 'Se connecter',
+            tooltip: connecte ? t('Connecté', 'متصل') : t('Se connecter', 'تسجيل الدخول'),
             onPressed: _seConnecter,
             icon: Icon(connecte ? Icons.person : Icons.person_outline),
           ),
@@ -290,14 +361,13 @@ class _RecherchePageState extends State<RecherchePage> {
               Expanded(
                 child: TextField(
                   controller: _nom,
-                  decoration:
-                      const InputDecoration(labelText: 'Nom du médecin'),
+                  decoration: InputDecoration(labelText: t('Nom du médecin', 'اسم الطبيب')),
                   onSubmitted: (_) => _rechercher(),
                 ),
               ),
               const SizedBox(width: 8),
               IconButton.filled(
-                tooltip: 'Rechercher',
+                tooltip: t('Rechercher', 'بحث'),
                 onPressed: _rechercher,
                 icon: const Icon(Icons.search),
               ),
@@ -308,14 +378,13 @@ class _RecherchePageState extends State<RecherchePage> {
                 child: DropdownButtonFormField<String>(
                   initialValue: _specialite,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Spécialité'),
+                  decoration: InputDecoration(labelText: t('Spécialité', 'التخصص')),
                   items: [
-                    const DropdownMenuItem<String>(
-                        value: null, child: Text('Toutes')),
+                    DropdownMenuItem<String>(value: null, child: Text(t('Toutes', 'الكل'))),
                     for (final sp in specialites)
                       DropdownMenuItem(
                           value: sp.slug,
-                          child: Text(sp.nom, overflow: TextOverflow.ellipsis)),
+                          child: Text(nomSpecialite(sp), overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     setState(() => _specialite = v);
@@ -328,15 +397,14 @@ class _RecherchePageState extends State<RecherchePage> {
                 child: DropdownButtonFormField<String>(
                   initialValue: _wilaya,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Wilaya'),
+                  decoration: InputDecoration(labelText: t('Wilaya', 'الولاية')),
                   items: [
-                    const DropdownMenuItem<String>(
-                        value: null, child: Text('Toutes')),
+                    DropdownMenuItem<String>(value: null, child: Text(t('Toutes', 'الكل'))),
                     for (final w in wilayas)
                       DropdownMenuItem(
                           value: w.code,
-                          child: Text('${w.code} - ${w.nom}',
-                              overflow: TextOverflow.ellipsis)),
+                          child:
+                              Text('${w.code} - ${nomWilaya(w)}', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     setState(() => _wilaya = v);
@@ -347,8 +415,8 @@ class _RecherchePageState extends State<RecherchePage> {
             ]),
             const SizedBox(height: 12),
             _entrees(),
-            const SizedBox(height: 12),
-            if (_charge) const CircularProgressIndicator(),
+            const SizedBox(height: 8),
+            if (_charge) const LinearProgressIndicator(),
             Expanded(
               child: ListView.separated(
                 itemCount: _resultats.length,
@@ -370,54 +438,42 @@ class _RecherchePageState extends State<RecherchePage> {
     );
   }
 
-  /// Entrees de l'espace personnel sous la recherche : « Notifications (n) » avec le nombre
-  /// de non lues (connu a l'ouverture et actualise au retour de chaque ecran),
-  /// « Teleconsultations », « Messagerie », « Mes avis », « Dawini (pharmacies) »,
-  /// « Liste d'attente » et « Mon profil ».
+  /// Entrees de l'espace personnel sous la recherche, sur une seule rangee defilante
+  /// horizontalement (la liste des medecins garde la place) : « Mon espace » (selon le role),
+  /// « Notifications (n) », « Téléconsultation · Bientôt » (desactivee tant que la visio est
+  /// fermee), « Messagerie », « Mes avis », « Dawini (pharmacies) », « Liste d'attente »,
+  /// « Mon profil ».
   Widget _entrees() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
+    Widget puce(IconData icone, String libelle, VoidCallback? action) => Padding(
+          padding: const EdgeInsetsDirectional.only(end: 8),
+          child: ActionChip(
+            avatar: Icon(icone, size: 18),
+            label: Text(libelle),
+            onPressed: action,
+          ),
+        );
+    return SingleChildScrollView(
+      key: const ValueKey('entrees-accueil'),
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          ActionChip(
-            avatar: const Icon(Icons.notifications_outlined, size: 18),
-            label: Text(libelleNotifications(_nonLues)),
-            onPressed: _ouvrirNotifications,
+          if (aUnEspacePro(_roles))
+            puce(Icons.work_outline, t('Mon espace', 'فضائي'), _ouvrirMonEspace),
+          puce(Icons.notifications_outlined, libelleNotifications(_nonLues), _ouvrirNotifications),
+          puce(
+            Icons.videocam_outlined,
+            visioActive
+                ? t('Téléconsultations', 'الاستشارات عن بعد')
+                : t('Téléconsultation · Bientôt', 'الاستشارة عن بعد · قريبًا'),
+            visioActive ? _ouvrirTeleconsultations : null,
           ),
-          ActionChip(
-            avatar: const Icon(Icons.videocam_outlined, size: 18),
-            label: Text(visioActive
-                ? 'Téléconsultations'
-                : 'Téléconsultation · Bientôt'),
-            onPressed: _ouvrirTeleconsultations,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.chat_bubble_outline, size: 18),
-            label: const Text('Messagerie'),
-            onPressed: _ouvrirMessagerie,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.star_outline, size: 18),
-            label: const Text('Mes avis'),
-            onPressed: _ouvrirMesAvis,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.local_pharmacy_outlined, size: 18),
-            label: const Text('Dawini (pharmacies)'),
-            onPressed: _ouvrirDawini,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.hourglass_top_outlined, size: 18),
-            label: const Text("Liste d'attente"),
-            onPressed: _ouvrirListesAttente,
-          ),
-          ActionChip(
-            avatar: const Icon(Icons.badge_outlined, size: 18),
-            label: const Text('Mon profil'),
-            onPressed: _ouvrirMonProfil,
-          ),
+          puce(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'), _ouvrirMessagerie),
+          puce(Icons.star_outline, t('Mes avis', 'تقييماتي'), _ouvrirMesAvis),
+          puce(Icons.local_pharmacy_outlined, t('Dawini (pharmacies)', 'دَويني (الصيدليات)'),
+              _ouvrirDawini),
+          puce(Icons.hourglass_top_outlined, t("Liste d'attente", 'قائمة الانتظار'),
+              _ouvrirListesAttente),
+          puce(Icons.badge_outlined, t('Mon profil', 'ملفي الشخصي'), _ouvrirMonProfil),
         ],
       ),
     );
@@ -438,21 +494,18 @@ class _BandeauLancement extends StatelessWidget {
         gradient: const LinearGradient(colors: [Charte.vert, Charte.vertFonce]),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(children: [
-        Expanded(
-          child: Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                  text: 'Lancement prochainement',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-              TextSpan(
-                  text:
-                      " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins."),
-            ]),
-            style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
-          ),
-        ),
-      ]),
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: t('Lancement prochainement', 'الإطلاق قريبًا'),
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          TextSpan(
+              text: t(
+                  " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins.",
+                  ' — حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. تصفّح دليل الأطباء من الآن.')),
+        ]),
+        style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
@@ -7,7 +8,8 @@ import '../utils/avis.dart';
 import '../widgets/vue_connexion.dart';
 
 /// Message affiche quand un avis existe deja pour le rendez-vous (409).
-const String messageAvisDejaDonne = 'Vous avez déjà donné votre avis pour ce rendez-vous.';
+String get messageAvisDejaDonne => t(
+    'Vous avez déjà donné votre avis pour ce rendez-vous.', 'لقد أبديت رأيك في هذا الموعد من قبل.');
 
 /// Longueur maximale du commentaire acceptee par l'API.
 const int longueurMaxCommentaire = 500;
@@ -57,7 +59,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   Future<void> _seConnecter() async {
     final ok = await _auth.seConnecter();
     if (!mounted) return;
-    if (!ok) _message('Connexion annulée');
+    if (!ok) _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     setState(() {});
   }
 
@@ -85,7 +87,8 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
         _message(messageAvisDejaDonne);
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
-        _message('Session expirée : reconnectez-vous puis réessayez');
+        _message(t('Session expirée : reconnectez-vous puis réessayez',
+            'انتهت الجلسة: سجّل الدخول من جديد ثم أعد المحاولة'));
       } else {
         _message(e.message);
       }
@@ -95,7 +98,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
     }
     if (!depose || !mounted) return;
-    _message('Merci pour votre avis.');
+    _message(t('Merci pour votre avis.', 'شكرًا على رأيك.'));
     Navigator.of(context).pop(true);
   }
 
@@ -107,7 +110,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mon avis')),
+      appBar: AppBar(title: Text(t('Mon avis', 'رأيي'))),
       body: _corps(context),
     );
   }
@@ -115,7 +118,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: 'Connectez-vous pour donner votre avis.',
+        message: t('Connectez-vous pour donner votre avis.', 'سجّل الدخول لإبداء رأيك.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -129,13 +132,14 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event_available_outlined),
-            title: Text(nomMedecin ?? 'Rendez-vous honoré'),
+            title: Text(nomMedecin ?? t('Rendez-vous honoré', 'موعد تم حضوره')),
             subtitle: dateRendezVous == null ? null : Text(dateRendezVous),
           ),
         const SizedBox(height: 8),
-        Text('Votre note', style: texte.titleMedium),
+        Text(t('Votre note', 'تقييمك'), style: texte.titleMedium),
         const SizedBox(height: 4),
-        Text('1 = insatisfait, 5 = excellent', style: texte.bodySmall),
+        Text(t('1 = insatisfait, 5 = excellent', '1 = غير راضٍ، 5 = ممتاز'),
+            style: texte.bodySmall),
         const SizedBox(height: 8),
         _choixNote(),
         const SizedBox(height: 24),
@@ -145,10 +149,10 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
           maxLines: 6,
           maxLength: longueurMaxCommentaire,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            labelText: 'Commentaire (facultatif)',
-            hintText: 'Accueil, écoute, explications...',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: t('Commentaire (facultatif)', 'تعليق (اختياري)'),
+            hintText: t('Accueil, écoute, explications...', 'الاستقبال، الإصغاء، الشرح...'),
+            border: const OutlineInputBorder(),
             alignLabelWithHint: true,
           ),
         ),
@@ -161,11 +165,12 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Envoyer mon avis'),
+              : Text(t('Envoyer mon avis', 'إرسال رأيي')),
         ),
         const SizedBox(height: 8),
         Text(
-          'Votre avis est publié anonymement sur la fiche du praticien.',
+          t('Votre avis est publié anonymement sur la fiche du praticien.',
+              'يُنشر رأيك دون ذكر اسمك في صفحة الطبيب.'),
           style: texte.bodySmall,
           textAlign: TextAlign.center,
         ),

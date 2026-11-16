@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/notification.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -43,7 +44,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -116,8 +117,8 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         _notifications = [for (final n in _notifications) n.marquerLue()];
       });
       _message(nombre > 0
-          ? '$nombre notification(s) marquée(s) lue(s)'
-          : 'Aucune notification a marquer');
+          ? t('$nombre notification(s) marquée(s) lue(s)', 'تم تعليم $nombre إشعار(ات) كمقروءة')
+          : t('Aucune notification à marquer', 'لا توجد إشعارات لتعليمها'));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.message);
@@ -137,16 +138,16 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     final nonLues = compterNonLues(_notifications);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes notifications'),
+        title: Text(t('Mes notifications', 'إشعاراتي')),
         actions: [
           if (_auth.estConnecte) ...[
             IconButton(
-              tooltip: 'Tout marquer comme lu',
+              tooltip: t('Tout marquer comme lu', 'تعليم الكل كمقروء'),
               onPressed: _charge || nonLues == 0 ? null : _toutMarquerLu,
               icon: const Icon(Icons.done_all),
             ),
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -160,7 +161,9 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos notifications.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter vos notifications.',
+                'سجّل الدخول للاطلاع على إشعاراتك.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -168,7 +171,8 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_notifications.isEmpty) {
-      return const Center(child: Text('Aucune notification pour le moment.'));
+      return Center(
+          child: Text(t('Aucune notification pour le moment.', 'لا توجد إشعارات حاليًا.')));
     }
     return RefreshIndicator(
       onRefresh: _rafraichir,
@@ -215,7 +219,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       );
     }
     return IconButton(
-      tooltip: 'Marquer comme lue',
+      tooltip: t('Marquer comme lue', 'تعليم كمقروء'),
       onPressed: () => _marquerLue(n),
       icon: const Icon(Icons.mark_email_read_outlined),
     );

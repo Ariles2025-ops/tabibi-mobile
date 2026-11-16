@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -50,7 +51,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -137,16 +138,16 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Annuler ce rendez-vous ?'),
+        title: Text(t('Annuler ce rendez-vous ?', 'إلغاء هذا الموعد؟')),
         content: Text('${_nomMedecin(rdv)}\n${_dateRdv(rdv)}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Non'),
+            child: Text(t('Non', 'لا')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Oui, annuler'),
+            child: Text(t('Oui, annuler', 'نعم، إلغاء')),
           ),
         ],
       ),
@@ -156,7 +157,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (token == null) return;
     try {
       await widget.api.annuler(identifiant(rdv['id']), token);
-      _message('Rendez-vous annulé');
+      _message(t('Rendez-vous annulé', 'تم إلغاء الموعد'));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.message);
@@ -197,11 +198,12 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   /// « Annuler » s'il est encore annulable, rien sinon.
   Widget? _action(Map<String, dynamic> rdv) {
     if (estHonore(rdv['statut'])) {
-      if (_aDonneSonAvis(rdv)) return const Text('Avis donné');
-      return TextButton(onPressed: () => _donnerAvis(rdv), child: const Text('Donner mon avis'));
+      if (_aDonneSonAvis(rdv)) return Text(t('Avis donné', 'تم تقديم الرأي'));
+      return TextButton(
+          onPressed: () => _donnerAvis(rdv), child: Text(t('Donner mon avis', 'أبدِ رأيك')));
     }
     if (_annulable(rdv)) {
-      return TextButton(onPressed: () => _annuler(rdv), child: const Text('Annuler'));
+      return TextButton(onPressed: () => _annuler(rdv), child: Text(t('Annuler', 'إلغاء')));
     }
     return null;
   }
@@ -210,11 +212,11 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes rendez-vous'),
+        title: Text(t('Mes rendez-vous', 'مواعيدي')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -229,7 +231,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_rdvs.isEmpty) return const Center(child: Text('Aucun rendez-vous.'));
+    if (_rdvs.isEmpty) return Center(child: Text(t('Aucun rendez-vous.', 'لا توجد مواعيد.')));
     return ListView.separated(
       itemCount: _rdvs.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -247,7 +249,8 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
 
   Widget _vueConnexion() {
     return VueConnexion(
-      message: _erreur ?? 'Connectez-vous pour consulter vos rendez-vous.',
+      message: _erreur ??
+          t('Connectez-vous pour consulter vos rendez-vous.', 'سجّل الدخول للاطلاع على مواعيدك.'),
       onSeConnecter: _seConnecter,
     );
   }

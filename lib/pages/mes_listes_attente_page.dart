@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/inscription_attente.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -10,7 +11,8 @@ import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 
 /// Message affiche apres le retrait d'une liste d'attente.
-const String messageRetrait = "Retrait de la liste d'attente effectué.";
+String get messageRetrait =>
+    t("Retrait de la liste d'attente effectué.", 'تم الانسحاب من قائمة الانتظار.');
 
 /// Listes d'attente du patient connecte : une carte par inscription avec le praticien (nom
 /// via `GET /api/medecins/{id}`, ou « Médecin » et l'identifiant abrege) et la date
@@ -51,7 +53,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -104,16 +106,18 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Vous retirer de cette liste d'attente ?"),
-        content: Text('${_nomMedecin(i)}\nVous ne serez plus notifié des créneaux libérés.'),
+        title:
+            Text(t("Vous retirer de cette liste d'attente ?", 'الانسحاب من قائمة الانتظار هذه؟')),
+        content: Text(t('${_nomMedecin(i)}\nVous ne serez plus notifié des créneaux libérés.',
+            '${_nomMedecin(i)}\nلن يتم إشعارك بعد الآن بالمواعيد الشاغرة.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Non'),
+            child: Text(t('Non', 'لا')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Oui, me retirer'),
+            child: Text(t('Oui, me retirer', 'نعم، انسحب')),
           ),
         ],
       ),
@@ -155,11 +159,11 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Mes listes d'attente"),
+        title: Text(t("Mes listes d'attente", 'قوائم الانتظار')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -172,7 +176,9 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? "Connectez-vous pour consulter vos listes d'attente.",
+        message: _erreur ??
+            t("Connectez-vous pour consulter vos listes d'attente.",
+                'سجّل الدخول للاطلاع على قوائم الانتظار.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -180,13 +186,17 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_inscriptions.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            "Aucune inscription sur une liste d'attente. Inscrivez-vous depuis la fiche d'un "
-            "médecin dont aucun créneau n'est disponible : vous serez notifié dès qu'un "
-            'créneau se libère.',
+            t(
+              "Aucune inscription sur une liste d'attente. Inscrivez-vous depuis la fiche d'un "
+                  "médecin dont aucun créneau n'est disponible : vous serez notifié dès qu'un "
+                  'créneau se libère.',
+              'لست مسجّلًا في أي قائمة انتظار. سجّل من صفحة طبيب ليس لديه مواعيد متاحة، '
+                  'وسيتم إشعارك فور توفر موعد.',
+            ),
             textAlign: TextAlign.center,
           ),
         ),
@@ -215,7 +225,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
               )
             : TextButton(
                 onPressed: _enCours == null ? () => _retirer(i) : null,
-                child: const Text('Me retirer'),
+                child: Text(t('Me retirer', 'انسحاب')),
               ),
       ),
     );

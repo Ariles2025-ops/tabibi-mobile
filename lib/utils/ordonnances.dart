@@ -2,12 +2,15 @@
 // {id, medecinId, patientId, rendezVousId, lignes: [{medicament, posologie, duree}],
 //  emiseLe (ISO 8601), codeVerification, statut}.
 
+import '../i18n/langue.dart';
 import 'dates.dart';
 
 /// Date d'emission formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
 String dateEmission(Map<String, dynamic> ordonnance) {
   final Object? iso = ordonnance['emiseLe'];
-  return iso is String && iso.isNotEmpty ? formaterDateIso(iso) : 'date inconnue';
+  return iso is String && iso.isNotEmpty
+      ? formaterDateIso(iso)
+      : t('date inconnue', 'تاريخ غير معروف');
 }
 
 /// Lignes de l'ordonnance : {medicament, posologie, duree} ; liste vide si absentes.

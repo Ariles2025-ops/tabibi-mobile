@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/langue.dart';
 import '../models/conversation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -46,7 +47,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     if (ok) {
       await _charger();
     } else {
-      _message('Connexion annulée');
+      _message(t('Connexion annulée', 'تم إلغاء تسجيل الدخول'));
     }
   }
 
@@ -125,11 +126,11 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messagerie'),
+        title: Text(t('Messagerie', 'الرسائل')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
-              tooltip: 'Actualiser',
+              tooltip: t('Actualiser', 'تحديث'),
               onPressed: _charge ? null : _charger,
               icon: const Icon(Icons.refresh),
             ),
@@ -142,7 +143,9 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   Widget _corps(BuildContext context) {
     if (!_auth.estConnecte) {
       return VueConnexion(
-        message: _erreur ?? 'Connectez-vous pour consulter vos conversations.',
+        message: _erreur ??
+            t('Connectez-vous pour consulter vos conversations.',
+                'سجّل الدخول للاطلاع على محادثاتك.'),
         onSeConnecter: _seConnecter,
       );
     }
@@ -150,11 +153,12 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_conversations.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'Aucune conversation pour le moment. Ouvrez-en une depuis la fiche de votre médecin.',
+            t('Aucune conversation pour le moment. Ouvrez-en une depuis la fiche de votre médecin.',
+                'لا توجد محادثات حاليًا. افتح محادثة من صفحة طبيبك.'),
             textAlign: TextAlign.center,
           ),
         ),
@@ -181,9 +185,8 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
         style: nonLus ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
       subtitle: Text(libelleActivite(c)),
-      trailing: nonLus
-          ? _pastille(context, libelleNonLus(c.nonLus))
-          : const Icon(Icons.chevron_right),
+      trailing:
+          nonLus ? _pastille(context, libelleNonLus(c.nonLus)) : const Icon(Icons.chevron_right),
       onTap: () => _ouvrir(c),
     );
   }
