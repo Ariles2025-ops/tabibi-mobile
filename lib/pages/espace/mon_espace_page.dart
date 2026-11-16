@@ -8,6 +8,7 @@ import '../../utils/espace_pro.dart';
 import 'agenda_page.dart';
 import 'cabinet_pages.dart';
 import 'creneaux_page.dart';
+import 'fiche_semaine_pages.dart';
 import 'outils_espace.dart';
 import 'pharmacie_pages.dart';
 
@@ -29,6 +30,9 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
   late final AuthService auth = widget.auth ?? session;
   List<Espace> _espaces = [];
 
+  /// Faux quand GET /api/medecin/fiche repond 404 : « Ma fiche » est alors cachee.
+  bool _ficheDispo = true;
+
   @override
   void initState() {
     super.initState();
@@ -38,12 +42,34 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
   @override
   Future<void> recharger() async {
     final moi = await chargerAvec((j) => widget.api.moi(j));
-    if (moi != null && mounted) setState(() => _espaces = espacesPour(rolesDe(moi)));
+    if (moi == null || !mounted) return;
+    final espaces = espacesPour(rolesDe(moi));
+    setState(() => _espaces = espaces);
+    if (espaces.contains(Espace.medecin)) await _sonderFiche();
+  }
+
+  /// La route « fiche » peut ne pas exister encore : un 404 cache l'entree, toute autre
+  /// reponse (ou erreur reseau) la laisse visible.
+  Future<void> _sonderFiche() async {
+    final jeton = auth.accessToken;
+    if (jeton == null) return;
+    var dispo = true;
+    try {
+      await widget.api.ficheMedecin(jeton);
+    } on ApiException catch (e) {
+      dispo = !e.introuvable;
+    } on Exception {
+      // Reseau : on garde l'entree.
+    }
+    if (mounted) setState(() => _ficheDispo = dispo);
   }
 
   Future<void> _ouvrir(Widget page) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
-    if (mounted) setState(() {});
+    final sortie = await Navigator.of(context).push<Object?>(MaterialPageRoute<Object?>(builder: (_) => page));
+    if (!mounted) return;
+    setState(() {
+      if (sortie is SortieEcran && sortie.indisponible) _ficheDispo = false;
+    });
   }
 
   Widget _entree(IconData icone, String titre, String sousTitre, Widget page) => Card(
@@ -88,6 +114,13 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                   t("Ma liste d'attente", 'قائمة الانتظار'),
                   t('Patients en attente d\'un créneau', 'مرضى ينتظرون موعدًا'),
                   ListeAttenteMedecinPage(api: api, auth: auth)),
+              if (_ficheDispo)
+                _entree(
+                    Icons.badge_outlined,
+                    t('Ma fiche', 'بطاقتي'),
+                    t('Adresse, téléphone, horaires, présentation et langues',
+                        'العنوان والهاتف وأوقات العمل والتعريف واللغات'),
+                    MaFichePage(api: api, auth: auth)),
             ],
             if (_espaces.contains(Espace.secretaire)) ...[
               _section(t('Espace secrétaire', 'فضاء السكرتارية')),

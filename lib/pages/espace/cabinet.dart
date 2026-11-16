@@ -40,6 +40,12 @@ class Cabinet {
           ? api.ouvrirCreneauSecretaire(medecinId!, debut, duree, jeton)
           : api.ouvrirCreneauMedecin(debut, duree, jeton);
 
+  Future<Map<String, dynamic>> semaineType(
+          ApiService api, Map<String, dynamic> corps, String jeton) =>
+      parSecretaire
+          ? api.semaineTypeSecretaire(medecinId!, corps, jeton)
+          : api.semaineTypeMedecin(corps, jeton);
+
   Future<void> supprimerCreneau(ApiService api, String creneauId, String jeton) => parSecretaire
       ? api.supprimerCreneauSecretaire(medecinId!, creneauId, jeton)
       : api.supprimerCreneauMedecin(creneauId, jeton);

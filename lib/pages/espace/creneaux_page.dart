@@ -8,6 +8,7 @@ import '../../utils/dates.dart';
 import '../../utils/espace_pro.dart';
 import '../../utils/identifiants.dart';
 import 'cabinet.dart';
+import 'fiche_semaine_pages.dart';
 import 'outils_espace.dart';
 
 /// Creneaux a venir du cabinet : libres (supprimables) ou reserves ; « Ajouter un créneau »
@@ -33,6 +34,10 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
   late final AuthService auth = widget.auth ?? session;
 
   List<Map<String, dynamic>> _creneaux = [];
+
+  /// Passent a faux quand l'API repond 404 : les boutons disparaissent, sans erreur.
+  bool _semaineTypeDispo = true;
+  bool _rdvTelephoneDispo = true;
 
   @override
   void initState() {
@@ -82,6 +87,32 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
     }
   }
 
+  Future<void> _semaineType() async {
+    final sortie = await Navigator.of(context).push<SortieEcran>(MaterialPageRoute<SortieEcran>(
+        builder: (_) => SemaineTypePage(cabinet: widget.cabinet, api: widget.api, auth: auth)));
+    if (!mounted || sortie == null) return;
+    if (sortie.indisponible) {
+      setState(() => _semaineTypeDispo = false);
+      return;
+    }
+    message(t('${sortie.crees} créneaux créés, ${sortie.ignores} ignorés',
+        'تم إنشاء ${sortie.crees} موعد، وتم تجاهل ${sortie.ignores}'));
+    await recharger();
+  }
+
+  Future<void> _rdvTelephone(Map<String, dynamic> creneau) async {
+    final sortie = await Navigator.of(context).push<SortieEcran>(MaterialPageRoute<SortieEcran>(
+        builder: (_) => RdvTelephonePage(
+            cabinet: widget.cabinet, creneau: creneau, api: widget.api, auth: auth)));
+    if (!mounted || sortie == null) return;
+    if (sortie.indisponible) {
+      setState(() => _rdvTelephoneDispo = false);
+      return;
+    }
+    message(t('Rendez-vous enregistré', 'تم تسجيل الموعد'));
+    await recharger();
+  }
+
   @override
   Widget build(BuildContext context) {
     final nom = widget.cabinet.nomMedecin;
@@ -117,6 +148,12 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
                 icon: const Icon(Icons.date_range),
                 label: Text(t('Ajouter une série', 'إضافة سلسلة')),
               ),
+              if (_semaineTypeDispo)
+                OutlinedButton.icon(
+                  onPressed: _semaineType,
+                  icon: const Icon(Icons.calendar_view_week),
+                  label: Text(t('Semaine type', 'الأسبوع النموذجي')),
+                ),
             ],
           ),
         ),
@@ -135,11 +172,19 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
                       subtitle: Text(
                           '${c['dureeMinutes']} min · ${libre ? t('Libre', 'متاح') : t('Réservé', 'محجوز')}'),
                       trailing: libre
-                          ? IconButton(
-                              tooltip: t('Supprimer', 'حذف'),
-                              onPressed: () => _supprimer(c),
-                              icon: const Icon(Icons.delete_outline),
-                            )
+                          ? Row(mainAxisSize: MainAxisSize.min, children: [
+                              if (widget.cabinet.parSecretaire && _rdvTelephoneDispo)
+                                IconButton(
+                                  tooltip: t('RDV pris au téléphone', 'موعد بالهاتف'),
+                                  onPressed: () => _rdvTelephone(c),
+                                  icon: const Icon(Icons.phone_in_talk_outlined),
+                                ),
+                              IconButton(
+                                tooltip: t('Supprimer', 'حذف'),
+                                onPressed: () => _supprimer(c),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                            ])
                           : null,
                     );
                   },
