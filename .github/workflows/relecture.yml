@@ -1,0 +1,82 @@
+# Relecteur : avant toute fusion, un agent relit la PR d'un autre agent (branches claude/…) comme un développeur senior.
+# Il peut la BLOQUER (vérification « Relecture » rouge, obligatoire sur main) : régression, choix voulu touché, test affaibli,
+# sécurité, texte faux ou incohérent avec le site/l'appli/l'API. Le chef d'équipe reprend ensuite la PR bloquée.
+# Les PR humaines (hors claude/…) passent sans relecture automatique.
+name: Relecture
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+concurrency:
+  group: relecture-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
+jobs:
+  relecture:
+    name: Relecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: PR d'agent ?
+        id: agent
+        run: |
+          case "${{ github.head_ref }}" in claude/*) echo "oui=1" >> "$GITHUB_OUTPUT";; *) echo "PR humaine : pas de relecture automatique.";; esac
+      - uses: actions/checkout@v4
+        if: steps.agent.outputs.oui == '1'
+        with:
+          fetch-depth: 0
+      - name: Différences à relire
+        if: steps.agent.outputs.oui == '1'
+        run: |
+          git diff "origin/${{ github.base_ref }}...HEAD" > ../diff.txt
+          git diff --stat "origin/${{ github.base_ref }}...HEAD" | tail -3
+          for d in tabibi-web tabibi-backend tabibi-mobile; do
+            [ "Ariles2025-ops/$d" = "${{ github.repository }}" ] || git clone -q --depth 1 "https://github.com/Ariles2025-ops/$d.git" "../$d"
+          done
+      - uses: anthropics/claude-code-action@v1
+        if: steps.agent.outputs.oui == '1'
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Tu es le relecteur senior de Tabibi (plateforme médicale algérienne : site Angular, API Spring Boot, appli Flutter).
+            Un agent développeur propose la PR #${{ github.event.pull_request.number }} dans ${{ github.repository }} :
+            « ${{ github.event.pull_request.title }} ». Le diff complet est dans ../diff.txt ; le dépôt est extrait ici, les deux
+            autres dépôts de la plateforme sont dans ../ (lecture seule). Lis le diff, puis le code autour, et décide.
+
+            BLOQUE seulement pour un vrai problème, prouvé par le code :
+            - régression : casse un parcours existant, change un contrat d'API (URL, champ, méthode) sans adapter les autres côtés ;
+            - test supprimé, désactivé ou affaibli (assertion retirée, @Disabled, skip) pour faire passer la PR ;
+            - choix VOULU modifié : pré-lancement (connexion → /bientot, bandeau), le chiffre « 75 000 », visio « Bientôt »,
+              gratuité (aucun paiement), aucun message envoyé aux médecins/patients par les agents, jamais android:taskAffinity ;
+            - sécurité : contrôle d'accès retiré, donnée d'un patient exposée à un autre, secret dans le code, SQL destructif ;
+            - migration de base risquée (perte de données, migration déjà passée modifiée) ;
+            - texte visible faux, incohérent avec ce que fait le produit, ou cassé en arabe ; mot « annuaire » ajouté ;
+            - la PR ne fait pas ce que dit son titre, ou fait bien plus (changements sans rapport).
+            Ne bloque PAS pour du style, des préférences ou des améliorations possibles : mentionne-les en remarques.
+
+            Écris UNIQUEMENT le fichier verdict.json à la racine du dépôt :
+            {"decision": "OK" | "BLOQUER", "resume": "une phrase", "problemes": ["fichier:ligne — problème — correction attendue", ...],
+             "remarques": ["suggestion non bloquante", ...]}
+          claude_args: --max-turns 40 --allowedTools "Read,Glob,Grep,Write,Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+      - name: Verdict
+        if: steps.agent.outputs.oui == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -f verdict.json ] || echo '{"decision":"OK","resume":"Relecteur sans verdict : pas de blocage.","problemes":[],"remarques":[]}' > verdict.json
+          python3 - <<'PY' > ../commentaire.md
+          import json
+          v = json.load(open("verdict.json"))
+          ok = v.get("decision") != "BLOQUER"
+          print(("✅ **Relecture : OK**" if ok else "⛔ **Relecture : BLOQUÉE**") + " — " + v.get("resume", ""))
+          if v.get("problemes"): print("\n**À corriger avant fusion :**\n" + "\n".join("- " + p for p in v["problemes"]))
+          if v.get("remarques"): print("\n**Remarques (non bloquantes) :**\n" + "\n".join("- " + r for r in v["remarques"]))
+          open("../decision", "w").write("OK" if ok else "BLOQUER")
+          PY
+          gh pr comment ${{ github.event.pull_request.number }} -R ${{ github.repository }} --body-file ../commentaire.md || true
+          cat ../commentaire.md
+          [ "$(cat ../decision)" = "OK" ]
