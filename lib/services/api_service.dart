@@ -500,6 +500,12 @@ class ApiService {
   Future<List<Map<String, dynamic>>> ordonnancesRedigees(String token) =>
       _get('/api/medecin/ordonnances', token);
 
+  /// Emet une ordonnance (comme « Nouvelle ordonnance » du site, 201) : corps de [corpsOrdonnance] ;
+  /// 403/409 si le patient n'a pas de rendez-vous confirme ou honore avec le medecin, 404 si
+  /// patient ou rendez-vous introuvable. Renvoie l'ordonnance creee.
+  Future<Map<String, dynamic>> emettreOrdonnance(Map<String, dynamic> corps, String token) =>
+      _postJson('/api/ordonnances', token, corps);
+
   /// Annule une ordonnance emise (le patient est prevenu, elle ne peut plus etre delivree) ;
   /// [motif] facultatif, 409 si elle n'est plus a l'etat « Émise ».
   Future<Map<String, dynamic>> annulerOrdonnance(String id, String motif, String token) =>

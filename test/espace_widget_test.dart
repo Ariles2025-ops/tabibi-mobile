@@ -11,6 +11,7 @@ import 'package:tabibi_mobile/pages/espace/cabinet_pages.dart';
 import 'package:tabibi_mobile/pages/espace/creneaux_page.dart';
 import 'package:tabibi_mobile/pages/espace/fiche_semaine_pages.dart';
 import 'package:tabibi_mobile/pages/espace/mon_espace_page.dart';
+import 'package:tabibi_mobile/pages/espace/nouvelle_ordonnance_page.dart';
 import 'package:tabibi_mobile/pages/espace/ordonnances_redigees_page.dart';
 import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
 import 'package:tabibi_mobile/pages/espace/secretaires_page.dart';
@@ -116,6 +117,17 @@ class FakeEspaceApi extends ApiService {
     appels.add('annuler-ordonnance $id $motif');
     return {'id': id, 'patientId': patientId, 'emiseLe': '2026-11-10T09:00:00Z', 'statut': 'ANNULEE',
         'motifAnnulation': motif, 'codeVerification': 'BBBB2222'};
+  }
+
+  Map<String, dynamic>? refusEmission;
+
+  @override
+  Future<Map<String, dynamic>> emettreOrdonnance(Map<String, dynamic> corps, String token) async {
+    final refus = refusEmission;
+    if (refus != null) throw ApiException(409, '${refus['erreur']}');
+    appels.add('emettre ${corps['patientId']} ${corps['rendezVousId'] ?? '-'} '
+        '${(corps['lignes'] as List).map((l) => (l as Map)['medicament']).join(',')}');
+    return {'id': 'o3', 'statut': 'EMISE'};
   }
 
   @override
@@ -504,6 +516,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.appels.last, 'annuler-ordonnance o2 ');
     expect(find.text('Annuler'), findsNothing);
+  });
+
+  testWidgets('nouvelle ordonnance : patient, medicament obligatoire, emission', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, NouvelleOrdonnancePage(api: api, auth: SessionTest()));
+    await tester.tap(find.text("Émettre l'ordonnance"));
+    await tester.pumpAndSettle();
+    expect(find.text('Choisissez le patient et indiquez le médicament de chaque ligne.'),
+        findsOneWidget);
+    expect(api.appels.where((a) => a.startsWith('emettre')), isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('champ-patient')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Karim Haddad · 0550123456').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Médicament'), 'Paracétamol 1 g');
+    await tester.tap(find.text("Émettre l'ordonnance"));
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'emettre $patientId - Paracétamol 1 g');
+  });
+
+  testWidgets('nouvelle ordonnance : le refus de l\'API est affiche', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN'])..refusEmission = {'erreur': 'Aucun rendez-vous.'};
+    await afficher(tester, NouvelleOrdonnancePage(api: api, auth: SessionTest()));
+    await tester.tap(find.byKey(const ValueKey('champ-patient')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Karim Haddad · 0550123456').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Médicament'), 'Doliprane');
+    await tester.tap(find.text("Émettre l'ordonnance"));
+    await tester.pumpAndSettle();
+    expect(find.text('Aucun rendez-vous.'), findsOneWidget);
+  });
+
+  testWidgets('ordonnances rédigées : « Nouvelle ordonnance » ouvre le formulaire', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, OrdonnancesRedigeesPage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Nouvelle ordonnance'));
+    await tester.pumpAndSettle();
+    expect(find.text('Prescription'), findsOneWidget);
   });
 
   testWidgets('mes secretaires : liste, invitation par e-mail puis retrait confirme', (tester) async {
