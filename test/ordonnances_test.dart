@@ -67,4 +67,28 @@ void main() {
         'Délivrée en pharmacie le jeu. 3 déc. 10:15');
     expect(infoStatutOrdonnance({'statut': 'DELIVREE'}), 'Délivrée en pharmacie');
   });
+
+  test('corpsOrdonnance : patient et medicament obligatoires, rendez-vous facultatif', () {
+    const ligne = {'medicament': ' Doliprane ', 'posologie': '', 'duree': ' 7 jours'};
+    expect(corpsOrdonnance('p1', '', [ligne]), {
+      'patientId': 'p1',
+      'lignes': [
+        {'medicament': 'Doliprane', 'posologie': '', 'duree': '7 jours'}
+      ],
+    });
+    expect(corpsOrdonnance('p1', 'r1', [ligne])!['rendezVousId'], 'r1');
+    expect(corpsOrdonnance('', '', [ligne]), isNull);
+    expect(corpsOrdonnance('p1', '', []), isNull);
+    expect(corpsOrdonnance('p1', '', [{'medicament': '  '}]), isNull);
+  });
+
+  test('rendezVousLiables : confirmes ou honores du patient, recents d\'abord', () {
+    final liste = rendezVousLiables([
+      {'id': 'a', 'patientId': 'p1', 'statut': 'CONFIRME', 'debut': '2026-11-01T08:00:00Z'},
+      {'id': 'b', 'patientId': 'p1', 'statut': 'honore', 'debut': '2026-11-09T08:00:00Z'},
+      {'id': 'c', 'patientId': 'p1', 'statut': 'ANNULE', 'debut': '2026-11-10T08:00:00Z'},
+      {'id': 'd', 'patientId': 'p2', 'statut': 'CONFIRME', 'debut': '2026-11-11T08:00:00Z'},
+    ], 'p1');
+    expect(liste.map((r) => r['id']), ['b', 'a']);
+  });
 }

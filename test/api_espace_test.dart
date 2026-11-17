@@ -111,6 +111,13 @@ void main() {
     ]);
   });
 
+  test('emettreOrdonnance poste le corps JSON sur /api/ordonnances', () async {
+    final r = (await requetes((a) => a.emettreOrdonnance({'patientId': 'p1'}, 'j'), statut: 201)).single;
+    expect('${r.method} ${r.url.path}', 'POST /api/ordonnances');
+    expect(r.headers['Authorization'], 'Bearer j');
+    expect(jsonDecode(r.body), {'patientId': 'p1'});
+  });
+
   test('espace medecin : secretaires du cabinet (liste, invitation, retrait)', () async {
     final liste = (await requetes((a) => a.secretairesMedecin('j'), corps: [])).single;
     expect('${liste.method} ${liste.url.path}', 'GET /api/medecin/secretaires');
