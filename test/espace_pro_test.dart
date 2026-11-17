@@ -78,4 +78,22 @@ void main() {
     expect(rdvCommence('2026-12-03T07:00:00Z', maintenant), isTrue);
     expect(rdvCommence('illisible', maintenant), isTrue);
   });
+
+  test('secretaires : e-mail valide, nom affiche, invitation en attente, tri', () {
+    expect(emailValide(' s@exemple.dz '), isTrue);
+    expect(emailValide('sans-arobase'), isFalse);
+    expect(emailValide('a@b'), isFalse);
+    expect(nomSecretaire({'secretaireNom': ' Samia ', 'secretaireEmail': 'x@y.dz'}), 'Samia');
+    expect(nomSecretaire({'secretaireNom': null, 'secretaireEmail': 'x@y.dz'}), 'x@y.dz');
+    expect(nomSecretaire({'secretaireId': 'bbbbbbbb-0000-4000'}), 'Secrétaire bbbbbbbb');
+    expect(invitationEnAttente({'accepte': false}), isTrue);
+    expect(invitationEnAttente({'accepte': true}), isFalse);
+    expect(invitationEnAttente({}), isFalse);
+    final tri = trierRattachements([
+      {'id': 'c'},
+      {'id': 'b', 'creeLe': '2026-11-02T00:00:00Z'},
+      {'id': 'a', 'creeLe': '2026-11-01T00:00:00Z'},
+    ]);
+    expect(tri.map((r) => r['id']), ['a', 'b', 'c']);
+  });
 }

@@ -13,6 +13,7 @@ import 'package:tabibi_mobile/pages/espace/fiche_semaine_pages.dart';
 import 'package:tabibi_mobile/pages/espace/mon_espace_page.dart';
 import 'package:tabibi_mobile/pages/espace/ordonnances_redigees_page.dart';
 import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
+import 'package:tabibi_mobile/pages/espace/secretaires_page.dart';
 import 'package:tabibi_mobile/pages/mon_profil_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
@@ -205,6 +206,40 @@ class FakeEspaceApi extends ApiService {
   Future<List<Map<String, dynamic>>> cabinetsSecretaire(String token) async => [
         {'id': 'k1', 'medecinId': medecinId, 'accepte': true}
       ];
+
+  @override
+  Future<List<Map<String, dynamic>>> secretairesMedecin(String token) async => [
+        if (!appels.contains('retirer-secretaire r1'))
+          {
+            'id': 'r1',
+            'secretaireId': 'bbbbbbbb-0000-4000-8000-000000000001',
+            'secretaireNom': 'Samia Kaci',
+            'secretaireEmail': 'samia@exemple.dz',
+            'creeLe': '2026-11-20T09:00:00Z',
+            'accepte': true,
+          },
+        if (appels.contains('inviter-secretaire nouvelle@exemple.dz'))
+          {
+            'id': 'r2',
+            'secretaireId': 'cccccccc-0000-4000-8000-000000000002',
+            'secretaireEmail': 'nouvelle@exemple.dz',
+            'creeLe': '2026-11-21T09:00:00Z',
+            'accepte': false,
+          },
+      ];
+
+  @override
+  Future<Map<String, dynamic>> inviterSecretaire(String email, String token) async {
+    if (email == 'doublon@exemple.dz') {
+      throw const ApiException(409, 'Cette secrétaire est déjà rattachée à votre cabinet.');
+    }
+    appels.add('inviter-secretaire $email');
+    return {'id': 'r2'};
+  }
+
+  @override
+  Future<void> retirerSecretaire(String rattachementId, String token) async =>
+      appels.add('retirer-secretaire $rattachementId');
 
   @override
   Future<List<Map<String, dynamic>>> invitationsCabinet(String token) async =>
@@ -469,6 +504,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.appels.last, 'annuler-ordonnance o2 ');
     expect(find.text('Annuler'), findsNothing);
+  });
+
+  testWidgets('mes secretaires : liste, invitation par e-mail puis retrait confirme', (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, SecretairesPage(api: api, auth: SessionTest()));
+    expect(find.text('Samia Kaci'), findsOneWidget);
+    expect(find.textContaining('samia@exemple.dz'), findsOneWidget);
+    expect(find.textContaining('Rattachée le'), findsOneWidget);
+
+    await tester.tap(find.text('Inviter cette secrétaire'));
+    await tester.pumpAndSettle();
+    expect(find.text("Indiquez l'adresse e-mail du compte Tabibi de votre secrétaire."),
+        findsOneWidget);
+    expect(api.appels, isEmpty);
+
+    await tester.enterText(find.byType(TextField), ' Nouvelle@Exemple.dz ');
+    await tester.tap(find.text('Inviter cette secrétaire'));
+    await tester.pumpAndSettle();
+    expect(api.appels, ['inviter-secretaire nouvelle@exemple.dz']);
+    expect(find.textContaining('pas encore acceptée'), findsOneWidget);
+    expect(find.text('nouvelle@exemple.dz'), findsWidgets);
+
+    await tester.tap(find.text('Retirer').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Retirer cette secrétaire ?'), findsOneWidget);
+    await tester.tap(find.text('Oui, retirer'));
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'retirer-secretaire r1');
+    expect(find.text('Samia Kaci'), findsNothing);
+  });
+
+  testWidgets('mes secretaires : un doublon (409) affiche le message de l\'API', (tester) async {
+    await afficher(tester, SecretairesPage(api: FakeEspaceApi(), auth: SessionTest()));
+    await tester.enterText(find.byType(TextField), 'doublon@exemple.dz');
+    await tester.tap(find.text('Inviter cette secrétaire'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cette secrétaire est déjà rattachée à votre cabinet.'), findsOneWidget);
+  });
+
+  testWidgets('mon espace medecin propose « Mes secrétaires », comme le site', (tester) async {
+    await afficher(tester, MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    expect(find.text('Mes secrétaires'), findsOneWidget);
+    await tester.tap(find.text('Mes secrétaires'));
+    await tester.pumpAndSettle();
+    expect(find.text('Secrétaires rattachées'), findsOneWidget);
   });
 
   testWidgets('mon espace medecin propose les ordonnances rédigées', (tester) async {

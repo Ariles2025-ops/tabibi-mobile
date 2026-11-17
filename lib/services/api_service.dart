@@ -520,6 +520,20 @@ class ApiService {
   Future<List<Map<String, dynamic>>> patientsMedecin(String token) =>
       _get('/api/medecin/patients', token);
 
+  /// Secretaires rattachees au cabinet du medecin connecte (comme « Mes secrétaires » du site) :
+  /// {id, medecinId, secretaireId, secretaireNom, secretaireEmail, creeLe, accepte}.
+  Future<List<Map<String, dynamic>>> secretairesMedecin(String token) =>
+      _get('/api/medecin/secretaires', token);
+
+  /// Invite une secretaire par l'e-mail de son compte Tabibi (201) ; 400 si aucun compte
+  /// n'utilise cette adresse, 409 si elle est deja rattachee. Elle doit accepter l'invitation.
+  Future<Map<String, dynamic>> inviterSecretaire(String email, String token) =>
+      _postJson('/api/medecin/secretaires', token, {'email': email});
+
+  /// Retire une secretaire (ou annule son invitation en attente) : 204, 404 si deja retiree.
+  Future<void> retirerSecretaire(String rattachementId, String token) =>
+      _post('/api/medecin/secretaires/${Uri.encodeComponent(rattachementId)}/retirer', token);
+
   // --- Espace secretaire ---
 
   /// Patients du cabinet d'un medecin, pour une secretaire rattachee (memes champs).
