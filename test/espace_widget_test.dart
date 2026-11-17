@@ -14,6 +14,7 @@ import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
 import 'package:tabibi_mobile/pages/mon_profil_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
+import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 const medecinId = '00000000-0000-0000-0000-000000000001';
 const patientId = 'a1a1a1a1-0000-4000-8000-000000000007';
@@ -138,7 +139,9 @@ class FakeEspaceApi extends ApiService {
   @override
   Future<Map<String, dynamic>> ouvrirCreneauMedecin(
       DateTime debut, int dureeMinutes, String token) async {
-    appels.add('ouvrir ${debut.hour}:${debut.minute} $dureeMinutes');
+    // Heure murale d'Alger de l'instant envoye, quel que soit le fuseau du telephone / du runner.
+    final alger = muraleAlger(debut);
+    appels.add('ouvrir ${alger.hour}:${alger.minute} $dureeMinutes');
     return {};
   }
 

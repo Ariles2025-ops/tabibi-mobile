@@ -155,7 +155,10 @@ void main() {
       try {
         await http.runWithClient(
           () => const ApiService(base: 'https://api.test').mesRendezVous('j'),
-          () => MockClient((r) async => http.Response(jsonEncode(corps), statut)),
+          // Corps en UTF-8 comme le vrai serveur : http.Response(String) encoderait en latin-1
+          // sans charset, ce qui n'est pas du UTF-8 valide pour « é ».
+          () => MockClient((r) async => http.Response.bytes(utf8.encode(jsonEncode(corps)), statut,
+              headers: {'content-type': 'application/json; charset=utf-8'})),
         );
       } on ApiException catch (e) {
         return e;
