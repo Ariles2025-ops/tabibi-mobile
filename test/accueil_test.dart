@@ -45,6 +45,9 @@ void main() {
     expect(find.text('Spécialité'), findsOneWidget);
     expect(find.text('Wilaya'), findsOneWidget);
     expect(find.text('Lancement prochainement'), findsOneWidget);
+    // Comme le site : « plateforme », jamais « annuaire » dans un texte visible.
+    expect(find.textContaining('Trouvez déjà un médecin sur la plateforme.'), findsOneWidget);
+    expect(find.textContaining('annuaire'), findsNothing);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('AB'), findsOneWidget);
     expect(Directionality.of(tester.element(find.text('Nom du médecin'))), TextDirection.ltr);
@@ -59,6 +62,8 @@ void main() {
     expect(find.text('التخصص'), findsOneWidget);
     expect(find.text('الولاية'), findsOneWidget);
     expect(find.text('الإطلاق قريبًا'), findsOneWidget);
+    expect(find.textContaining('منصة طبية: ابحث عن طبيب من الآن.'), findsOneWidget);
+    expect(find.textContaining('دليل'), findsNothing);
     expect(find.text('Votre santé ne devrait jamais attendre'), findsNothing);
     expect(Directionality.of(tester.element(find.text('اسم الطبيب'))), TextDirection.rtl);
   });

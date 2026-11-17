@@ -590,8 +590,8 @@ class _BandeauLancement extends StatelessWidget {
             Text(t('Lancement prochainement', 'الإطلاق قريبًا'),
                 style: const TextStyle(fontWeight: FontWeight.w800)),
             Text(t(
-                "La prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins.",
-                'حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. تصفّح دليل الأطباء من الآن.')),
+                "La prise de rendez-vous en ligne ouvre très bientôt. Trouvez déjà un médecin sur la plateforme.",
+                'حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. منصة طبية: ابحث عن طبيب من الآن.')),
           ],
         ),
       ),
