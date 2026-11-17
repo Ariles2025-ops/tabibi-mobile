@@ -25,6 +25,7 @@ import 'utils/espace_pro.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
 import 'utils/praticien.dart';
+import 'widgets/composants.dart';
 import 'widgets/selecteur_langue.dart';
 import 'widgets/vue_erreur.dart';
 
@@ -361,96 +362,146 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (prelancement) const _BandeauLancement(),
-            Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _nom,
-                  decoration: InputDecoration(
-                      labelText: t('Nom du médecin', 'اسم الطبيب')),
-                  onSubmitted: (_) => _rechercher(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                tooltip: t('Rechercher', 'بحث'),
-                onPressed: _rechercher,
-                icon: const Icon(Icons.search),
-              ),
-            ]),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _specialite,
-                  isExpanded: true,
-                  decoration:
-                      InputDecoration(labelText: t('Spécialité', 'التخصص')),
-                  items: [
-                    DropdownMenuItem<String>(
-                        value: null, child: Text(t('Toutes', 'الكل'))),
-                    for (final sp in specialites)
-                      DropdownMenuItem(
-                          value: sp.slug,
-                          child: Text(nomSpecialite(sp),
-                              overflow: TextOverflow.ellipsis)),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _specialite = v);
-                    _rechercher();
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _wilaya,
-                  isExpanded: true,
-                  decoration:
-                      InputDecoration(labelText: t('Wilaya', 'الولاية')),
-                  items: [
-                    DropdownMenuItem<String>(
-                        value: null, child: Text(t('Toutes', 'الكل'))),
-                    for (final w in wilayas)
-                      DropdownMenuItem(
-                          value: w.code,
-                          child: Text('${w.code} - ${nomWilaya(w)}',
-                              overflow: TextOverflow.ellipsis)),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _wilaya = v);
-                    _rechercher();
-                  },
-                ),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            _entrees(),
-            const SizedBox(height: 8),
-            if (_charge) const LinearProgressIndicator(),
-            Expanded(
-              child: _erreur != null
-                  ? VueErreur(message: _erreur!, onReessayer: _rechercher)
-                  : ListView.separated(
-                itemCount: _resultats.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (_, i) {
-                  final m = _resultats[i];
-                  return ListTile(
-                    title: Text(m['nomComplet'] as String),
-                    subtitle: Text(sousTitrePraticien(m)),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _ouvrirFiche(identifiant(m['id'])),
-                  );
-                },
+            _enTete(context),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (prelancement) const _BandeauLancement(),
+                  _entrees(),
+                  const SizedBox(height: 12),
+                  if (_charge) const LinearProgressIndicator(),
+                  if (_erreur != null)
+                    VueErreur(message: _erreur!, onReessayer: _rechercher),
+                  for (final m in _resultats)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: CarteTabibi(
+                        onTap: () => _ouvrirFiche(identifiant(m['id'])),
+                        child: Row(children: [
+                          AvatarInitiales(nom: m['nomComplet'] as String),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(m['nomComplet'] as String,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(sousTitrePraticien(m),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(color: Charte.doux)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right),
+                        ]),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// En-tete vert en degrade : titre d'accroche et recherche (nom, specialite, wilaya)
+  /// dans une carte blanche.
+  Widget _enTete(BuildContext context) {
+    final clair = Theme.of(context).colorScheme.onPrimary;
+    return Container(
+      decoration: const BoxDecoration(gradient: Charte.degrade),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t('Votre santé ne devrait jamais attendre', 'صحتك لا يجب أن تنتظر'),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: clair, fontWeight: FontWeight.w800, height: 1.25),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: Charte.carte(),
+            padding: const EdgeInsets.all(12),
+            child: Column(children: [
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nom,
+                    decoration: InputDecoration(
+                        labelText: t('Nom du médecin', 'اسم الطبيب')),
+                    onSubmitted: (_) => _rechercher(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: t('Rechercher', 'بحث'),
+                  onPressed: _rechercher,
+                  icon: const Icon(Icons.search),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _specialite,
+                    isExpanded: true,
+                    decoration:
+                        InputDecoration(labelText: t('Spécialité', 'التخصص')),
+                    items: [
+                      DropdownMenuItem<String>(
+                          value: null, child: Text(t('Toutes', 'الكل'))),
+                      for (final sp in specialites)
+                        DropdownMenuItem(
+                            value: sp.slug,
+                            child: Text(nomSpecialite(sp),
+                                overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (v) {
+                      setState(() => _specialite = v);
+                      _rechercher();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _wilaya,
+                    isExpanded: true,
+                    decoration:
+                        InputDecoration(labelText: t('Wilaya', 'الولاية')),
+                    items: [
+                      DropdownMenuItem<String>(
+                          value: null, child: Text(t('Toutes', 'الكل'))),
+                      for (final w in wilayas)
+                        DropdownMenuItem(
+                            value: w.code,
+                            child: Text('${w.code} - ${nomWilaya(w)}',
+                                overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (v) {
+                      setState(() => _wilaya = v);
+                      _rechercher();
+                    },
+                  ),
+                ),
+              ]),
+            ]),
+          ),
+        ],
       ),
     );
   }
@@ -517,20 +568,22 @@ class _BandeauLancement extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Charte.vert, Charte.vertFonce]),
+        gradient: Charte.degrade,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text.rich(
-        TextSpan(children: [
-          TextSpan(
-              text: t('Lancement prochainement', 'الإطلاق قريبًا'),
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          TextSpan(
-              text: t(
-                  " — la prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins.",
-                  ' — حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. تصفّح دليل الأطباء من الآن.')),
-        ]),
-        style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+      child: DefaultTextStyle.merge(
+        style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary, fontSize: 13, height: 1.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(t('Lancement prochainement', 'الإطلاق قريبًا'),
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text(t(
+                "La prise de rendez-vous en ligne ouvre très bientôt. Parcourez déjà l'annuaire des médecins.",
+                'حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. تصفّح دليل الأطباء من الآن.')),
+          ],
+        ),
       ),
     );
   }
