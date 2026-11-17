@@ -1004,22 +1004,23 @@ void main() {
   });
 
   testWidgets(
-      "mes conversations affiche « Médecin » et l'identifiant abrege si la fiche du "
+      "mes conversations affiche « Médecin » sans identifiant technique si la fiche du "
       'praticien est indisponible', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesConversationsPage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
     ));
     await tester.pumpAndSettle();
 
-    // Repli sur les 8 premiers caracteres de l'UUID, jamais l'identifiant entier.
-    expect(find.text('Médecin 00000000'), findsOneWidget);
+    // Repli « Médecin » seul : aucun fragment d'UUID montre au patient.
+    expect(find.text('Médecin'), findsOneWidget);
+    expect(find.textContaining('00000000'), findsNothing);
     expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
     expect(find.text('2 non lus'), findsOneWidget);
 
-    await tester.tap(find.text('Médecin 00000000'));
+    await tester.tap(find.text('Médecin'));
     await tester.pumpAndSettle();
-    // Sans nom, le fil garde son titre generique mais s'ouvre bien sur les messages.
-    expect(find.text('Conversation'), findsOneWidget);
+    // Le fil reprend le meme repli en titre et s'ouvre sur les messages.
+    expect(find.text('Médecin'), findsOneWidget);
     expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
   });
 
