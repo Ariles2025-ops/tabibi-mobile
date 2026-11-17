@@ -4,6 +4,7 @@ import '../i18n/langue.dart';
 import '../services/api_service.dart';
 import '../utils/dates.dart';
 import '../utils/libelles.dart';
+import '../utils/ordonnances.dart';
 import '../widgets/vue_erreur.dart';
 
 /// Verification publique (sans compte) de l'authenticite d'une ordonnance par son code,
@@ -123,6 +124,16 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           title: Text(t('Code inconnu', 'رمز غير معروف')),
           subtitle: Text(
               t('Aucune ordonnance ne correspond à ce code.', 'لا توجد وصفة مطابقة لهذا الرمز.')),
+        ),
+      );
+    }
+    final avertissement = avertissementVerification(resultat);
+    if (avertissement != null) {
+      return Card(
+        color: couleurs.errorContainer,
+        child: ListTile(
+          leading: Icon(Icons.block, color: couleurs.onErrorContainer),
+          title: Text(avertissement),
         ),
       );
     }

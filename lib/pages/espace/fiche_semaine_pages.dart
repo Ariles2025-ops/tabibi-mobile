@@ -175,7 +175,7 @@ class _SemaineTypePageState extends State<SemaineTypePage> {
               prefixIcon: const Icon(Icons.timelapse),
             ),
             items: [
-              for (final d in dureesCreneau) DropdownMenuItem(value: d, child: Text('$d min')),
+              for (final d in dureesCreneau) DropdownMenuItem(value: d, child: Text(formaterDuree(d))),
             ],
             onChanged: (d) => setState(() => _duree = d ?? _duree),
           ),
@@ -465,7 +465,7 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
           ListTile(
             leading: const Icon(Icons.event_available),
             title: Text(formaterDateIso('${widget.creneau['debut']}')),
-            subtitle: Text('${widget.creneau['dureeMinutes']} min'),
+            subtitle: Text(formaterDuree(widget.creneau['dureeMinutes'])),
           ),
           const SizedBox(height: 8),
           TextField(

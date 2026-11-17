@@ -43,4 +43,28 @@ void main() {
     ]);
     expect(illisible.map((o) => o['id']).toList(), ['5', '4']);
   });
+
+  test("avertissementVerification refuse une ordonnance deja delivree ou annulee (comme le site)", () {
+    expect(avertissementVerification({'valide': true, 'statut': 'EMISE'}), isNull);
+    expect(avertissementVerification({'valide': true}), isNull);
+    expect(avertissementVerification({'statut': 'ANNULEE'}),
+        'Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.');
+    expect(
+        avertissementVerification({'statut': 'DELIVREE', 'delivreeLe': '2026-12-03T10:15:00'}),
+        'Déjà délivrée le jeu. 3 déc. 10:15 : cette ordonnance ne peut pas être délivrée une nouvelle fois.');
+    expect(avertissementVerification({'statut': 'DELIVREE'}),
+        'Déjà délivrée : cette ordonnance ne peut pas être délivrée une nouvelle fois.');
+  });
+
+  test('infoStatutOrdonnance precise l\'annulation et la delivrance (comme le site)', () {
+    expect(infoStatutOrdonnance({'statut': 'EMISE'}), isNull);
+    expect(infoStatutOrdonnance({}), isNull);
+    expect(infoStatutOrdonnance({'statut': 'ANNULEE', 'motifAnnulation': ' Erreur de dose '}),
+        'Annulée par le médecin : Erreur de dose');
+    expect(infoStatutOrdonnance({'statut': 'ANNULEE', 'motifAnnulation': null}),
+        'Annulée par le médecin');
+    expect(infoStatutOrdonnance({'statut': 'DELIVREE', 'delivreeLe': '2026-12-03T10:15:00'}),
+        'Délivrée en pharmacie le jeu. 3 déc. 10:15');
+    expect(infoStatutOrdonnance({'statut': 'DELIVREE'}), 'Délivrée en pharmacie');
+  });
 }

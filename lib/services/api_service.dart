@@ -648,7 +648,8 @@ class ApiService {
       404 => t('Ressource introuvable', 'العنصر غير موجود'),
       409 => t('Action impossible : la situation a changé entre-temps',
           'تعذّر الإجراء: تغيّر الوضع في الأثناء'),
-      _ => t('Échec $chemin : ${res.statusCode}', 'فشل $chemin : ${res.statusCode}'),
+      _ => t('Une erreur est survenue (code ${res.statusCode}). Réessayez dans un instant.',
+          'حدث خطأ (الرمز ${res.statusCode}). أعد المحاولة بعد قليل.'),
     };
   }
 }

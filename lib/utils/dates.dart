@@ -68,3 +68,9 @@ String formaterDateIso(String iso) {
 
 /// « 14 mai 1990 » : jour, mois et annee sans heure (date de naissance, par exemple).
 String formaterJour(DateTime date) => '${date.day} ${_nomMois(date.month)} ${date.year}';
+
+/// « 20 min » (« 20 دقيقة » en arabe) : duree d'un creneau ; [minutes] absent -> chaine vide.
+String formaterDuree(Object? minutes) {
+  if (minutes == null) return '';
+  return t('$minutes min', '$minutes دقيقة');
+}

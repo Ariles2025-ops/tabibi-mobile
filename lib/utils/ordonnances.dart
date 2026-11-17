@@ -41,3 +41,39 @@ List<Map<String, dynamic>> trierParEmission(List<Map<String, dynamic>> ordonnanc
   });
   return copie;
 }
+
+/// Avertissement a afficher a la verification d'un code dont l'ordonnance ne doit plus etre
+/// delivree (comme le site) : « Déjà délivrée le ... » ou « Annulée : ... » ; null sinon.
+String? avertissementVerification(Map<String, dynamic> resultat) {
+  switch ('${resultat['statut'] ?? ''}'.trim().toUpperCase()) {
+    case 'DELIVREE':
+      final Object? iso = resultat['delivreeLe'];
+      final date = iso is String && DateTime.tryParse(iso) != null ? formaterDateIso(iso) : null;
+      return t(
+          'Déjà délivrée${date == null ? '' : ' le $date'} : cette ordonnance ne peut pas être délivrée une nouvelle fois.',
+          'سبق صرفها${date == null ? '' : ' في $date'}: لا يمكن صرف هذه الوصفة مرة أخرى.');
+    case 'ANNULEE':
+      return t('Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.',
+          'ملغاة: ألغى الطبيب هذه الوصفة ولا يجوز صرفها.');
+  }
+  return null;
+}
+
+/// Precision sous le statut (comme le site) : « Annulée par le médecin : motif » ou
+/// « Délivrée en pharmacie le ... » ; null pour les autres statuts.
+String? infoStatutOrdonnance(Map<String, dynamic> ordonnance) {
+  switch ('${ordonnance['statut'] ?? ''}'.trim().toUpperCase()) {
+    case 'ANNULEE':
+      final Object? brut = ordonnance['motifAnnulation'];
+      final motif = brut is String ? brut.trim() : '';
+      return motif.isEmpty
+          ? t('Annulée par le médecin', 'ألغاها الطبيب')
+          : t('Annulée par le médecin : $motif', 'ألغاها الطبيب: $motif');
+    case 'DELIVREE':
+      final Object? iso = ordonnance['delivreeLe'];
+      final date = iso is String && DateTime.tryParse(iso) != null ? formaterDateIso(iso) : null;
+      return t('Délivrée en pharmacie${date == null ? '' : ' le $date'}',
+          'صُرفت في الصيدلية${date == null ? '' : ' في $date'}');
+  }
+  return null;
+}

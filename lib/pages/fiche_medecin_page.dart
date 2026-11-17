@@ -454,7 +454,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             children: [
               Text(formaterDateIso(creneau['debut'] as String),
                   style: texte.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-              Text(t('${creneau['dureeMinutes']} min', '${creneau['dureeMinutes']} دقيقة'),
+              Text(formaterDuree(creneau['dureeMinutes']),
                   style: texte.bodySmall?.copyWith(color: Charte.doux)),
             ],
           ),
