@@ -56,6 +56,12 @@ void main() {
         'Déjà délivrée : cette ordonnance ne peut pas être délivrée une nouvelle fois.');
   });
 
+  test('avertissementVerification refuse aussi une ordonnance expiree (comme le site)', () {
+    expect(avertissementVerification({'valide': true, 'statut': 'EXPIREE'}),
+        'Expirée : cette ordonnance n\'est plus valable et ne doit pas être délivrée.');
+    expect(avertissementVerification({'statut': ' expiree '}), isNotNull);
+  });
+
   test('infoStatutOrdonnance precise l\'annulation et la delivrance (comme le site)', () {
     expect(infoStatutOrdonnance({'statut': 'EMISE'}), isNull);
     expect(infoStatutOrdonnance({}), isNull);
