@@ -8,6 +8,7 @@ import '../../utils/dates.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
 import '../../utils/ordonnances.dart';
+import 'nouvelle_ordonnance_page.dart';
 import 'outils_espace.dart';
 
 /// « Mes ordonnances rédigées » du site : ordonnances emises par le medecin connecte
@@ -119,19 +120,31 @@ class _OrdonnancesRedigeesPageState extends State<OrdonnancesRedigeesPage> with 
     message(t('Ordonnance annulée.', 'تم إلغاء الوصفة.'));
   }
 
+  Future<void> _nouvelle() async {
+    final emise = await Navigator.of(context).push<bool>(MaterialPageRoute<bool>(
+        builder: (_) => NouvelleOrdonnancePage(api: widget.api, auth: widget.auth)));
+    if (emise == true && mounted) await recharger();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
           title: Text(t('Mes ordonnances rédigées', 'وصفاتي الطبية')),
           actions: actionsActualiser()),
+      floatingActionButton: auth.estConnecte
+          ? FloatingActionButton.extended(
+              onPressed: _nouvelle,
+              icon: const Icon(Icons.add),
+              label: Text(t('Nouvelle ordonnance', 'وصفة جديدة')))
+          : null,
       body: corps(t('Connectez-vous pour voir vos ordonnances.', 'سجّل الدخول لعرض وصفاتك.'), () {
         if (_ordonnances.isEmpty) {
           return VueVide(
               t('Aucune ordonnance rédigée pour le moment.', 'لا توجد وصفات محرَّرة حاليًا.'));
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
           children: [
             for (final o in _ordonnances)
               Card(

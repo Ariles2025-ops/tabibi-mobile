@@ -269,3 +269,13 @@
   (`/api/medecin/secretaires`, `/{id}/retirer`) ; utilitaires `emailValide`, `nomSecretaire`,
   `invitationEnAttente`, `trierRattachements` (`lib/utils/espace_pro.dart`).
 - Tests : `test/api_espace_test.dart`, `test/espace_pro_test.dart`, `test/espace_widget_test.dart`.
+
+## Espace médecin : « Nouvelle ordonnance » (comme le site)
+- `lib/pages/espace/nouvelle_ordonnance_page.dart` : choix du patient (`GET /api/medecin/patients`),
+  rendez-vous lié facultatif (confirmé ou honoré seulement), lignes médicament / posologie / durée
+  (seul le médicament est obligatoire), émission par `POST /api/ordonnances` ; messages d'erreur
+  403/409/404 comme sur le site. Bouton « Nouvelle ordonnance » dans « Mes ordonnances rédigées » :
+  jusqu'ici le médecin pouvait annuler une ordonnance dans l'appli, mais pas en rédiger.
+- `ApiService.emettreOrdonnance` ; utilitaires `corpsOrdonnance`, `rendezVousLiables`
+  (`lib/utils/ordonnances.dart`).
+- Tests : `test/api_espace_test.dart`, `test/ordonnances_test.dart`, `test/espace_widget_test.dart`.

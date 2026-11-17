@@ -77,3 +77,38 @@ String? infoStatutOrdonnance(Map<String, dynamic> ordonnance) {
   }
   return null;
 }
+
+/// Corps de POST /api/ordonnances, comme le site : patient, lignes {medicament, posologie, duree}
+/// (champs facultatifs vides mais presents) et rendez-vous lie facultatif. Null si le patient
+/// manque, s'il n'y a aucune ligne ou si un medicament est vide.
+Map<String, dynamic>? corpsOrdonnance(
+    String patientId, String rendezVousId, List<Map<String, String>> lignes) {
+  final patient = patientId.trim();
+  if (patient.isEmpty || lignes.isEmpty) return null;
+  final propres = [
+    for (final l in lignes)
+      {
+        'medicament': (l['medicament'] ?? '').trim(),
+        'posologie': (l['posologie'] ?? '').trim(),
+        'duree': (l['duree'] ?? '').trim(),
+      },
+  ];
+  if (propres.any((l) => l['medicament']!.isEmpty)) return null;
+  final rdv = rendezVousId.trim();
+  return {'patientId': patient, 'lignes': propres, if (rdv.isNotEmpty) 'rendezVousId': rdv};
+}
+
+/// Rendez-vous d'un patient auxquels une ordonnance peut etre liee (seuls acceptes par l'API :
+/// confirmes ou honores, comme sur le site), les plus recents d'abord.
+List<Map<String, dynamic>> rendezVousLiables(List<Map<String, dynamic>> rendezVous, String patientId) {
+  final liste = [
+    for (final r in rendezVous)
+      if ('${r['patientId']}' == patientId &&
+          const {'CONFIRME', 'HONORE'}.contains('${r['statut']}'.trim().toUpperCase()))
+        r,
+  ];
+  liste.sort((a, b) =>
+      (DateTime.tryParse('${b['debut']}')?.millisecondsSinceEpoch ?? 0)
+          .compareTo(DateTime.tryParse('${a['debut']}')?.millisecondsSinceEpoch ?? 0));
+  return liste;
+}

@@ -146,6 +146,7 @@ class _DialogueReponseState extends State<_DialogueReponse> {
   bool _disponible = true;
   final _prix = TextEditingController();
   final _commentaire = TextEditingController();
+  String? _erreurPrix;
 
   @override
   void dispose() {
@@ -169,7 +170,10 @@ class _DialogueReponseState extends State<_DialogueReponse> {
           TextField(
             controller: _prix,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: t('Prix (DA)', 'السعر (دج)')),
+            decoration: InputDecoration(
+              labelText: t('Prix (DA)', 'السعر (دج)'),
+              errorText: _erreurPrix,
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -183,9 +187,17 @@ class _DialogueReponseState extends State<_DialogueReponse> {
         FilledButton(
           onPressed: () {
             final commentaire = _commentaire.text.trim();
+            final texte = _prix.text.trim();
+            // Un prix vide est ignore ; un prix non vide mais invalide bloque l'envoi.
+            final prix = texte.isEmpty ? null : int.tryParse(texte);
+            if (texte.isNotEmpty && (prix == null || prix < 0)) {
+              setState(() => _erreurPrix = t('Indiquez un prix en dinars valide (nombre entier)',
+                  'أدخل سعراً صحيحاً بالدينار (عدد صحيح)'));
+              return;
+            }
             Navigator.pop(
               context,
-              _Reponse(_disponible, int.tryParse(_prix.text.trim()),
+              _Reponse(_disponible, prix,
                   commentaire.isEmpty ? null : commentaire),
             );
           },
