@@ -1,5 +1,7 @@
 # Dès qu'un agent pousse une branche claude/…, ouvre la PR vers main si elle n'existe pas encore,
 # avec le titre et la description du dernier commit, puis active la fusion automatique (si les tests sont verts).
+# Important : une PR ou un envoi fait avec GITHUB_TOKEN ne déclenche PAS les autres workflows (règle GitHub).
+# On lance donc nous-mêmes les tests (ci) et la sécurité sur la branche : sans eux, la PR resterait bloquée.
 name: Ouvrir PR agent
 on:
   push:
@@ -7,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 jobs:
   ouvrir:
     runs-on: ubuntu-latest
@@ -14,20 +17,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 20
-      - name: PR vers main
+      - name: PR vers main et lancement des tests
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCHE: ${{ github.ref_name }}
         run: |
-          if [ -n "$(gh pr list --head "$BRANCHE" --state open --json number -q '.[0].number')" ]; then echo "PR deja ouverte"; exit 0; fi
           if [ "$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 1)" = "0" ]; then echo "rien de nouveau"; exit 0; fi
-          titre="$(git log -1 --format=%s)"
-          num="$(echo "$BRANCHE" | sed -n 's#^claude/issue-\([0-9]*\)-.*#\1#p')"
-          corps="$(git log origin/main..HEAD --format='- %s')"
-          [ -n "$num" ] && corps="$corps
+          if [ -z "$(gh pr list --head "$BRANCHE" --state open --json number -q '.[0].number')" ]; then
+            titre="$(git log -1 --format=%s)"
+            num="$(echo "$BRANCHE" | sed -n 's#^claude/issue-\([0-9]*\)-.*#\1#p')"
+            corps="$(git log origin/main..HEAD --format='- %s')"
+            [ -n "$num" ] && corps="$corps
 
           Closes #$num"
-          gh pr create --base main --head "$BRANCHE" --title "$titre" --body "$corps
+            gh pr create --base main --head "$BRANCHE" --title "$titre" --body "$corps
 
           PR ouverte automatiquement pour le travail de l'agent développeur."
-          gh pr merge "$BRANCHE" --auto --squash --delete-branch || true
+            gh pr merge "$BRANCHE" --auto --squash --delete-branch || true
+          fi
+          gh workflow run ci.yml --ref "$BRANCHE" || echo "ci non lancee"
+          gh workflow run securite.yml --ref "$BRANCHE" || echo "securite non lancee"

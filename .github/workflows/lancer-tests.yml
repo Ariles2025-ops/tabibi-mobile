@@ -1,0 +1,50 @@
+# Lanceur de tests des agents.
+# Règle GitHub : ce qu'un agent pousse avec GITHUB_TOKEN (branche, PR) ne déclenche AUCUN autre workflow.
+# Sans ce lanceur, les branches claude/… restaient sans PR ou avec une PR sans tests, donc bloquées.
+# Après chaque passage d'un agent (et toutes les heures en secours), pour chaque branche claude/… en avance sur main :
+#   1. ouvre la PR si elle n'a jamais existé, avec fusion automatique ;
+#   2. lance ci et Securite sur la branche si son dernier commit n'a pas encore été testé.
+name: Lancer tests agents
+on:
+  workflow_run:
+    workflows: ["Claude", "Chef d'equipe", "Coherence plateforme", "Reparation auto"]
+    types: [completed]
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+concurrency:
+  group: lancer-tests
+  cancel-in-progress: false
+permissions:
+  contents: read
+  pull-requests: write
+  actions: write
+jobs:
+  lancer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ouvrir les PR manquantes et lancer les tests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          R: ${{ github.repository }}
+        run: |
+          for b in $(gh api "repos/$R/branches" --paginate -q '.[].name' | grep '^claude/' || true); do
+            ahead=$(gh api "repos/$R/compare/main...$b" -q .ahead_by 2>/dev/null || echo 0)
+            [ "$ahead" = "0" ] && continue
+            sha=$(gh api "repos/$R/commits/$b" -q .sha)
+            if [ -z "$(gh pr list -R "$R" --head "$b" --state open --json number -q '.[0].number')" ]; then
+              [ -n "$(gh pr list -R "$R" --head "$b" --state all --json number -q '.[0].number')" ] && { echo "$b : PR deja fermee, on laisse"; continue; }
+              titre=$(gh api "repos/$R/commits/$sha" -q .commit.message | head -1)
+              num=$(echo "$b" | sed -n 's#^claude/issue-\([0-9]*\)-.*#\1#p')
+              corps="PR ouverte automatiquement pour le travail de l'agent."
+              [ -n "$num" ] && corps="$corps
+
+          Closes #$num"
+              gh pr create -R "$R" --base main --head "$b" --title "$titre" --body "$corps" && echo "$b : PR ouverte"
+              gh pr merge -R "$R" "$b" --auto --squash --delete-branch || true
+            fi
+            if [ "$(gh run list -R "$R" --workflow ci.yml --commit "$sha" --json databaseId -q length)" = "0" ]; then
+              gh workflow run ci.yml -R "$R" --ref "$b" && echo "$b : ci lancee"
+              gh workflow run securite.yml -R "$R" --ref "$b" && echo "$b : securite lancee"
+            fi
+          done
