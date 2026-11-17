@@ -513,8 +513,8 @@ class FakeApiServiceSansFiche extends FakeApiService {
 }
 
 /// Ordonnance annulee par le medecin, avec motif.
-class FakeApiServiceOrdonnanceAnnulee extends FakeApiService {
-  const FakeApiServiceOrdonnanceAnnulee();
+class FakeApiServiceOrdonnanceAnnuleeMotif extends FakeApiService {
+  const FakeApiServiceOrdonnanceAnnuleeMotif();
 
   @override
   Future<Map<String, dynamic>> ordonnance(String id, String token) async => {
@@ -800,7 +800,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: DetailOrdonnancePage(
         ordonnanceId: FakeApiService.ordonnanceDemo,
-        api: const FakeApiServiceOrdonnanceAnnulee(),
+        api: const FakeApiServiceOrdonnanceAnnuleeMotif(),
         auth: sessionConnectee(),
       ),
     ));
