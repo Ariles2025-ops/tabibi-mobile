@@ -139,9 +139,11 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.conflit) {
-        // Pris entre-temps par un autre patient : il n'est plus reservable.
-        setState(() => _retirerCreneau(creneauId));
-        _message(t("Ce créneau vient d'être pris", 'تم حجز هذا الموعد للتو'));
+        // Le 409 peut venir d'un creneau pris, mais aussi de la regle « un seul rendez-vous
+        // a venir par medecin » (creneau encore libre) : on affiche le message de l'API et
+        // on recharge les creneaux, seul un creneau reellement pris disparait de la liste.
+        _message(e.message);
+        await _rechargerCreneaux();
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
         _message(t('Session expirée : reconnectez-vous puis réessayez',
@@ -153,6 +155,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _enCours = null);
+    }
+  }
+
+  /// Recharge les creneaux depuis l'API ; en cas d'echec, la liste affichee est conservee.
+  Future<void> _rechargerCreneaux() async {
+    try {
+      final creneaux = await widget.api.creneaux(widget.medecinId);
+      if (!mounted) return;
+      setState(() => _creneaux = creneaux.where((c) => c['disponible'] != false).toList());
+    } on Exception {
+      // Liste inchangee : le message de l'API a deja ete affiche.
     }
   }
 

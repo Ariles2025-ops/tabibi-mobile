@@ -638,6 +638,18 @@ class FakeApiServiceDejaInscrit extends FakeApiService {
       throw const ApiException(409, "Vous etes deja inscrit sur la liste d'attente de ce medecin.");
 }
 
+/// Variante ou la reservation echoue en 409 alors que le creneau reste libre
+/// (regle « un seul rendez-vous a venir par medecin »).
+class FakeApiServiceRdvExistant extends FakeApiService {
+  const FakeApiServiceRdvExistant();
+
+  static const String message = 'Vous avez deja un rendez-vous a venir avec ce medecin.';
+
+  @override
+  Future<Map<String, dynamic>> reserverCreneau(String creneauId, String token) async =>
+      throw const ApiException(409, message);
+}
+
 /// Variante qui conserve les profils enregistres (corps envoyes a PUT /api/moi/profil).
 class FakeApiServiceProfil extends FakeApiService {
   FakeApiServiceProfil();
@@ -1415,6 +1427,26 @@ void main() {
     expect(find.text(messageDejaInscrit), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
     expect(find.text(texteInscrit), findsOneWidget);
+  });
+
+  testWidgets(
+      'la fiche medecin affiche le message du 409 (rendez-vous existant) et garde le creneau libre',
+      (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+        medecinId: FakeApiService.medecinDemo,
+        api: const FakeApiServiceRdvExistant(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Réserver'));
+    await tester.pumpAndSettle();
+    expect(find.text(FakeApiServiceRdvExistant.message), findsOneWidget);
+    expect(find.text("Ce créneau vient d'être pris"), findsNothing);
+    expect(find.text('Réserver'), findsOneWidget);
   });
 
   testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {
