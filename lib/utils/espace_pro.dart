@@ -14,6 +14,14 @@ Set<String> rolesDe(Map<String, dynamic> moi) {
   return roles.map((r) => r.toString().toUpperCase()).toSet();
 }
 
+/// Message de confirmation apres connexion : « Connecté : karim », ou « Connecté » seul si
+/// l'identite n'a pas de nom (jamais « Connecté : null »).
+String messageConnecte(Map<String, dynamic> moi) {
+  final nom = (moi['nom']?.toString() ?? '').trim();
+  if (nom.isEmpty) return t('Connecté', 'تم تسجيل الدخول');
+  return t('Connecté : $nom', 'تم تسجيل الدخول: $nom');
+}
+
 /// Espaces ouverts par les roles, dans l'ordre d'affichage.
 List<Espace> espacesPour(Set<String> roles) => [
       if (roles.contains('MEDECIN')) Espace.medecin,
