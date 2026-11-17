@@ -163,7 +163,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
               Text(commentaire),
             ],
             const SizedBox(height: 8),
-            Text(t('Déposé le ${dateAvis(a)}', 'نُشر في ${dateAvis(a)}'), style: texte.bodySmall),
+            Text(t('Déposé le ${dateAvis(a)}', 'قُدِّم في ${dateAvis(a)}'), style: texte.bodySmall),
           ],
         ),
       ),
