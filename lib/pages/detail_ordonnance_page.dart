@@ -144,6 +144,16 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
           title: Text(_nomMedecin),
           subtitle: Text(_sousTitre(ordonnance)),
         ),
+        if (infoStatutOrdonnance(ordonnance) != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(infoStatutOrdonnance(ordonnance)!,
+                key: const ValueKey('info-statut-ordonnance'),
+                style: TextStyle(
+                    color: '${ordonnance['statut']}'.toUpperCase() == 'ANNULEE'
+                        ? Theme.of(context).colorScheme.error
+                        : null)),
+          ),
         const SizedBox(height: 8),
         _carteCode(context, '${ordonnance['codeVerification'] ?? ''}'),
         const SizedBox(height: 24),
