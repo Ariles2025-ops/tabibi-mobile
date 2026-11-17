@@ -495,6 +495,17 @@ class ApiService {
     return _objet(res, '/api/medecin/fiche');
   }
 
+  /// Ordonnances emises par le medecin connecte (comme « Mes ordonnances rédigées » du site) :
+  /// memes champs que [mesOrdonnances].
+  Future<List<Map<String, dynamic>>> ordonnancesRedigees(String token) =>
+      _get('/api/medecin/ordonnances', token);
+
+  /// Annule une ordonnance emise (le patient est prevenu, elle ne peut plus etre delivree) ;
+  /// [motif] facultatif, 409 si elle n'est plus a l'etat « Émise ».
+  Future<Map<String, dynamic>> annulerOrdonnance(String id, String motif, String token) =>
+      _postJson('/api/medecin/ordonnances/${Uri.encodeComponent(id)}/annuler', token,
+          {'motif': motif});
+
   /// Liste d'attente du medecin connecte : {id, patientId, medecinId, inscritLe}.
   Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) =>
       _get('/api/medecin/liste-attente', token);
