@@ -102,17 +102,17 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
               _section(t('Espace médecin', 'فضاء الطبيب')),
               _entree(
                   Icons.event_note,
-                  t('Mon agenda', 'مواعيدي'),
+                  t('Agenda', 'المواعيد'),
                   t('Rendez-vous de vos patients', 'مواعيد مرضاك'),
                   AgendaPage(api: api, auth: auth)),
               _entree(
                   Icons.schedule,
-                  t('Mes créneaux', 'مواعيدي المتاحة'),
+                  t('Disponibilités', 'الأوقات المتاحة'),
                   t('Ouvrir ou supprimer des créneaux', 'فتح أو حذف مواعيد متاحة'),
                   CreneauxPage(api: api, auth: auth)),
               _entree(
                   Icons.hourglass_top_outlined,
-                  t("Ma liste d'attente", 'قائمة الانتظار'),
+                  t("Liste d'attente", 'قائمة الانتظار'),
                   t('Patients en attente d\'un créneau', 'مرضى ينتظرون موعدًا'),
                   ListeAttenteMedecinPage(api: api, auth: auth)),
               _entree(
@@ -133,7 +133,7 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
               _section(t('Espace secrétaire', 'فضاء السكرتارية')),
               _entree(
                   Icons.business_outlined,
-                  t('Cabinets', 'العيادات'),
+                  t('Agenda du cabinet', 'مواعيد العيادة'),
                   t('Agenda et créneaux des médecins', 'مواعيد الأطباء وأوقاتهم المتاحة'),
                   CabinetsPage(api: api, auth: auth)),
             ],
