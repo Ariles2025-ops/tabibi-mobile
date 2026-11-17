@@ -1,0 +1,58 @@
+# Agent cohérence de la plateforme : toutes les heures, compare le site (tabibi-web) et l'appli (tabibi-mobile),
+# repère ce qui est illogique, incohérent ou manquant, et corrige le côté tabibi-mobile dans une PR claude/coherence-…
+# (fusion et mise en ligne seules si tous les tests sont verts). Une seule PR de cohérence ouverte à la fois.
+name: Coherence plateforme
+on:
+  schedule:
+    - cron: '45 * * * *'
+  workflow_dispatch:
+concurrency:
+  group: coherence-plateforme
+  cancel-in-progress: false
+jobs:
+  coherence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Une PR de cohérence est-elle déjà ouverte ?
+        id: garde
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          n=$(gh pr list -R "${{ github.repository }}" --state open --json headRefName -q '[.[]|select(.headRefName|startswith("claude/coherence"))]|length')
+          echo "ouvertes=$n" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.garde.outputs.ouvertes == '0'
+        with:
+          fetch-depth: 0
+      - name: Copie de l'autre moitié de la plateforme (tabibi-web, lecture seule)
+        if: steps.garde.outputs.ouvertes == '0'
+        run: git clone --depth 1 https://github.com/Ariles2025-ops/tabibi-web.git ../tabibi-web
+      - uses: anthropics/claude-code-action@v1
+        if: steps.garde.outputs.ouvertes == '0'
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Tabibi est UNE plateforme : le site (Angular, dépôt tabibi-web) et l'appli (Flutter, dépôt tabibi-mobile) partagent
+            la même API (api.tabibi.doctor) et les mêmes comptes Keycloak. Tu es dans ${{ github.repository }} ; l'autre moitié est
+            en lecture seule dans ../tabibi-web.
+            Cherche ce qui est incohérent, illogique ou manquant ENTRE les deux, et DANS ce dépôt :
+            - mêmes écrans et mêmes fonctions des deux côtés (recherche, fiche médecin, réservation, rendez-vous, ordonnances,
+              messagerie, notifications, avis, liste d'attente, profil, suppression de compte, espaces médecin/secrétaire/pharmacie) ;
+            - mêmes mots, statuts et libellés, en français ET en arabe ; aucun texte anglais, aucun « null », aucun lien mort ;
+            - parcours illogiques (bouton qui ne mène nulle part, étape impossible, message contradictoire, promesse non tenue).
+            Choisis les 1 à 5 problèmes les plus utiles à corriger CÔTÉ tabibi-mobile, corrige-les avec des tests, et ouvre UNE PR vers main
+            sur une branche claude/coherence-${{ github.run_id }}, expliquée en français. S'il n'y a rien d'utile, ne fais rien.
+            Ce qui doit être corrigé dans l'autre dépôt : écris-le simplement dans la description de ta PR (section « Côté tabibi-web »).
+            Choix VOULUS, à ne jamais changer : pré-lancement (connexion → /bientot et bandeau « Lancement prochainement »),
+            le chiffre « 75 000 », la visio « Bientôt », les opticiens et les pharmacies tels qu'ils sont.
+            Règles : ne pousse jamais sur main, ne supprime aucun test, ne touche ni à l'authentification ni aux URLs de l'API,
+            ni aux secrets ; charte Tabibi (vert #0F7560, or #D4A437, Plus Jakarta Sans) ; jamais android:taskAffinity.
+          claude_args: --max-turns 60 --allowedTools "Bash(gh pr create:*),Bash(gh pr list:*),Bash(git:*),Bash(npm ci),Bash(npm run *),Bash(npx ng *),Bash(flutter *),Bash(dart *),Read,Edit,Write,Glob,Grep"

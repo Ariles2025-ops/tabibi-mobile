@@ -69,6 +69,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
   }
 
   String _patient(Map<String, dynamic> rdv) {
+    final saisi = rdv['nomPatient'];
+    if (saisi is String && saisi.trim().isNotEmpty) return saisi.trim();
     final id = identifiant(rdv['patientId']);
     return _patients[id] ?? t('Patient ${abreger(id)}', 'مريض ${abreger(id)}');
   }
