@@ -9,7 +9,6 @@ import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
-import '../utils/libelles.dart';
 import '../widgets/composants.dart';
 import '../utils/rendez_vous.dart';
 import '../widgets/vue_connexion.dart';
