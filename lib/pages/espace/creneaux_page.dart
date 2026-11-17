@@ -36,8 +36,8 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
   List<Map<String, dynamic>> _creneaux = [];
 
   /// Passent a faux quand l'API repond 404 : les boutons disparaissent, sans erreur.
-  bool _semaineTypeDispo = true;
-  bool _rdvTelephoneDispo = true;
+  final bool _semaineTypeDispo = true;
+  final bool _rdvTelephoneDispo = true;
 
   @override
   void initState() {
@@ -91,8 +91,8 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
     final sortie = await Navigator.of(context).push<SortieEcran>(MaterialPageRoute<SortieEcran>(
         builder: (_) => SemaineTypePage(cabinet: widget.cabinet, api: widget.api, auth: auth)));
     if (!mounted || sortie == null) return;
-    if (sortie.indisponible) {
-      setState(() => _semaineTypeDispo = false);
+    if (sortie.recharger) {
+      await recharger();
       return;
     }
     message(t('${sortie.crees} créneaux créés, ${sortie.ignores} ignorés',
@@ -105,8 +105,8 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
         builder: (_) => RdvTelephonePage(
             cabinet: widget.cabinet, creneau: creneau, api: widget.api, auth: auth)));
     if (!mounted || sortie == null) return;
-    if (sortie.indisponible) {
-      setState(() => _rdvTelephoneDispo = false);
+    if (sortie.recharger) {
+      await recharger();
       return;
     }
     message(t('Rendez-vous enregistré', 'تم تسجيل الموعد'));
@@ -119,7 +119,7 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
     return Scaffold(
       appBar: AppBar(
         title: Text(nom == null
-            ? t('Mes créneaux', 'مواعيدي المتاحة')
+            ? t('Disponibilités', 'الأوقات المتاحة')
             : t('Créneaux · $nom', 'المواعيد المتاحة · $nom')),
         actions: actionsActualiser(),
       ),
@@ -221,7 +221,7 @@ class NouveauCreneauPage extends StatefulWidget {
 
 class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
   late final AuthService _auth = widget.auth ?? session;
-  late final DateTime Function() _maintenant = widget.maintenant ?? DateTime.now;
+  late final DateTime Function() _maintenant = widget.maintenant ?? () => muraleAlger(DateTime.now());
   late DateTime _jour;
   TimeOfDay _debut = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _fin = const TimeOfDay(hour: 12, minute: 0);
@@ -260,8 +260,9 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
   List<DateTime> _debuts() {
     if (!widget.serie) {
       final d = DateTime(_jour.year, _jour.month, _jour.day, _debut.hour, _debut.minute);
-      return d.isAfter(_maintenant()) ? [d] : [];
+      return d.isAfter(_maintenant()) ? [instantAlger(d)] : [];
     }
+    // Heures murales d'Alger converties en instants, quel que soit le fuseau du telephone.
     return creneauxSerie(
       premierJour: _jour,
       jours: _jours,
@@ -269,7 +270,7 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
       finMinutes: _fin.hour * 60 + _fin.minute,
       dureeMinutes: _duree,
       maintenant: _maintenant(),
-    );
+    ).map(instantAlger).toList();
   }
 
   Future<void> _choisirJour() async {

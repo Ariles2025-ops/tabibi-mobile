@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/theme.dart';
 import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
@@ -8,6 +9,7 @@ import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
+import '../widgets/composants.dart';
 import '../utils/rendez_vous.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -240,20 +242,40 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
         for (final rdv in classes.passes) _ligne(rdv, avecAnnee: true),
       ],
     ];
-    return ListView(children: lignes);
+    return ListView(padding: const EdgeInsets.all(16), children: lignes);
   }
 
   Widget _enTete(String titre) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
         child: Text(titre, style: Theme.of(context).textTheme.titleMedium),
       );
 
   Widget _ligne(Map<String, dynamic> rdv, {required bool avecAnnee}) {
-    return ListTile(
-      leading: const Icon(Icons.event),
-      title: Text(formaterDateIso(rdv['debut'] as String, avecAnnee: avecAnnee)),
-      subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
-      trailing: _action(rdv),
+    final texte = Theme.of(context).textTheme;
+    final action = _action(rdv);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: CarteTabibi(
+        child: Row(children: [
+          AvatarInitiales(nom: _nomMedecin(rdv)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(formaterDateIso(rdv['debut'] as String, avecAnnee: avecAnnee),
+                    style: texte.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(_nomMedecin(rdv),
+                    style: texte.bodyMedium?.copyWith(color: Charte.doux)),
+                const SizedBox(height: 6),
+                PastilleStatut(libelle: _libelleStatut(rdv), statut: rdv['statut']),
+              ],
+            ),
+          ),
+          if (action != null) action,
+        ]),
+      ),
     );
   }
 

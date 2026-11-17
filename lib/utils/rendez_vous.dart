@@ -32,11 +32,16 @@ bool peutEtreAnnule(Object? statut) {
 bool estAnnulable(Map<String, dynamic> rdv, {DateTime? maintenant}) =>
     estAVenir(rdv, maintenant: maintenant);
 
-/// Libelle du statut ; un rendez-vous confirme dont l'heure est passee est « Terminé ».
+/// Libelle du statut cote patient ; confirme passe ou honore = « Terminé », absent = « Non honoré ».
 String libelleStatutRendezVous(Map<String, dynamic> rdv, {DateTime? maintenant}) {
   if (estConfirme(rdv['statut']) && !estAVenir(rdv, maintenant: maintenant)) {
     return t('Terminé', 'منتهٍ');
   }
+  // Vocabulaire patient, comme l'historique du site : consultation effectuee = « Terminé »,
+  // absence = « Non honoré ». Les agendas medecin / secretaire gardent « Honoré » / « Absent ».
+  final s = _brut(rdv['statut']);
+  if (s == 'HONORE') return t('Terminé', 'منتهٍ');
+  if (s == 'ABSENT') return t('Non honoré', 'لم يتم الحضور');
   return libelleStatut(rdv['statut']);
 }
 

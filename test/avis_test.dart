@@ -103,6 +103,11 @@ void main() {
     expect(libelleStatutAvis('masque'), 'Masqué');
     expect(libelleStatutAvis('AUTRE_STATUT'), 'Autre statut');
     expect(libelleStatutAvis(null), '');
+    // Page « Mes avis » : vocabulaire patient du site.
+    expect(libelleStatutAvisPatient('PUBLIE'), 'Publié');
+    expect(libelleStatutAvisPatient('SIGNALE'), 'En cours de vérification');
+    expect(libelleStatutAvisPatient('masque'), 'Masqué par la modération');
+    expect(libelleStatutAvisPatient(null), '');
     expect(dateAvis(Avis.fromJson({'deposeLe': '2026-11-20T10:15:00'})), 'ven. 20 nov. 10:15');
     expect(dateAvis(Avis.fromJson({})), 'date inconnue');
   });

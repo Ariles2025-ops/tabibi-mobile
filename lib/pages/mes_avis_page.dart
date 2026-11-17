@@ -156,7 +156,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star_outline),
               title: Text(_nomMedecin(a)),
-              subtitle: Text('${formaterNote(a.note)} · ${libelleStatutAvis(a.statut)}'),
+              subtitle: Text('${formaterNote(a.note)} · ${libelleStatutAvisPatient(a.statut)}'),
             ),
             if (commentaire != null) ...[
               const SizedBox(height: 4),
