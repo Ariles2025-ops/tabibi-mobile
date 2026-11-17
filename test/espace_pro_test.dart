@@ -11,6 +11,13 @@ void main() {
     expect(rolesDe({}), isEmpty);
   });
 
+  test('messageConnecte n\'affiche jamais « null »', () {
+    expect(messageConnecte({'nom': 'karim'}), 'Connecté : karim');
+    expect(messageConnecte({'nom': null}), 'Connecté');
+    expect(messageConnecte({}), 'Connecté');
+    expect(messageConnecte({'nom': '  '}), 'Connecté');
+  });
+
   test('espacesPour et aUnEspacePro suivent les roles', () {
     expect(espacesPour({'PATIENT'}), isEmpty);
     expect(aUnEspacePro({'PATIENT'}), isFalse);

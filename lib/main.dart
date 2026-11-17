@@ -155,7 +155,7 @@ class _RecherchePageState extends State<RecherchePage> {
     var texte = t('Connecté', 'تم تسجيل الدخول');
     try {
       final moi = await widget.api.moi(token);
-      texte = t('Connecté : ${moi['nom']}', 'تم تسجيل الدخول: ${moi['nom']}');
+      texte = messageConnecte(moi);
       if (mounted) setState(() => _roles = rolesDe(moi));
     } on Exception {
       // Identite indisponible : message generique.
