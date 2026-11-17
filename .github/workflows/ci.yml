@@ -6,6 +6,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 # Une seule execution par branche : un nouvel envoi annule la precedente.
 concurrency:
