@@ -111,6 +111,17 @@ void main() {
     ]);
   });
 
+  test('espace medecin : secretaires du cabinet (liste, invitation, retrait)', () async {
+    final liste = (await requetes((a) => a.secretairesMedecin('j'), corps: [])).single;
+    expect('${liste.method} ${liste.url.path}', 'GET /api/medecin/secretaires');
+    final invite = (await requetes((a) => a.inviterSecretaire('s@exemple.dz', 'j'))).single;
+    expect('${invite.method} ${invite.url.path}', 'POST /api/medecin/secretaires');
+    expect(jsonDecode(invite.body), {'email': 's@exemple.dz'});
+    final retrait =
+        (await requetes((a) => a.retirerSecretaire('r 1', 'j'), corps: null, statut: 204)).single;
+    expect('${retrait.method} ${retrait.url.path}', 'POST /api/medecin/secretaires/r%201/retirer');
+  });
+
   test('espace pharmacie : besoins de la wilaya, reponse et delivrance', () async {
     final besoins = (await requetes((a) => a.besoinsWilaya('16', 'j'), corps: [])).single;
     expect(besoins.url.toString(), 'https://api.test/api/dawini/besoins?wilaya=16');

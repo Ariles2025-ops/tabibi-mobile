@@ -1,6 +1,8 @@
 // Espaces selon le role (GET /api/moi -> roles) : medecin, secretaire, pharmacie ; regles de
 // l'agenda du cabinet et generation des creneaux en serie.
 
+import '../i18n/langue.dart';
+
 /// Espaces professionnels proposes dans « Mon espace ».
 enum Espace { medecin, secretaire, pharmacie }
 
@@ -100,4 +102,41 @@ bool rdvCommence(Object? debut, DateTime maintenant) {
   final d = DateTime.tryParse('$debut');
   if (d == null) return true;
   return !d.isAfter(maintenant);
+}
+
+/// Forme minimale d'une adresse e-mail, comme sur le site (le serveur verifie qu'un compte l'utilise).
+bool emailValide(String texte) => RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(texte.trim());
+
+/// Nom affiche d'une secretaire rattachee, comme sur le site : son nom, a defaut son e-mail,
+/// a defaut « Secrétaire » suivi de l'identifiant abrege.
+String nomSecretaire(Map<String, dynamic> rattachement) {
+  for (final cle in ['secretaireNom', 'secretaireEmail']) {
+    final Object? v = rattachement[cle];
+    if (v is String && v.trim().isNotEmpty) return v.trim();
+  }
+  final id = rattachement['secretaireId']?.toString() ?? '';
+  final court = id.length <= 8 ? id : id.substring(0, 8);
+  return '${t('Secrétaire', 'سكرتيرة')} $court'.trim();
+}
+
+/// Vrai tant que la secretaire n'a pas accepte l'invitation (`accepte` explicitement faux ;
+/// absent = ancien rattachement, actif).
+bool invitationEnAttente(Map<String, dynamic> rattachement) => rattachement['accepte'] == false;
+
+/// Rattachements du plus ancien au plus recent (`creeLe`) ; dates illisibles en fin de liste.
+List<Map<String, dynamic>> trierRattachements(List<Map<String, dynamic>> liste) {
+  DateTime? date(Map<String, dynamic> r) {
+    final Object? iso = r['creeLe'];
+    return iso is String ? DateTime.tryParse(iso) : null;
+  }
+
+  final copie = List<Map<String, dynamic>>.of(liste);
+  copie.sort((a, b) {
+    final da = date(a);
+    final db = date(b);
+    if (da == null) return db == null ? 0 : 1;
+    if (db == null) return -1;
+    return da.compareTo(db);
+  });
+  return copie;
 }

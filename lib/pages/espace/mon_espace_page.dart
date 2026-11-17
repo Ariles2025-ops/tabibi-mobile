@@ -13,6 +13,7 @@ import 'fiche_semaine_pages.dart';
 import 'ordonnances_redigees_page.dart';
 import 'outils_espace.dart';
 import 'pharmacie_pages.dart';
+import 'secretaires_page.dart';
 
 /// « Mon espace » : entrees selon les roles du compte (GET /api/moi) ; medecin (agenda,
 /// creneaux, liste d'attente), secretaire (cabinets), pharmacie (besoins Dawini, delivrance) ;
@@ -127,6 +128,12 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                   t('Avis publiés sur votre fiche, signalement',
                       'الآراء المنشورة على بطاقتك والإبلاغ عنها'),
                   AvisMedecinPage(api: api, auth: auth)),
+              _entree(
+                  Icons.group_outlined,
+                  t('Mes secrétaires', 'سكرتيراتي'),
+                  t('Inviter une secrétaire, retirer un accès',
+                      'دعوة سكرتيرة أو إزالة صلاحية الوصول'),
+                  SecretairesPage(api: api, auth: auth)),
               if (_ficheDispo)
                 _entree(
                     Icons.badge_outlined,
