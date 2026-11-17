@@ -114,7 +114,7 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                   CreneauxPage(api: api, auth: auth)),
               _entree(
                   Icons.description_outlined,
-                  t('Mes ordonnances rédigées', 'وصفاتي الطبية'),
+                  t('Mes ordonnances rédigées', 'وصفاتي التي حررتها'),
                   t('Ordonnances émises, annulation', 'الوصفات الصادرة وإلغاؤها'),
                   OrdonnancesRedigeesPage(api: api, auth: auth)),
               _entree(
@@ -126,7 +126,7 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                   Icons.star_outline,
                   t('Avis des patients', 'آراء المرضى'),
                   t('Avis publiés sur votre fiche, signalement',
-                      'الآراء المنشورة على بطاقتك والإبلاغ عنها'),
+                      'الآراء المنشورة على صفحتك والإبلاغ عنها'),
                   AvisMedecinPage(api: api, auth: auth)),
               _entree(
                   Icons.group_outlined,
@@ -137,7 +137,7 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
               if (_ficheDispo)
                 _entree(
                     Icons.badge_outlined,
-                    t('Ma fiche', 'بطاقتي'),
+                    t('Ma fiche', 'صفحتي'),
                     t('Adresse, téléphone, horaires, présentation et langues',
                         'العنوان والهاتف وأوقات العمل والتعريف واللغات'),
                     MaFichePage(api: api, auth: auth)),
@@ -154,7 +154,7 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
               _section(t('Espace pharmacie', 'فضاء الصيدلية')),
               _entree(
                   Icons.local_pharmacy_outlined,
-                  t('Besoins Dawini', 'طلبات دَويني'),
+                  t('Besoins Dawini', 'طلبات داويني'),
                   t('Demandes de médicaments dans votre wilaya', 'طلبات الأدوية في ولايتك'),
                   BesoinsPharmaciePage(api: api, auth: auth)),
               _entree(

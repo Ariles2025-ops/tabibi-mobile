@@ -130,7 +130,7 @@ class _OrdonnancesRedigeesPageState extends State<OrdonnancesRedigeesPage> with 
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text(t('Mes ordonnances rédigées', 'وصفاتي الطبية')),
+          title: Text(t('Mes ordonnances rédigées', 'وصفاتي التي حررتها')),
           actions: actionsActualiser()),
       floatingActionButton: auth.estConnecte
           ? FloatingActionButton.extended(

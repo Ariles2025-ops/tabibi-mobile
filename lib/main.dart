@@ -438,7 +438,7 @@ class _RecherchePageState extends State<RecherchePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            t('Votre santé ne devrait jamais attendre', 'صحتك لا يجب أن تنتظر'),
+            t('Votre santé ne devrait jamais attendre', 'صحتك لا تحتمل الانتظار'),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: clair, fontWeight: FontWeight.w800, height: 1.25),
           ),
@@ -552,7 +552,7 @@ class _RecherchePageState extends State<RecherchePage> {
               _ouvrirMessagerie),
           puce(Icons.star_outline, t('Mes avis', 'تقييماتي'), _ouvrirMesAvis),
           puce(Icons.local_pharmacy_outlined,
-              t('Dawini (pharmacies)', 'دَويني (الصيدليات)'), _ouvrirDawini),
+              t('Dawini (pharmacies)', 'داويني (الصيدليات)'), _ouvrirDawini),
           puce(Icons.hourglass_top_outlined,
               t("Liste d'attente", 'قائمة الانتظار'), _ouvrirListesAttente),
           puce(Icons.badge_outlined, t('Mon profil', 'ملفي الشخصي'),

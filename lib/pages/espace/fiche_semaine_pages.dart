@@ -311,7 +311,7 @@ class _MaFichePageState extends State<MaFichePage> with AppelsEspace {
     final f = await appeler((j) => widget.api.modifierFicheMedecin(corps, j));
     if (!mounted) return;
     setState(() => _envoi = false);
-    if (f != null) message(t('Fiche enregistrée', 'تم حفظ البطاقة'));
+    if (f != null) message(t('Fiche enregistrée', 'تم حفظ الصفحة'));
   }
 
   Widget _champ(TextEditingController c, String libelle, IconData icone, int max,
@@ -332,8 +332,8 @@ class _MaFichePageState extends State<MaFichePage> with AppelsEspace {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t('Ma fiche', 'بطاقتي')), actions: actionsActualiser()),
-      body: corps(t('Connectez-vous pour modifier votre fiche.', 'سجّل الدخول لتعديل بطاقتك.'), () {
+      appBar: AppBar(title: Text(t('Ma fiche', 'صفحتي')), actions: actionsActualiser()),
+      body: corps(t('Connectez-vous pour modifier votre fiche.', 'سجّل الدخول لتعديل صفحتك.'), () {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
