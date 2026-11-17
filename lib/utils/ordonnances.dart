@@ -58,3 +58,22 @@ String? avertissementVerification(Map<String, dynamic> resultat) {
   }
   return null;
 }
+
+/// Precision sous le statut (comme le site) : « Annulée par le médecin : motif » ou
+/// « Délivrée en pharmacie le ... » ; null pour les autres statuts.
+String? infoStatutOrdonnance(Map<String, dynamic> ordonnance) {
+  switch ('${ordonnance['statut'] ?? ''}'.trim().toUpperCase()) {
+    case 'ANNULEE':
+      final Object? brut = ordonnance['motifAnnulation'];
+      final motif = brut is String ? brut.trim() : '';
+      return motif.isEmpty
+          ? t('Annulée par le médecin', 'ألغاها الطبيب')
+          : t('Annulée par le médecin : $motif', 'ألغاها الطبيب: $motif');
+    case 'DELIVREE':
+      final Object? iso = ordonnance['delivreeLe'];
+      final date = iso is String && DateTime.tryParse(iso) != null ? formaterDateIso(iso) : null;
+      return t('Délivrée en pharmacie${date == null ? '' : ' le $date'}',
+          'صُرفت في الصيدلية${date == null ? '' : ' في $date'}');
+  }
+  return null;
+}
