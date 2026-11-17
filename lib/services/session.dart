@@ -1,3 +1,4 @@
+import 'api_service.dart';
 import 'auth_service.dart';
 
 /// Session partagee par toutes les pages : une seule instance d'[AuthService],
@@ -6,3 +7,8 @@ import 'auth_service.dart';
 /// Les pages acceptent aussi un [AuthService] injecte (tests), sinon elles
 /// utilisent cette instance.
 final AuthService session = AuthService();
+
+/// Branche le rejeu unique d'un appel API apres un 401 (voir [ApiService.rafraichisseur]).
+void brancherRafraichissement() {
+  ApiService.rafraichisseur = session.jetonApres401;
+}

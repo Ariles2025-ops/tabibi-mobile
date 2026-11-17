@@ -128,7 +128,8 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
           leading: const Icon(Icons.description_outlined),
           title: Text('${t('Émise le', 'صدرت في')} ${dateEmission(o)}'),
           subtitle: Text(
-              '${t('Code', 'الرمز')} ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'),
+              '${t('Code', 'الرمز')} ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'
+              '${infoStatutOrdonnance(o) == null ? '' : '\n${infoStatutOrdonnance(o)}'}'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _ouvrirDetail(o),
         );

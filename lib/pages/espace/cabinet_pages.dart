@@ -52,13 +52,13 @@ class _ListeAttenteMedecinPageState extends State<ListeAttenteMedecinPage> with 
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text(t("Ma liste d'attente", 'قائمة الانتظار')), actions: actionsActualiser()),
+          title: Text(t("Liste d'attente", 'قائمة الانتظار')), actions: actionsActualiser()),
       body: corps(
           t("Connectez-vous pour voir votre liste d'attente.", 'سجّل الدخول لعرض قائمة الانتظار.'),
           () {
         if (_inscrits.isEmpty) {
-          return VueVide(t("Personne n'est inscrit sur votre liste d'attente.",
-              'لا أحد مسجّل في قائمة الانتظار.'));
+          return VueVide(t("Aucun patient en liste d'attente pour le moment.",
+              'لا يوجد مرضى في قائمة الانتظار حاليًا.'));
         }
         return ListView.separated(
           itemCount: _inscrits.length,
@@ -131,10 +131,11 @@ class _CabinetsPageState extends State<CabinetsPage> with AppelsEspace {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t('Cabinets', 'العيادات')), actions: actionsActualiser()),
+      appBar: AppBar(title: Text(t('Agenda du cabinet', 'مواعيد العيادة')), actions: actionsActualiser()),
       body: corps(t('Connectez-vous pour gérer vos cabinets.', 'سجّل الدخول لإدارة العيادات.'), () {
         if (_cabinets.isEmpty) {
-          return VueVide(t('Vous n\'êtes rattachée à aucun cabinet.', 'لست مرتبطة بأي عيادة.'));
+          return VueVide(t('Aucun médecin ne vous a encore rattachée à son cabinet. Communiquez-lui l\'adresse e-mail de votre compte Ndawik.',
+              'لم يربطك أي طبيب بعيادته بعد. أرسل إليه عنوان البريد الإلكتروني لحسابك في نداويك.'));
         }
         return ListView(
           padding: const EdgeInsets.all(16),

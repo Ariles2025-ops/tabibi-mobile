@@ -32,10 +32,39 @@ bool peutEtreAnnule(Object? statut) {
 bool estAnnulable(Map<String, dynamic> rdv, {DateTime? maintenant}) =>
     estAVenir(rdv, maintenant: maintenant);
 
-/// Libelle du statut ; un rendez-vous confirme dont l'heure est passee est « Terminé ».
+/// Libelle du statut cote patient ; confirme passe ou honore = « Terminé », absent = « Non honoré ».
 String libelleStatutRendezVous(Map<String, dynamic> rdv, {DateTime? maintenant}) {
   if (estConfirme(rdv['statut']) && !estAVenir(rdv, maintenant: maintenant)) {
     return t('Terminé', 'منتهٍ');
   }
+  // Vocabulaire patient, comme l'historique du site : consultation effectuee = « Terminé »,
+  // absence = « Non honoré ». Les agendas medecin / secretaire gardent « Honoré » / « Absent ».
+  final s = _brut(rdv['statut']);
+  if (s == 'HONORE') return t('Terminé', 'منتهٍ');
+  if (s == 'ABSENT') return t('Non honoré', 'لم يتم الحضور');
   return libelleStatut(rdv['statut']);
+}
+
+/// Rendez-vous separes comme sur le site : « À venir » (du plus proche au plus lointain)
+/// puis « Passés » (du plus recent au plus ancien).
+class RendezVousClasses {
+  const RendezVousClasses(this.aVenir, this.passes);
+
+  final List<Map<String, dynamic>> aVenir;
+  final List<Map<String, dynamic>> passes;
+}
+
+/// Partitionne [rdvs] avec [estAVenir] ; un rendez-vous sans date lisible passe en fin de
+/// section.
+RendezVousClasses classerRendezVous(List<Map<String, dynamic>> rdvs, {DateTime? maintenant}) {
+  final aVenir = <Map<String, dynamic>>[];
+  final passes = <Map<String, dynamic>>[];
+  for (final rdv in rdvs) {
+    (estAVenir(rdv, maintenant: maintenant) ? aVenir : passes).add(rdv);
+  }
+  final fin = DateTime.fromMillisecondsSinceEpoch(8640000000000000, isUtc: true);
+  DateTime debut(Map<String, dynamic> r) => _debut(r['debut']) ?? fin;
+  aVenir.sort((a, b) => debut(a).compareTo(debut(b)));
+  passes.sort((a, b) => debut(b).compareTo(debut(a)));
+  return RendezVousClasses(aVenir, passes);
 }

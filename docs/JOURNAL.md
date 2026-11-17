@@ -259,3 +259,13 @@
   automatique dans Xcode, `CFBundleURLTypes` / `LSApplicationQueriesSchemes` dans `Info.plist`,
   `flutter build ipa`, Transporter / Organizer, TestFlight, revue) ; « Prochaines etapes » :
   signature release en CI par secrets, iOS sur macOS.
+
+## Espace medecin : « Mes secrétaires » (comme le site)
+- `lib/pages/espace/secretaires_page.dart` : secretaires rattachees (en attente ou actives),
+  invitation par e-mail du compte Tabibi, retrait ou annulation d'invitation confirme ; entree
+  « Mes secrétaires » dans « Mon espace » (espace medecin). Sans cela, l'ecran « Invitations de
+  cabinet » de l'appli n'avait aucun point de depart cote medecin.
+- `ApiService.secretairesMedecin`, `inviterSecretaire`, `retirerSecretaire`
+  (`/api/medecin/secretaires`, `/{id}/retirer`) ; utilitaires `emailValide`, `nomSecretaire`,
+  `invitationEnAttente`, `trierRattachements` (`lib/utils/espace_pro.dart`).
+- Tests : `test/api_espace_test.dart`, `test/espace_pro_test.dart`, `test/espace_widget_test.dart`.
