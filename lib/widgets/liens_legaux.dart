@@ -13,6 +13,9 @@ class LiensLegaux extends StatelessWidget {
   static final Uri conditions = Uri.parse('https://ndawik.com/legal/cgu.html');
   static final Uri mentions = Uri.parse('https://ndawik.com/legal/mentions-legales.html');
 
+  /// Centre d'aide du site (comme le pied de page du site), dans la langue de l'interface.
+  static Uri aide() => Uri.parse(Langue.estArabe ? 'https://ndawik.com/ar/aide' : 'https://ndawik.com/aide');
+
   Future<void> _ouvrir(Uri lien) => launchUrl(lien, mode: LaunchMode.externalApplication);
 
   @override
@@ -36,6 +39,11 @@ class LiensLegaux extends StatelessWidget {
           style: style,
           onPressed: () => _ouvrir(mentions),
           child: Text(t('Mentions légales', 'الإشعارات القانونية')),
+        ),
+        TextButton(
+          style: style,
+          onPressed: () => _ouvrir(aide()),
+          child: Text(t("Centre d'aide", 'مركز المساعدة')),
         ),
       ],
     );
