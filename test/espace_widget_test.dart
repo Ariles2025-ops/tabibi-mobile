@@ -662,6 +662,24 @@ void main() {
     expect(api.appels, contains('repondre b1 true 850'));
   });
 
+  testWidgets('un prix mal saisi bloque la reponse de la pharmacie', (tester) async {
+    final api = FakeEspaceApi(roles: ['PHARMACIE']);
+    await afficher(tester, BesoinsPharmaciePage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Répondre'));
+    await tester.pumpAndSettle();
+    for (final saisie in ['12.5', '1 250', '850 DA']) {
+      await tester.enterText(find.widgetWithText(TextField, 'Prix (DA)'), saisie);
+      await tester.tap(find.text('Envoyer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Indiquez un prix en dinars valide (nombre entier)'), findsOneWidget);
+    }
+    expect(api.appels.where((a) => a.startsWith('repondre')), isEmpty);
+    await tester.enterText(find.widgetWithText(TextField, 'Prix (DA)'), '');
+    await tester.tap(find.text('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(api.appels, contains('repondre b1 true null'));
+  });
+
   testWidgets('la pharmacie verifie un code puis marque l\'ordonnance delivree', (tester) async {
     final api = FakeEspaceApi(roles: ['PHARMACIE']);
     await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
