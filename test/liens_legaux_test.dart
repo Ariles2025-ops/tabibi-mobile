@@ -8,8 +8,9 @@ void main() {
   tearDown(() => Langue.courante.value = Langue.francais);
 
   test('les liens visent les pages legales du site', () {
-    expect(LiensLegaux.confidentialite.toString(), 'https://tabibi.doctor/legal/confidentialite.html');
-    expect(LiensLegaux.conditions.toString(), 'https://tabibi.doctor/legal/cgu.html');
+    expect(LiensLegaux.confidentialite.toString(), 'https://ndawik.com/legal/confidentialite.html');
+    expect(LiensLegaux.conditions.toString(), 'https://ndawik.com/legal/cgu.html');
+    expect(LiensLegaux.mentions.toString(), 'https://ndawik.com/legal/mentions-legales.html');
   });
 
   testWidgets('la politique de confidentialite est visible avant connexion (FR et AR)', (tester) async {
@@ -24,6 +25,7 @@ void main() {
       ));
       expect(find.text(langue == Langue.arabe ? 'سياسة الخصوصية' : 'Politique de confidentialité'), findsOneWidget);
       expect(find.text(langue == Langue.arabe ? 'شروط الاستخدام' : "Conditions d'utilisation"), findsOneWidget);
+      expect(find.text(langue == Langue.arabe ? 'الإشعارات القانونية' : 'Mentions légales'), findsOneWidget);
     }
   });
 }
