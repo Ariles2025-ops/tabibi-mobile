@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/espace_pro.dart';
 import 'agenda_page.dart';
+import 'avis_medecin_page.dart';
 import 'cabinet_pages.dart';
 import 'creneaux_page.dart';
 import 'fiche_semaine_pages.dart';
@@ -114,6 +115,12 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                   t("Ma liste d'attente", 'قائمة الانتظار'),
                   t('Patients en attente d\'un créneau', 'مرضى ينتظرون موعدًا'),
                   ListeAttenteMedecinPage(api: api, auth: auth)),
+              _entree(
+                  Icons.star_outline,
+                  t('Avis des patients', 'آراء المرضى'),
+                  t('Avis publiés sur votre fiche, signalement',
+                      'الآراء المنشورة على بطاقتك والإبلاغ عنها'),
+                  AvisMedecinPage(api: api, auth: auth)),
               if (_ficheDispo)
                 _entree(
                     Icons.badge_outlined,

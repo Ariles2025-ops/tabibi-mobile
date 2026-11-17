@@ -499,6 +499,12 @@ class ApiService {
   Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) =>
       _get('/api/medecin/liste-attente', token);
 
+  /// Signale a l'equipe Tabibi un avis recu par le medecin connecte (POST /api/avis/{id}/signaler) :
+  /// 403 si l'avis ne le concerne pas, 409 s'il n'est plus publie ; l'avis reste visible jusqu'a
+  /// la decision de la moderation.
+  Future<void> signalerAvis(String avisId, String token) =>
+      _post('/api/avis/${Uri.encodeComponent(avisId)}/signaler', token);
+
   /// Patients du medecin connecte : {patientId, nomComplet, telephone, email}.
   Future<List<Map<String, dynamic>>> patientsMedecin(String token) =>
       _get('/api/medecin/patients', token);
