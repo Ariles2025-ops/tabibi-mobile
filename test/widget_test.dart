@@ -606,16 +606,20 @@ class FakeApiServiceSansAvis extends FakeApiService {
 /// Variante qui conserve les inscriptions en liste d'attente demandees et les retraits ;
 /// une inscription retiree disparait de « mes inscriptions ».
 class FakeApiServiceListeAttente extends FakeApiService {
-  FakeApiServiceListeAttente();
+  FakeApiServiceListeAttente({this.dejaInscrit = true});
 
+  /// Faux : « mes inscriptions » est vide tant qu'on ne s'est pas inscrit.
+  final bool dejaInscrit;
   final List<String> inscriptions = [];
   final List<String> retraits = [];
 
   @override
   Future<List<Map<String, dynamic>>> mesInscriptionsAttente(String token) async =>
-      (await super.mesInscriptionsAttente(token))
-          .where((i) => !retraits.contains(i['id']))
-          .toList();
+      dejaInscrit
+          ? (await super.mesInscriptionsAttente(token))
+              .where((i) => !retraits.contains(i['id']))
+              .toList()
+          : [];
 
   @override
   Future<Map<String, dynamic>> inscrireListeAttente(String medecinId, String token) async {
@@ -632,6 +636,9 @@ class FakeApiServiceListeAttente extends FakeApiService {
 /// Variante ou le patient est deja inscrit sur la liste d'attente (409 a l'inscription).
 class FakeApiServiceDejaInscrit extends FakeApiService {
   const FakeApiServiceDejaInscrit();
+
+  @override
+  Future<List<Map<String, dynamic>>> mesInscriptionsAttente(String token) async => [];
 
   @override
   Future<Map<String, dynamic>> inscrireListeAttente(String medecinId, String token) async =>
@@ -1372,7 +1379,7 @@ void main() {
   testWidgets("la fiche medecin inscrit le patient sur la liste d'attente du praticien",
       (tester) async {
     surfaceHaute(tester);
-    final api = FakeApiServiceListeAttente();
+    final api = FakeApiServiceListeAttente(dejaInscrit: false);
     await tester.pumpWidget(MaterialApp(
       home: FicheMedecinPage(
         medecinId: FakeApiService.medecinDemo,
@@ -1414,6 +1421,22 @@ void main() {
     expect(find.text(messageDejaInscrit), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
     expect(find.text(texteInscrit), findsOneWidget);
+  });
+
+  testWidgets("la fiche medecin affiche d'emblee l'etat inscrit si le patient l'est deja",
+      (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+        medecinId: FakeApiService.medecinDemo,
+        api: FakeApiServiceListeAttente(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text(texteInscrit), findsOneWidget);
+    expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
   });
 
   testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {

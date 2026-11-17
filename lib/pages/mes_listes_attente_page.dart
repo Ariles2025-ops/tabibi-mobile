@@ -192,9 +192,8 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
           child: Text(
             t(
               "Aucune inscription sur une liste d'attente. Inscrivez-vous depuis la fiche d'un "
-                  "médecin dont aucun créneau n'est disponible : vous serez notifié dès qu'un "
-                  'créneau se libère.',
-              'لست مسجّلًا في أي قائمة انتظار. سجّل من صفحة طبيب ليس لديه مواعيد متاحة، '
+                  "médecin : vous serez notifié dès qu'un créneau se libère.",
+              'لست مسجّلًا في أي قائمة انتظار. سجّل من صفحة الطبيب، '
                   'وسيتم إشعارك فور توفر موعد.',
             ),
             textAlign: TextAlign.center,
