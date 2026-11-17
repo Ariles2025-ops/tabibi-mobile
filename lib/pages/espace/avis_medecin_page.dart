@@ -53,16 +53,16 @@ class _AvisMedecinPageState extends State<AvisMedecinPage> with AppelsEspace {
   Future<void> _signaler(Avis avis) async {
     final ok = await confirmer(
         t('Signaler cet avis ?', 'الإبلاغ عن هذا الرأي؟'),
-        t("Il reste visible jusqu'à la décision de l'équipe Tabibi.",
-            'يبقى ظاهرًا حتى قرار فريق طبيبي.'),
+        t("Il reste visible jusqu'à la décision de l'équipe Ndawik.",
+            'يبقى ظاهرًا حتى قرار فريق نداويك.'),
         t('Signaler', 'إبلاغ'));
     if (!ok) return;
     final jeton = auth.accessToken;
     if (jeton == null) return;
     try {
       await widget.api.signalerAvis(avis.id, jeton);
-      message(t("Avis signalé : il reste visible jusqu'à la décision de l'équipe Tabibi.",
-          'تم الإبلاغ عن الرأي، ويبقى ظاهرًا حتى قرار فريق طبيبي.'));
+      message(t("Avis signalé : il reste visible jusqu'à la décision de l'équipe Ndawik.",
+          'تم الإبلاغ عن الرأي، ويبقى ظاهرًا حتى قرار فريق نداويك.'));
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
       if (e.statusCode == 403) {

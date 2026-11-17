@@ -78,7 +78,7 @@ class _TabibiAppState extends State<TabibiApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Tabibi',
+      title: 'Ndawik',
       debugShowCheckedModeBanner: false,
       theme: Charte.theme(arabe: Langue.estArabe),
       locale: Langue.locale,
@@ -340,7 +340,7 @@ class _RecherchePageState extends State<RecherchePage> {
     return Scaffold(
       appBar: AppBar(
         title:
-            const Text('Tabibi', style: TextStyle(fontWeight: FontWeight.w800)),
+            const Text('Ndawik', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           const SelecteurLangue(),
           IconButton(

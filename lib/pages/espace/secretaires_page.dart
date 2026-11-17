@@ -52,8 +52,8 @@ class _SecretairesPageState extends State<SecretairesPage> with AppelsEspace {
     final email = _email.text.trim().toLowerCase();
     if (!emailValide(email)) {
       setState(() => _erreurFormulaire = t(
-          "Indiquez l'adresse e-mail du compte Tabibi de votre secrétaire.",
-          'أدخل البريد الإلكتروني لحساب سكرتيرتك على طبيبي.'));
+          "Indiquez l'adresse e-mail du compte Ndawik de votre secrétaire.",
+          'أدخل البريد الإلكتروني لحساب سكرتيرتك على نداويك.'));
       return;
     }
     final jeton = auth.accessToken;
@@ -136,11 +136,11 @@ class _SecretairesPageState extends State<SecretairesPage> with AppelsEspace {
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               decoration: InputDecoration(
-                labelText: t('Adresse e-mail du compte Tabibi de votre secrétaire',
-                    'البريد الإلكتروني لحساب سكرتيرتك على طبيبي'),
+                labelText: t('Adresse e-mail du compte Ndawik de votre secrétaire',
+                    'البريد الإلكتروني لحساب سكرتيرتك على نداويك'),
                 helperText: t(
-                    'La secrétaire doit avoir créé son compte Tabibi. Elle reçoit une invitation à accepter.',
-                    'يجب أن تكون السكرتيرة قد أنشأت حسابها على طبيبي. ستتلقى دعوة لقبولها.'),
+                    'La secrétaire doit avoir créé son compte Ndawik. Elle reçoit une invitation à accepter.',
+                    'يجب أن تكون السكرتيرة قد أنشأت حسابها على نداويك. ستتلقى دعوة لقبولها.'),
                 helperMaxLines: 3,
                 errorText: _erreurFormulaire,
                 errorMaxLines: 3,
