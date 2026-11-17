@@ -16,6 +16,8 @@ class Teleconsultation {
     this.creeLe,
     this.demarreeLe,
     this.termineeLe,
+    this.debutRendezVous,
+    this.nomMedecin,
   });
 
   /// Lecture tolerante d'une carte JSON : un champ absent ou nul devient une chaine vide
@@ -60,6 +62,31 @@ class Teleconsultation {
 
   /// Vrai si le patient a donne son consentement.
   bool get aConsenti => consentementPatientLe != null;
+
+  /// Date du rendez-vous lie (absente de l'API des teleconsultations : renseignee par
+  /// l'appli depuis `GET /api/rendezvous/mes`) ; null si inconnue.
+  final DateTime? debutRendezVous;
+
+  /// Nom du medecin (fiche publique) ; null si inconnu.
+  final String? nomMedecin;
+
+  /// Copie enrichie du rendez-vous lie et du nom du medecin.
+  Teleconsultation avecContexte({DateTime? debutRendezVous, String? nomMedecin}) {
+    return Teleconsultation(
+      id: id,
+      rendezVousId: rendezVousId,
+      patientId: patientId,
+      medecinId: medecinId,
+      statut: statut,
+      consentementPatientLe: consentementPatientLe,
+      lienSalle: lienSalle,
+      creeLe: creeLe,
+      demarreeLe: demarreeLe,
+      termineeLe: termineeLe,
+      debutRendezVous: debutRendezVous ?? this.debutRendezVous,
+      nomMedecin: nomMedecin ?? this.nomMedecin,
+    );
+  }
 
   static String _texte(Object? valeur) => valeur?.toString() ?? '';
 

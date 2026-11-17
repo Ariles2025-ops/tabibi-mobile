@@ -413,7 +413,7 @@ class FakeApiService extends ApiService {
   }) =>
       {
         'id': id,
-        'rendezVousId': rdvHonore,
+        'rendezVousId': 'f0f0f0f0-0000-4000-8000-0000000000ff', // sans date : pas de fenetre
         'patientId': sujetPatient,
         'medecinId': medecinDemo,
         'statut': statut,
@@ -932,13 +932,13 @@ void main() {
     expect(find.text('Mes téléconsultations'), findsOneWidget);
     // Session planifiee sans consentement : carte de consentement, pas de lien.
     expect(find.text('Proposée le jeu. 3 déc. 08:00'), findsOneWidget);
-    expect(find.text('Planifiée'), findsOneWidget);
+    expect(find.text('Dr Amina Benali · Planifiée'), findsOneWidget);
     expect(find.text(texteConsentement), findsOneWidget);
     expect(find.text('Je donne mon consentement'), findsOneWidget);
     expect(find.text('Rejoindre la téléconsultation'), findsNothing);
     // Session terminee (consentement donne, lien remis) : texte d'etat seulement.
     expect(find.text('Terminée le ven. 20 nov. 09:40'), findsOneWidget);
-    expect(find.text('Terminée'), findsOneWidget);
+    expect(find.text('Dr Amina Benali · Terminée'), findsOneWidget);
     expect(find.text('Cette téléconsultation est terminée.'), findsOneWidget);
 
     await tester.tap(find.text('Je donne mon consentement'));
