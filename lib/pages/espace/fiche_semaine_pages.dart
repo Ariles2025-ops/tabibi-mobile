@@ -13,11 +13,15 @@ import 'outils_espace.dart';
 /// Issue d'un ecran dont la route peut ne pas exister encore : [indisponible] (404) fait
 /// disparaitre l'entree correspondante, sans message d'erreur.
 class SortieEcran {
-  const SortieEcran({this.crees = 0, this.ignores = 0, this.indisponible = false});
+  const SortieEcran(
+      {this.crees = 0, this.ignores = 0, this.indisponible = false, this.recharger = false});
 
   final int crees;
   final int ignores;
   final bool indisponible;
+
+  /// Erreur serveur deja affichee : la liste doit simplement etre rechargee.
+  final bool recharger;
 }
 
 /// Message commun aux erreurs de saisie et d'appel.
@@ -117,8 +121,11 @@ class _SemaineTypePageState extends State<SemaineTypePage> {
       Navigator.of(context).pop(SortieEcran(crees: r.$1, ignores: r.$2));
     } on ApiException catch (e) {
       if (!mounted) return;
+      // Ces routes existent : un 404 est une vraie reponse du serveur (creneau disparu...).
+      // On affiche son message et on revient recharger la liste.
       if (e.introuvable) {
-        Navigator.of(context).pop(const SortieEcran(indisponible: true));
+        _afficher(context, e.message);
+        Navigator.of(context).pop(const SortieEcran(recharger: true));
         return;
       }
       if (e.nonAutorise) _auth.seDeconnecter();
@@ -441,8 +448,11 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
       if (mounted) Navigator.of(context).pop(const SortieEcran(crees: 1));
     } on ApiException catch (e) {
       if (!mounted) return;
+      // Ces routes existent : un 404 est une vraie reponse du serveur (creneau disparu...).
+      // On affiche son message et on revient recharger la liste.
       if (e.introuvable) {
-        Navigator.of(context).pop(const SortieEcran(indisponible: true));
+        _afficher(context, e.message);
+        Navigator.of(context).pop(const SortieEcran(recharger: true));
         return;
       }
       if (e.nonAutorise) _auth.seDeconnecter();

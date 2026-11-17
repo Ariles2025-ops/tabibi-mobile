@@ -258,7 +258,7 @@ void main() {
   testWidgets("l'agenda du medecin nomme le patient, traite RESERVE comme confirme et honore",
       (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
-    await afficher(tester, AgendaPage(api: api, auth: SessionTest()));
+    await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
     expect(find.text('Karim Haddad · Confirmé'), findsOneWidget);
     expect(find.text('Karim Haddad · Honoré'), findsOneWidget);
     expect(find.byTooltip('Actions'), findsOneWidget); // seulement sur le rendez-vous confirme
@@ -343,15 +343,16 @@ void main() {
     expect(find.text('12 créneaux créés, 2 ignorés'), findsOneWidget);
   });
 
-  testWidgets('semaine type : un 404 cache le bouton sans erreur', (tester) async {
+  testWidgets('semaine type : un 404 affiche le message du serveur et garde le bouton',
+      (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
     await afficher(tester, CreneauxPage(api: api, auth: SessionTest()));
     await tester.tap(find.text('Semaine type'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Créer les créneaux'));
     await tester.pumpAndSettle();
-    expect(find.text('Semaine type'), findsNothing);
-    expect(find.text('absent'), findsNothing);
+    expect(find.text('Semaine type'), findsOneWidget);
+    expect(find.text('absent'), findsOneWidget);
   });
 
   testWidgets('RDV pris au telephone : seulement pour la secretaire, sur un creneau libre',

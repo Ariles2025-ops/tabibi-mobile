@@ -23,11 +23,15 @@ class AgendaPage extends StatefulWidget {
     this.cabinet = const Cabinet.duMedecin(),
     this.api = const ApiService(),
     this.auth,
+    this.maintenant,
   });
 
   final Cabinet cabinet;
   final ApiService api;
   final AuthService? auth;
+
+  /// Horloge (tests) ; par defaut l'heure du telephone.
+  final DateTime Function()? maintenant;
 
   @override
   State<AgendaPage> createState() => _AgendaPageState();
@@ -138,9 +142,13 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
                     tooltip: t('Actions', 'إجراءات'),
                     onSelected: (a) => _agir(rdv, a),
                     itemBuilder: (_) => [
-                      PopupMenuItem(
-                          value: ActionRdv.honorer, child: Text(t('Patient venu', 'حضر المريض'))),
-                      PopupMenuItem(value: ActionRdv.absent, child: Text(t('Absent', 'غائب'))),
+                      // Seulement une fois l'heure du rendez-vous atteinte (comme le site).
+                      if (rdvCommence(rdv['debut'], (widget.maintenant ?? DateTime.now)())) ...[
+                        PopupMenuItem(
+                            value: ActionRdv.honorer,
+                            child: Text(t('Patient venu', 'حضر المريض'))),
+                        PopupMenuItem(value: ActionRdv.absent, child: Text(t('Absent', 'غائب'))),
+                      ],
                       PopupMenuItem(value: ActionRdv.annuler, child: Text(t('Annuler', 'إلغاء'))),
                     ],
                   )

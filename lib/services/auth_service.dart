@@ -1,7 +1,33 @@
+import 'dart:async';
+
 import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/configuration.dart';
 import '../utils/jetons.dart';
+
+/// Stockage persistant des jetons (surchargeable dans les tests).
+abstract class StockageJetons {
+  Future<String?> lire(String cle);
+  Future<void> ecrire(String cle, String? valeur);
+  Future<void> effacerTout();
+}
+
+/// Stockage chiffre du systeme (Keystore Android / Keychain iOS).
+class StockageSecurise implements StockageJetons {
+  const StockageSecurise();
+  static const FlutterSecureStorage _s = FlutterSecureStorage();
+
+  @override
+  Future<String?> lire(String cle) => _s.read(key: cle);
+
+  @override
+  Future<void> ecrire(String cle, String? valeur) =>
+      valeur == null ? _s.delete(key: cle) : _s.write(key: cle, value: valeur);
+
+  @override
+  Future<void> effacerTout() => _s.deleteAll();
+}
 
 /// Authentification OIDC contre le realm Keycloak « tabibi ».
 ///
@@ -10,9 +36,22 @@ import '../utils/jetons.dart';
 /// redirection viennent de la configuration par environnement ([Configuration],
 /// `--dart-define=TABIBI_ISSUER=...`).
 class AuthService {
+  AuthService({StockageJetons? stockage, DateTime Function()? maintenant})
+      : _stockage = stockage ?? const StockageSecurise(),
+        _maintenant = maintenant ?? DateTime.now;
+
   final FlutterAppAuth _appAuth = const FlutterAppAuth();
+  final StockageJetons _stockage;
+  final DateTime Function() _maintenant;
+
+  /// Marge avant l'expiration a partir de laquelle le jeton est rafraichi.
+  static const Duration marge = Duration(seconds: 30);
 
   String? accessToken;
+  String? _refreshToken;
+  DateTime? _expiration;
+  Timer? _minuteur;
+  Future<bool>? _rafraichissement;
 
   /// Jeton d'identite conserve a la connexion : il designe la session Keycloak a fermer
   /// lors de la deconnexion ([seDeconnecterCompletement]).
@@ -40,8 +79,8 @@ class AuthService {
           allowInsecureConnections: Configuration.issuer.startsWith('http://'),
         ),
       );
-      accessToken = result.accessToken;
-      idToken = result.idToken;
+      await _adopter(result.accessToken, result.refreshToken, result.idToken,
+          result.accessTokenExpirationDateTime);
     } on Exception {
       // Annulation par l'utilisateur ou erreur de plateforme : non connecte.
       return false;
@@ -49,10 +88,109 @@ class AuthService {
     return accessToken != null;
   }
 
+  /// Retient (en memoire et dans le stockage chiffre) les jetons recus et programme leur
+  /// rafraichissement. Un jeton absent de la reponse conserve l'ancienne valeur.
+  Future<void> _adopter(
+      String? acces, String? refresh, String? identite, DateTime? expiration) async {
+    accessToken = acces;
+    _refreshToken = refresh ?? _refreshToken;
+    idToken = identite ?? idToken;
+    _expiration = expiration;
+    _programmer();
+    try {
+      await _stockage.ecrire('access_token', accessToken);
+      await _stockage.ecrire('refresh_token', _refreshToken);
+      await _stockage.ecrire('id_token', idToken);
+      await _stockage.ecrire('expiration', expiration?.millisecondsSinceEpoch.toString());
+    } on Exception {
+      // Stockage indisponible : la session reste valable tant que l'appli tourne.
+    }
+  }
+
+  void _programmer() {
+    _minuteur?.cancel();
+    _minuteur = null;
+    final fin = _expiration;
+    if (fin == null || _refreshToken == null) return;
+    var attente = fin.difference(_maintenant()) - marge;
+    if (attente < Duration.zero) attente = Duration.zero;
+    _minuteur = Timer(attente, () => rafraichir());
+  }
+
+  /// Restaure la session enregistree au demarrage : jeton encore valide, sinon rafraichi.
+  /// Faux (sans effacer le stockage) si rien n'est enregistre ou si le rafraichissement echoue.
+  Future<bool> restaurer() async {
+    try {
+      accessToken = await _stockage.lire('access_token');
+      _refreshToken = await _stockage.lire('refresh_token');
+      idToken = await _stockage.lire('id_token');
+      final ms = int.tryParse(await _stockage.lire('expiration') ?? '');
+      _expiration = ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+    } on Exception {
+      return false;
+    }
+    final fin = _expiration;
+    if (accessToken != null && fin != null && fin.isAfter(_maintenant().add(marge))) {
+      _programmer();
+      return true;
+    }
+    if (_refreshToken == null) {
+      accessToken = null;
+      return false;
+    }
+    final ok = await rafraichir();
+    if (!ok) accessToken = null;
+    return ok;
+  }
+
+  /// Obtient de nouveaux jetons avec le refresh token (un seul appel a la fois).
+  /// Vrai si la session est renouvelee ; faux sinon (refresh absent, refuse ou reseau coupe).
+  Future<bool> rafraichir() =>
+      _rafraichissement ??= _rafraichirVraiment().whenComplete(() => _rafraichissement = null);
+
+  Future<bool> _rafraichirVraiment() async {
+    final refresh = _refreshToken;
+    if (refresh == null) return false;
+    try {
+      final r = await echangerRefreshToken(refresh);
+      if (r == null || r.accessToken == null) return false;
+      await _adopter(r.accessToken, r.refreshToken, r.idToken, r.accessTokenExpirationDateTime);
+      return true;
+    } on Exception {
+      return false;
+    }
+  }
+
+  /// Echange du refresh token contre de nouveaux jetons (surchargeable dans les tests).
+  Future<TokenResponse?> echangerRefreshToken(String refresh) => _appAuth.token(
+        TokenRequest(
+          Configuration.clientId,
+          Configuration.redirect,
+          issuer: Configuration.issuer,
+          refreshToken: refresh,
+          scopes: ['openid', 'profile'],
+          allowInsecureConnections: Configuration.issuer.startsWith('http://'),
+        ),
+      );
+
+  /// Reaction a un 401 : renvoie un jeton frais pour rejouer l'appel une seule fois, ou null
+  /// (session perdue : l'appelant se deconnecte). Si un autre appel a deja rafraichi le jeton
+  /// ([ancien] differe du jeton courant), le jeton courant est renvoye sans nouvel echange.
+  Future<String?> jetonApres401(String ancien) async {
+    if (accessToken != null && accessToken != ancien) return accessToken;
+    return await rafraichir() ? accessToken : null;
+  }
+
   /// Oublie les jetons locaux (jeton expire, par exemple) sans fermer la session Keycloak.
   void seDeconnecter() {
     accessToken = null;
     idToken = null;
+    _refreshToken = null;
+    _expiration = null;
+    _minuteur?.cancel();
+    _minuteur = null;
+    // Efface aussi le stockage : une session perdue ne doit pas revenir au prochain demarrage.
+    unawaited(_stockage.effacerTout().catchError((Object _) {}));
   }
 
   /// Deconnexion demandee par l'utilisateur : efface les jetons puis ferme la session Keycloak

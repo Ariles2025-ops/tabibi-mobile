@@ -37,23 +37,40 @@ class ApiException implements Exception {
 const Duration delaiApi = Duration(seconds: 15);
 
 /// Appels HTTP avec un delai maximal de [delaiApi].
+///
+/// Sur un 401 portant un jeton Bearer, l'appel est rejoue UNE seule fois avec un jeton
+/// rafraichi si [ApiService.rafraichisseur] en fournit un ; sinon le 401 est renvoye tel quel
+/// (les ecrans deconnectent alors l'utilisateur).
 class _Http {
   const _Http._();
 
   static Future<http.Response> get(Uri url, {Map<String, String>? headers}) =>
-      http.get(url, headers: headers).timeout(delaiApi);
+      _avecRejeu(headers, (h) => http.get(url, headers: h).timeout(delaiApi));
 
   static Future<http.Response> post(Uri url,
           {Map<String, String>? headers, Object? body}) =>
-      http.post(url, headers: headers, body: body).timeout(delaiApi);
+      _avecRejeu(headers, (h) => http.post(url, headers: h, body: body).timeout(delaiApi));
 
   static Future<http.Response> put(Uri url,
           {Map<String, String>? headers, Object? body}) =>
-      http.put(url, headers: headers, body: body).timeout(delaiApi);
+      _avecRejeu(headers, (h) => http.put(url, headers: h, body: body).timeout(delaiApi));
 
   static Future<http.Response> delete(Uri url,
           {Map<String, String>? headers}) =>
-      http.delete(url, headers: headers).timeout(delaiApi);
+      _avecRejeu(headers, (h) => http.delete(url, headers: h).timeout(delaiApi));
+
+  static Future<http.Response> _avecRejeu(Map<String, String>? headers,
+      Future<http.Response> Function(Map<String, String>?) envoyer) async {
+    final res = await envoyer(headers);
+    final auth = headers?['Authorization'];
+    final rafraichir = ApiService.rafraichisseur;
+    if (res.statusCode != 401 || rafraichir == null || auth == null || !auth.startsWith('Bearer ')) {
+      return res;
+    }
+    final neuf = await rafraichir(auth.substring(7));
+    if (neuf == null) return res;
+    return envoyer({...headers!, 'Authorization': 'Bearer $neuf'});
+  }
 }
 
 /// Vrai si [erreur] vient du reseau : pas de connexion, serveur injoignable ou delai depasse.
@@ -88,6 +105,9 @@ class ApiService {
 
   /// Adresse de base de l'API, sans barre oblique finale.
   final String base;
+
+  /// Fournit un jeton frais apres un 401 (recoit le jeton refuse) ; null si la session est perdue.
+  static Future<String?> Function(String ancien)? rafraichisseur;
 
   /// Recherche publique de praticiens (sans jeton).
   Future<List<Map<String, dynamic>>> rechercherMedecins({
@@ -464,13 +484,13 @@ class ApiService {
 
   /// Fiche publique du medecin connecte (404 tant que la route n'existe pas).
   Future<Map<String, dynamic>> ficheMedecin(String token) async {
-    final res = await http.get(Uri.parse('$base/api/medecin/fiche'), headers: _bearer(token));
+    final res = await _Http.get(Uri.parse('$base/api/medecin/fiche'), headers: _bearer(token));
     return _objet(res, '/api/medecin/fiche');
   }
 
   /// Modifie adresse, telephone du cabinet, horaires, presentation et langues.
   Future<Map<String, dynamic>> modifierFicheMedecin(Map<String, dynamic> corps, String token) async {
-    final res = await http.put(Uri.parse('$base/api/medecin/fiche'),
+    final res = await _Http.put(Uri.parse('$base/api/medecin/fiche'),
         headers: _bearerJson(token), body: jsonEncode(corps));
     return _objet(res, '/api/medecin/fiche');
   }
@@ -637,18 +657,30 @@ class ApiService {
   String _libelleErreur(http.Response res, String chemin) {
     try {
       final corps = _json(res);
-      if (corps is Map && corps['erreur'] is String) return corps['erreur'] as String;
+      if (corps is Map) {
+        // `erreur` (API) ou `message` (limiteurs du serveur) ; jamais pour un 429/5xx techniques.
+        for (final cle in ['erreur', 'message']) {
+          final v = corps[cle];
+          if (v is String && v.isNotEmpty && res.statusCode != 429 && res.statusCode < 500) {
+            return v;
+          }
+        }
+      }
     } on FormatException {
       // Corps vide ou non JSON : libelle par defaut ci-dessous.
     }
     return switch (res.statusCode) {
+      429 => t('Trop de demandes, réessayez dans une minute.',
+          'طلبات كثيرة جدًا، حاول مرة أخرى بعد دقيقة.'),
+      >= 500 => t('Le serveur rencontre un problème. Réessayez plus tard.',
+          'يواجه الخادم مشكلة. حاول لاحقًا.'),
       401 => t('Connexion requise', 'يجب تسجيل الدخول'),
       403 => t('Accès refusé : ce compte n\'a pas les droits nécessaires',
           'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة'),
       404 => t('Ressource introuvable', 'العنصر غير موجود'),
       409 => t('Action impossible : la situation a changé entre-temps',
           'تعذّر الإجراء: تغيّر الوضع في الأثناء'),
-      _ => t('Échec $chemin : ${res.statusCode}', 'فشل $chemin : ${res.statusCode}'),
+      _ => t('Un problème est survenu. Réessayez.', 'حدث خطأ. حاول مرة أخرى.'),
     };
   }
 }

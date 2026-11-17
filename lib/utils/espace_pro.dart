@@ -73,3 +73,31 @@ List<DateTime> creneauxSerie({
   }
   return resultat;
 }
+
+/// Algerie : UTC+1 toute l'annee (pas d'heure d'ete), quel que soit le fuseau du telephone.
+const Duration decalageAlger = Duration(hours: 1);
+
+/// Heure murale d'Alger a l'instant [instant], sous forme de DateTime sans fuseau reel
+/// (seuls les champs annee..minute comptent).
+DateTime muraleAlger(DateTime instant) {
+  final a = instant.toUtc().add(decalageAlger);
+  return DateTime(a.year, a.month, a.day, a.hour, a.minute, a.second);
+}
+
+/// Instant (UTC) correspondant a l'heure murale [murale] a Alger : 9 h a Alger = 8 h UTC.
+DateTime instantAlger(DateTime murale) => DateTime.utc(
+      murale.year,
+      murale.month,
+      murale.day,
+      murale.hour,
+      murale.minute,
+      murale.second,
+    ).subtract(decalageAlger);
+
+/// Vrai si le rendez-vous commencant a [debut] (ISO 8601) a atteint son heure : « Patient venu »
+/// et « Absent » ne sont proposes qu'ensuite (comme sur le site). Debut illisible : vrai.
+bool rdvCommence(Object? debut, DateTime maintenant) {
+  final d = DateTime.tryParse('$debut');
+  if (d == null) return true;
+  return !d.isAfter(maintenant);
+}
