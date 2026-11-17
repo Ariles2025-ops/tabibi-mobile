@@ -30,7 +30,7 @@ jobs:
             -q '[.[] | select(.headRefName|startswith("claude/")) | select(.mergeable=="CONFLICTING" or ([.statusCheckRollup[]?|select(.conclusion=="FAILURE")]|length>0)) | {numero:.number, branche:.headRefName, conflit:(.mergeable=="CONFLICTING")}]' > a-reprendre.json
           cat a-reprendre.json
           echo "nombre=$(jq length a-reprendre.json)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.liste.outputs.nombre != '0'
         with:
           fetch-depth: 0

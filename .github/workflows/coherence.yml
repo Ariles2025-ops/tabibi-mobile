@@ -27,7 +27,7 @@ jobs:
         run: |
           n=$(gh pr list -R "${{ github.repository }}" --state open --json headRefName -q '[.[]|select(.headRefName|startswith("claude/coherence"))]|length')
           echo "ouvertes=$n" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.garde.outputs.ouvertes == '0'
         with:
           fetch-depth: 0
