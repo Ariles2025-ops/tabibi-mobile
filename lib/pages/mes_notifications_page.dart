@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../i18n/langue.dart';
+import '../models/conversation.dart';
 import '../models/notification.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -8,9 +9,16 @@ import '../services/session.dart';
 import '../utils/notifications.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import 'conversation_page.dart';
+import 'dawini_page.dart';
+import 'detail_ordonnance_page.dart';
+import 'fiche_medecin_page.dart';
+import 'mes_conversations_page.dart';
+import 'mes_ordonnances_page.dart';
+import 'mes_rendez_vous_page.dart';
 
 /// Notifications de l'utilisateur connecte : sujet (en gras tant qu'elle n'est pas lue),
-/// message et date ; un toucher marque la notification lue, l'AppBar permet de tout marquer lu.
+/// message et date ; un toucher marque la notification lue (si besoin) puis ouvre la page de son lien, l'AppBar permet de tout marquer lu.
 class MesNotificationsPage extends StatefulWidget {
   const MesNotificationsPage({super.key, this.api = const ApiService(), this.auth});
 
@@ -104,6 +112,54 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
     } finally {
       if (mounted) setState(() => _enCours = null); // rebatit aussi si la session a expire
     }
+  }
+
+  /// Toucher : marque lue si besoin, puis ouvre l'ecran du lien (meme si deja lue).
+  Future<void> _ouvrir(NotificationUtilisateur n) async {
+    await _marquerLue(n);
+    final cible = cibleDuLien(n.lien);
+    if (cible == null || !mounted) return;
+    final ecran = await _ecran(cible);
+    if (ecran == null || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ecran));
+  }
+
+  Future<Widget?> _ecran(CibleNotification cible) async {
+    final id = cible.id ?? '';
+    switch (cible.type) {
+      case TypeCible.rendezVous:
+        return MesRendezVousPage(api: widget.api, auth: _auth);
+      case TypeCible.ordonnances:
+        return MesOrdonnancesPage(api: widget.api, auth: _auth);
+      case TypeCible.ordonnance:
+        return DetailOrdonnancePage(ordonnanceId: id, api: widget.api, auth: _auth);
+      case TypeCible.medecin:
+        return FicheMedecinPage(medecinId: id, api: widget.api, auth: _auth);
+      case TypeCible.dawini:
+        return DawiniPage(api: widget.api, auth: _auth);
+      case TypeCible.conversations:
+        return MesConversationsPage(api: widget.api, auth: _auth);
+      case TypeCible.conversation:
+        final conversation = await _conversation(id);
+        return conversation == null
+            ? MesConversationsPage(api: widget.api, auth: _auth)
+            : ConversationPage(conversation: conversation, api: widget.api, auth: _auth);
+    }
+  }
+
+  /// Retrouve une conversation par identifiant ; null si introuvable ou en cas d'echec.
+  Future<Conversation?> _conversation(String id) async {
+    final token = _auth.accessToken;
+    if (token == null) return null;
+    try {
+      for (final c in await widget.api.mesConversations(token)) {
+        final conversation = Conversation.fromJson(c);
+        if (conversation.id == id) return conversation;
+      }
+    } on Exception {
+      // Repli sur la liste des conversations.
+    }
+    return null;
   }
 
   /// Marque lues toutes les notifications (POST /api/notifications/toutes-lues).
@@ -204,7 +260,7 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
       ),
       isThreeLine: true,
       trailing: _actionLecture(n),
-      onTap: n.lue ? null : () => _marquerLue(n),
+      onTap: () => _ouvrir(n),
     );
   }
 
