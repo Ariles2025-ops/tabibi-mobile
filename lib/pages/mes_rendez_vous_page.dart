@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/theme.dart';
 import '../i18n/langue.dart';
 import '../models/avis.dart';
 import '../services/api_service.dart';
@@ -8,6 +9,7 @@ import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
+import '../widgets/composants.dart';
 import '../utils/rendez_vous.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -229,18 +231,51 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_rdvs.isEmpty) return Center(child: Text(t('Aucun rendez-vous.', 'لا توجد مواعيد.')));
-    return ListView.separated(
-      itemCount: _rdvs.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (_, i) {
-        final rdv = _rdvs[i];
-        return ListTile(
-          leading: const Icon(Icons.event),
-          title: Text(_dateRdv(rdv)),
-          subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
-          trailing: _action(rdv),
-        );
-      },
+    final classes = classerRendezVous(_rdvs);
+    final lignes = <Widget>[
+      if (classes.aVenir.isNotEmpty) ...[
+        _enTete(t('À venir', 'القادمة')),
+        for (final rdv in classes.aVenir) _ligne(rdv, avecAnnee: false),
+      ],
+      if (classes.passes.isNotEmpty) ...[
+        _enTete(t('Passés', 'السابقة')),
+        for (final rdv in classes.passes) _ligne(rdv, avecAnnee: true),
+      ],
+    ];
+    return ListView(padding: const EdgeInsets.all(16), children: lignes);
+  }
+
+  Widget _enTete(String titre) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+        child: Text(titre, style: Theme.of(context).textTheme.titleMedium),
+      );
+
+  Widget _ligne(Map<String, dynamic> rdv, {required bool avecAnnee}) {
+    final texte = Theme.of(context).textTheme;
+    final action = _action(rdv);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: CarteTabibi(
+        child: Row(children: [
+          AvatarInitiales(nom: _nomMedecin(rdv)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(formaterDateIso(rdv['debut'] as String, avecAnnee: avecAnnee),
+                    style: texte.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(_nomMedecin(rdv),
+                    style: texte.bodyMedium?.copyWith(color: Charte.doux)),
+                const SizedBox(height: 6),
+                PastilleStatut(libelle: _libelleStatut(rdv), statut: rdv['statut']),
+              ],
+            ),
+          ),
+          if (action != null) action,
+        ]),
+      ),
     );
   }
 

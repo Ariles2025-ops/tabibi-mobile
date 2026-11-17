@@ -16,9 +16,9 @@ typedef OuvrirLien = Future<bool> Function(Uri lien);
 /// Texte du consentement explicite demande avant de remettre le lien de salle.
 String get texteConsentement => t(
     "En rejoignant cette téléconsultation, vous acceptez qu'elle se déroule en vidéo via un "
-        "service tiers (Jitsi Meet). Aucun enregistrement n'est réalisé par Tabibi.",
+        "service tiers (Jitsi Meet). Aucun enregistrement n'est réalisé par Ndawik.",
     'بانضمامك إلى هذه الاستشارة عن بُعد، فإنك توافق على إجرائها بالفيديو عبر خدمة خارجية '
-        '(Jitsi Meet). لا يقوم Tabibi بأي تسجيل.');
+        '(Jitsi Meet). لا يقوم نداويك بأي تسجيل.');
 
 /// Teleconsultations du patient connecte : statut et date de chaque session ; consentement
 /// explicite avant la remise du lien de salle, puis bouton « Rejoindre » (navigateur externe).
