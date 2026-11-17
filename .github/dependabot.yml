@@ -5,11 +5,26 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # Pas de changement de version majeure automatique avant le lancement (ils cassaient les tests et envoyaient des e-mails d'échec).
+    # Les failles connues restent surveillées par Trivy (Securite) ; une version majeure se fait à la main, sur décision.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: gradle
     directory: "/android"
     schedule:
       interval: weekly
+    # Pas de changement de version majeure automatique avant le lancement (ils cassaient les tests et envoyaient des e-mails d'échec).
+    # Les failles connues restent surveillées par Trivy (Securite) ; une version majeure se fait à la main, sur décision.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    # Pas de changement de version majeure automatique avant le lancement (ils cassaient les tests et envoyaient des e-mails d'échec).
+    # Les failles connues restent surveillées par Trivy (Securite) ; une version majeure se fait à la main, sur décision.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

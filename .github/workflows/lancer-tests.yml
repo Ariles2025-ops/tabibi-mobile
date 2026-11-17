@@ -4,6 +4,7 @@
 # Après chaque passage d'un agent (et toutes les heures en secours), pour chaque branche claude/… en avance sur main :
 #   1. ouvre la PR si elle n'a jamais existé, avec fusion automatique ;
 #   2. lance ci et Securite sur la branche si son dernier commit n'a pas encore été testé.
+# Les passages « action_required » (PR créée par un agent : GitHub demande une approbation) ne comptent pas comme testés.
 name: Lancer tests agents
 on:
   workflow_run:
@@ -43,7 +44,7 @@ jobs:
               gh pr create -R "$R" --base main --head "$b" --title "$titre" --body "$corps" && echo "$b : PR ouverte"
               gh pr merge -R "$R" "$b" --auto --squash --delete-branch || true
             fi
-            if [ "$(gh run list -R "$R" --workflow ci.yml --commit "$sha" --json databaseId -q length)" = "0" ]; then
+            if [ "$(gh run list -R "$R" --workflow ci.yml --commit "$sha" --json conclusion -q '[.[] | select(.conclusion != "action_required")] | length')" = "0" ]; then
               gh workflow run ci.yml -R "$R" --ref "$b" && echo "$b : ci lancee"
               gh workflow run securite.yml -R "$R" --ref "$b" && echo "$b : securite lancee"
             fi
