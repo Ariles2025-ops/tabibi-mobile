@@ -11,6 +11,7 @@ import 'package:tabibi_mobile/pages/espace/cabinet_pages.dart';
 import 'package:tabibi_mobile/pages/espace/creneaux_page.dart';
 import 'package:tabibi_mobile/pages/espace/fiche_semaine_pages.dart';
 import 'package:tabibi_mobile/pages/espace/mon_espace_page.dart';
+import 'package:tabibi_mobile/pages/espace/ordonnances_redigees_page.dart';
 import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
 import 'package:tabibi_mobile/pages/mon_profil_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
@@ -99,6 +100,21 @@ class FakeEspaceApi extends ApiService {
         {'id': 'a2', 'note': 5, 'commentaire': 'Très bien', 'deposeLe': '2026-11-10T09:00:00Z'},
       ],
     };
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> ordonnancesRedigees(String token) async => [
+        {'id': 'o1', 'patientId': patientId, 'emiseLe': '2026-11-01T09:00:00Z', 'statut': 'ANNULEE',
+         'motifAnnulation': 'Erreur de dose', 'codeVerification': 'AAAA1111'},
+        {'id': 'o2', 'patientId': patientId, 'emiseLe': '2026-11-10T09:00:00Z', 'statut': 'EMISE',
+         'codeVerification': 'BBBB2222'},
+      ];
+
+  @override
+  Future<Map<String, dynamic>> annulerOrdonnance(String id, String motif, String token) async {
+    appels.add('annuler-ordonnance $id $motif');
+    return {'id': id, 'patientId': patientId, 'emiseLe': '2026-11-10T09:00:00Z', 'statut': 'ANNULEE',
+        'motifAnnulation': motif, 'codeVerification': 'BBBB2222'};
   }
 
   @override
@@ -437,6 +453,27 @@ void main() {
     expect(api.appels.last, 'signaler a2');
     expect(find.text('Signalé'), findsOneWidget);
     expect(find.text('Signaler'), findsOneWidget);
+  });
+
+  testWidgets('ordonnances rédigées : recentes d\'abord, le medecin annule une ordonnance émise',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, OrdonnancesRedigeesPage(api: api, auth: SessionTest()));
+    expect(find.textContaining('Motif : Erreur de dose'), findsOneWidget);
+    expect(tester.getTopLeft(find.textContaining('BBBB2222')).dy,
+        lessThan(tester.getTopLeft(find.textContaining('AAAA1111')).dy));
+    expect(find.text('Annuler'), findsOneWidget);
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oui, annuler'));
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'annuler-ordonnance o2 ');
+    expect(find.text('Annuler'), findsNothing);
+  });
+
+  testWidgets('mon espace medecin propose les ordonnances rédigées', (tester) async {
+    await afficher(tester, MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    expect(find.text('Mes ordonnances rédigées'), findsOneWidget);
   });
 
   testWidgets('mon espace medecin propose les avis des patients', (tester) async {

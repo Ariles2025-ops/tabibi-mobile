@@ -10,6 +10,7 @@ import 'avis_medecin_page.dart';
 import 'cabinet_pages.dart';
 import 'creneaux_page.dart';
 import 'fiche_semaine_pages.dart';
+import 'ordonnances_redigees_page.dart';
 import 'outils_espace.dart';
 import 'pharmacie_pages.dart';
 
@@ -110,6 +111,11 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                   t('Disponibilités', 'الأوقات المتاحة'),
                   t('Ouvrir ou supprimer des créneaux', 'فتح أو حذف مواعيد متاحة'),
                   CreneauxPage(api: api, auth: auth)),
+              _entree(
+                  Icons.description_outlined,
+                  t('Mes ordonnances rédigées', 'وصفاتي الطبية'),
+                  t('Ordonnances émises, annulation', 'الوصفات الصادرة وإلغاؤها'),
+                  OrdonnancesRedigeesPage(api: api, auth: auth)),
               _entree(
                   Icons.hourglass_top_outlined,
                   t("Liste d'attente", 'قائمة الانتظار'),
