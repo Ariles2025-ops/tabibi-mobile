@@ -119,7 +119,7 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
     return Scaffold(
       appBar: AppBar(
         title: Text(nom == null
-            ? t('Mes créneaux', 'مواعيدي المتاحة')
+            ? t('Disponibilités', 'الأوقات المتاحة')
             : t('Créneaux · $nom', 'المواعيد المتاحة · $nom')),
         actions: actionsActualiser(),
       ),

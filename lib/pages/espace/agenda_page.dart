@@ -116,7 +116,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     final nom = widget.cabinet.nomMedecin;
     return Scaffold(
       appBar: AppBar(
-        title: Text(nom == null ? t('Mon agenda', 'مواعيدي') : t('Agenda · $nom', 'مواعيد · $nom')),
+        title: Text(nom == null ? t('Agenda', 'المواعيد') : t('Agenda · $nom', 'مواعيد · $nom')),
         actions: actionsActualiser(),
       ),
       body: corps(

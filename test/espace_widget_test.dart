@@ -20,6 +20,15 @@ import 'package:tabibi_mobile/utils/espace_pro.dart';
 const medecinId = '00000000-0000-0000-0000-000000000001';
 const patientId = 'a1a1a1a1-0000-4000-8000-000000000007';
 
+/// API factice sans cabinet rattache ni patient en liste d'attente.
+class FakeEspaceVide extends FakeEspaceApi {
+  @override
+  Future<List<Map<String, dynamic>>> cabinetsSecretaire(String token) async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) async => [];
+}
+
 /// API factice des espaces professionnels : donnees fixes, appels notes dans [appels].
 class FakeEspaceApi extends ApiService {
   FakeEspaceApi({this.roles = const ['PATIENT'], this.wilayaProfil = '16'});
@@ -267,9 +276,9 @@ void main() {
   testWidgets('mon espace propose les entrees selon les roles', (tester) async {
     await afficher(tester,
         MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN', 'PHARMACIE']), auth: SessionTest()));
-    expect(find.text('Mon agenda'), findsOneWidget);
-    expect(find.text('Mes créneaux'), findsOneWidget);
-    expect(find.text("Ma liste d'attente"), findsOneWidget);
+    expect(find.text('Agenda'), findsOneWidget);
+    expect(find.text('Disponibilités'), findsOneWidget);
+    expect(find.text("Liste d'attente"), findsOneWidget);
     expect(find.text('Besoins Dawini'), findsOneWidget);
     expect(find.text('Cabinets'), findsNothing);
     expect(find.text('Invitations de cabinet'), findsOneWidget);
@@ -409,7 +418,7 @@ void main() {
 
     final absent = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
     await afficher(tester, MonEspacePage(api: absent, auth: SessionTest()));
-    expect(find.text('Mes créneaux'), findsOneWidget);
+    expect(find.text('Disponibilités'), findsOneWidget);
     expect(find.text('Ma fiche'), findsNothing);
   });
 
@@ -446,6 +455,18 @@ void main() {
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('Agenda'), findsOneWidget);
     expect(find.text('Créneaux'), findsOneWidget);
+  });
+
+  testWidgets('sans cabinet ni patient, les textes vides sont ceux du site', (tester) async {
+    await afficher(tester, CabinetsPage(api: FakeEspaceVide(), auth: SessionTest()));
+    expect(find.text('Agenda du cabinet'), findsOneWidget);
+    expect(
+        find.text('Aucun médecin ne vous a encore rattachée à son cabinet. '
+            "Communiquez-lui l'adresse e-mail de votre compte Tabibi."),
+        findsOneWidget);
+    await afficher(tester, ListeAttenteMedecinPage(api: FakeEspaceVide(), auth: SessionTest()));
+    expect(find.text("Liste d'attente"), findsOneWidget);
+    expect(find.text("Aucun patient en liste d'attente pour le moment."), findsOneWidget);
   });
 
   testWidgets('une invitation de cabinet peut etre acceptee', (tester) async {
