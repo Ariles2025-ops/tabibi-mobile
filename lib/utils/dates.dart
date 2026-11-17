@@ -52,18 +52,23 @@ String _jour(int weekday) => (Langue.estArabe ? _joursAr : _jours)[weekday - 1];
 String _nomMois(int mois) => (Langue.estArabe ? _moisAr : _mois)[mois - 1];
 
 /// « jeu. 4 déc. 09:00 » (« الخميس 4 ديسمبر 09:00 » en arabe) : jour de la semaine, jour,
-/// mois et heure locale.
-String formaterDateHeure(DateTime date) {
-  final d = date.toLocal();
+/// mois et heure ; l'annee est ajoutee si [avecAnnee] (« jeu. 4 déc. 2025 09:00 »).
+///
+/// Un instant avec fuseau (« ...+01:00 », « ...Z » : [DateTime.isUtc]) est toujours affiche a
+/// l'heure d'Algerie (UTC+1), comme sur le site, quel que soit le fuseau du telephone. Une
+/// date sans fuseau est deja l'heure murale algerienne et n'est pas decalee.
+String formaterDateHeure(DateTime date, {bool avecAnnee = false}) {
+  final d = date.isUtc ? date.add(const Duration(hours: 1)) : date;
   final hh = d.hour.toString().padLeft(2, '0');
   final mm = d.minute.toString().padLeft(2, '0');
-  return '${_jour(d.weekday)} ${d.day} ${_nomMois(d.month)} $hh:$mm';
+  final annee = avecAnnee ? ' ${d.year}' : '';
+  return '${_jour(d.weekday)} ${d.day} ${_nomMois(d.month)}$annee $hh:$mm';
 }
 
 /// Idem a partir d'une chaine ISO 8601 ; la chaine brute est renvoyee si elle est invalide.
-String formaterDateIso(String iso) {
+String formaterDateIso(String iso, {bool avecAnnee = false}) {
   final d = DateTime.tryParse(iso);
-  return d == null ? iso : formaterDateHeure(d);
+  return d == null ? iso : formaterDateHeure(d, avecAnnee: avecAnnee);
 }
 
 /// « 14 mai 1990 » : jour, mois et annee sans heure (date de naissance, par exemple).

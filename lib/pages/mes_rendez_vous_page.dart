@@ -229,18 +229,31 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_rdvs.isEmpty) return Center(child: Text(t('Aucun rendez-vous.', 'لا توجد مواعيد.')));
-    return ListView.separated(
-      itemCount: _rdvs.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (_, i) {
-        final rdv = _rdvs[i];
-        return ListTile(
-          leading: const Icon(Icons.event),
-          title: Text(_dateRdv(rdv)),
-          subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
-          trailing: _action(rdv),
-        );
-      },
+    final classes = classerRendezVous(_rdvs);
+    final lignes = <Widget>[
+      if (classes.aVenir.isNotEmpty) ...[
+        _enTete(t('À venir', 'القادمة')),
+        for (final rdv in classes.aVenir) _ligne(rdv, avecAnnee: false),
+      ],
+      if (classes.passes.isNotEmpty) ...[
+        _enTete(t('Passés', 'السابقة')),
+        for (final rdv in classes.passes) _ligne(rdv, avecAnnee: true),
+      ],
+    ];
+    return ListView(children: lignes);
+  }
+
+  Widget _enTete(String titre) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Text(titre, style: Theme.of(context).textTheme.titleMedium),
+      );
+
+  Widget _ligne(Map<String, dynamic> rdv, {required bool avecAnnee}) {
+    return ListTile(
+      leading: const Icon(Icons.event),
+      title: Text(formaterDateIso(rdv['debut'] as String, avecAnnee: avecAnnee)),
+      subtitle: Text('${_nomMedecin(rdv)} · ${_libelleStatut(rdv)}'),
+      trailing: _action(rdv),
     );
   }
 
