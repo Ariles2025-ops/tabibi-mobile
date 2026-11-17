@@ -1,6 +1,6 @@
 /// Notification adressee a l'utilisateur connecte (boite de reception interne de Tabibi),
 /// telle que renvoyee par `GET /api/notifications/mes` :
-/// {id, destinataireId, canal, sujet, message, lue, creeLe (ISO 8601)}.
+/// {id, destinataireId, canal, sujet, message, lue, creeLe (ISO 8601), lien}.
 ///
 /// Nommee `NotificationUtilisateur` pour ne pas masquer la classe `Notification` de Flutter.
 /// Valeur immuable : la marquer lue produit une copie ([marquerLue]).
@@ -13,6 +13,7 @@ class NotificationUtilisateur {
     required this.message,
     required this.lue,
     this.creeLe,
+    this.lien = '',
   });
 
   /// Lecture tolerante d'une carte JSON : un champ absent ou nul devient une chaine vide,
@@ -26,6 +27,7 @@ class NotificationUtilisateur {
       message: _texte(json['message']),
       lue: json['lue'] == true,
       creeLe: _date(json['creeLe']),
+      lien: _texte(json['lien']),
     );
   }
 
@@ -41,6 +43,9 @@ class NotificationUtilisateur {
   /// Date de creation ; null si absente ou illisible.
   final DateTime? creeLe;
 
+  /// Route de la page concernee (ex. `/ordonnances/{id}`) ; chaine vide si absente.
+  final String lien;
+
   /// Copie de la notification une fois lue.
   NotificationUtilisateur marquerLue() => NotificationUtilisateur(
         id: id,
@@ -50,6 +55,7 @@ class NotificationUtilisateur {
         message: message,
         lue: true,
         creeLe: creeLe,
+        lien: lien,
       );
 
   static String _texte(Object? valeur) => valeur?.toString() ?? '';

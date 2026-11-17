@@ -35,3 +35,49 @@ String libelleNotifications(int? nonLues) {
   final libelle = t('Notifications', 'الإشعارات');
   return nonLues != null && nonLues > 0 ? '$libelle ($nonLues)' : libelle;
 }
+
+/// Ecrans de l'appli pouvant etre ouverts depuis le lien d'une notification.
+enum TypeCible { rendezVous, ordonnances, ordonnance, medecin, conversations, conversation, dawini }
+
+/// Ecran cible d'un lien de notification ; [id] n'est renseigne que pour les ecrans de detail.
+class CibleNotification {
+  const CibleNotification(this.type, [this.id]);
+
+  final TypeCible type;
+  final String? id;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CibleNotification && other.type == type && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(type, id);
+}
+
+/// Associe un lien d'API (`/mes-rendez-vous`, `/ordonnances/{id}`, `/medecins/{id}`,
+/// `/messagerie/{id}`, `/dawini`...) a un ecran de l'appli ; null si le lien est vide
+/// ou n'a pas d'ecran correspondant.
+CibleNotification? cibleDuLien(String lien) {
+  final chemin = lien.split(RegExp('[?#]')).first;
+  final segments = chemin.split('/').where((s) => s.isNotEmpty).toList();
+  if (segments.isEmpty || segments.length > 2) return null;
+  final id = segments.length == 2 ? Uri.decodeComponent(segments[1]) : null;
+  switch (segments[0]) {
+    case 'mes-rendez-vous':
+      return id == null ? const CibleNotification(TypeCible.rendezVous) : null;
+    case 'ordonnances':
+      return id == null
+          ? const CibleNotification(TypeCible.ordonnances)
+          : CibleNotification(TypeCible.ordonnance, id);
+    case 'medecins':
+      return id == null ? null : CibleNotification(TypeCible.medecin, id);
+    case 'messagerie':
+      return id == null
+          ? const CibleNotification(TypeCible.conversations)
+          : CibleNotification(TypeCible.conversation, id);
+    case 'dawini':
+      return id == null ? const CibleNotification(TypeCible.dawini) : null;
+    default:
+      return null;
+  }
+}

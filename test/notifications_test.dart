@@ -97,4 +97,24 @@ void main() {
     expect(libelleNotifications(0), 'Notifications');
     expect(libelleNotifications(3), 'Notifications (3)');
   });
+
+  test('fromJson lit le lien, vide par defaut, et marquerLue le conserve', () {
+    expect(NotificationUtilisateur.fromJson({}).lien, '');
+    final n = NotificationUtilisateur.fromJson({'id': 'n-1', 'lien': '/ordonnances/o-1'});
+    expect(n.lien, '/ordonnances/o-1');
+    expect(n.marquerLue().lien, '/ordonnances/o-1');
+  });
+
+  test('cibleDuLien associe les routes aux ecrans et ignore les autres', () {
+    expect(cibleDuLien('/mes-rendez-vous'), const CibleNotification(TypeCible.rendezVous));
+    expect(cibleDuLien('/ordonnances'), const CibleNotification(TypeCible.ordonnances));
+    expect(cibleDuLien('/ordonnances/o-1'), const CibleNotification(TypeCible.ordonnance, 'o-1'));
+    expect(cibleDuLien('/medecins/m-1?x=1'), const CibleNotification(TypeCible.medecin, 'm-1'));
+    expect(cibleDuLien('/messagerie/c-1/'), const CibleNotification(TypeCible.conversation, 'c-1'));
+    expect(cibleDuLien('/dawini'), const CibleNotification(TypeCible.dawini));
+    expect(cibleDuLien(''), isNull);
+    expect(cibleDuLien('/inconnu'), isNull);
+    expect(cibleDuLien('/medecins'), isNull);
+    expect(cibleDuLien('/a/b/c'), isNull);
+  });
 }
