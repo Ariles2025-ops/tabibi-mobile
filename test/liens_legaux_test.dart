@@ -13,6 +13,12 @@ void main() {
     expect(LiensLegaux.mentions.toString(), 'https://ndawik.com/legal/mentions-legales.html');
   });
 
+  test("le centre d'aide suit la langue de l'interface", () {
+    expect(LiensLegaux.aide().toString(), 'https://ndawik.com/aide');
+    Langue.courante.value = Langue.arabe;
+    expect(LiensLegaux.aide().toString(), 'https://ndawik.com/ar/aide');
+  });
+
   testWidgets('la politique de confidentialite est visible avant connexion (FR et AR)', (tester) async {
     for (final langue in [Langue.francais, Langue.arabe]) {
       Langue.courante.value = langue;
@@ -26,6 +32,7 @@ void main() {
       expect(find.text(langue == Langue.arabe ? 'سياسة الخصوصية' : 'Politique de confidentialité'), findsOneWidget);
       expect(find.text(langue == Langue.arabe ? 'شروط الاستخدام' : "Conditions d'utilisation"), findsOneWidget);
       expect(find.text(langue == Langue.arabe ? 'الإشعارات القانونية' : 'Mentions légales'), findsOneWidget);
+      expect(find.text(langue == Langue.arabe ? 'مركز المساعدة' : "Centre d'aide"), findsOneWidget);
     }
   });
 }
