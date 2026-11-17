@@ -17,7 +17,7 @@ concurrency:
   group: lancer-tests
   cancel-in-progress: false
 permissions:
-  contents: read
+  contents: write   # nécessaire pour activer la fusion automatique (enablePullRequestAutoMerge)
   pull-requests: write
   actions: write
 jobs:
