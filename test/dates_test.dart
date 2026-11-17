@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/utils/dates.dart';
 
 void main() {
@@ -15,5 +16,13 @@ void main() {
   test('formate un jour sans heure (date de naissance)', () {
     expect(formaterJour(DateTime(1990, 5, 14)), '14 mai 1990');
     expect(formaterJour(DateTime(1985, 12, 3)), '3 déc. 1985');
+  });
+
+  test('formate la duree d\'un creneau en francais et en arabe', () {
+    expect(formaterDuree(20), '20 min');
+    expect(formaterDuree(null), '');
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(formaterDuree(20), '20 دقيقة');
   });
 }

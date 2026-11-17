@@ -22,7 +22,7 @@ const Map<String, (String, String)> _statuts = {
   'HONORE': ('Honoré', 'تم الحضور'),
   'ABSENT': ('Absent', 'غائب'),
   'EN_ATTENTE': ('En attente', 'قيد الانتظار'),
-  'EN_COURS': ('En cours', 'جارٍ'),
+  'EN_COURS': ('En cours', 'جارية'),
   'CLOTURE': ('Clôturé', 'مغلق'),
   'OUVERT': ('Ouvert', 'مفتوح'),
   'EXPIREE': ('Expirée', 'منتهية الصلاحية'),

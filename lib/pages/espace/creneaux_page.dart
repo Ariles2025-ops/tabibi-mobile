@@ -170,7 +170,7 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
                       leading: Icon(libre ? Icons.event_available : Icons.event_busy),
                       title: Text(formaterDateIso('${c['debut']}')),
                       subtitle: Text(
-                          '${c['dureeMinutes']} min · ${libre ? t('Libre', 'متاح') : t('Réservé', 'محجوز')}'),
+                          '${formaterDuree(c['dureeMinutes'])} · ${libre ? t('Libre', 'متاح') : t('Réservé', 'محجوز')}'),
                       trailing: libre
                           ? Row(mainAxisSize: MainAxisSize.min, children: [
                               if (widget.cabinet.parSecretaire && _rdvTelephoneDispo)
@@ -369,7 +369,7 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
               prefixIcon: const Icon(Icons.timelapse),
             ),
             items: [
-              for (final d in dureesCreneau) DropdownMenuItem(value: d, child: Text('$d min')),
+              for (final d in dureesCreneau) DropdownMenuItem(value: d, child: Text(formaterDuree(d))),
             ],
             onChanged: (d) => setState(() => _duree = d ?? _duree),
           ),

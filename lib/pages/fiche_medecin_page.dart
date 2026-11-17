@@ -416,7 +416,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.schedule),
       title: Text(formaterDateIso(creneau['debut'] as String)),
-      subtitle: Text(t('${creneau['dureeMinutes']} min', '${creneau['dureeMinutes']} دقيقة')),
+      subtitle: Text(formaterDuree(creneau['dureeMinutes'])),
       trailing: FilledButton(
         onPressed: _enCours == null ? () => _reserver(creneau) : null,
         child: enCours
