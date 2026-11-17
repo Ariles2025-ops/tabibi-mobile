@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/profil.dart';
 import '../widgets/champ_wilaya.dart';
+import '../widgets/liens_legaux.dart';
 import '../widgets/selecteur_langue.dart';
 import 'espace/cabinet_pages.dart';
 import '../widgets/vue_connexion.dart';
@@ -355,6 +356,8 @@ class _MonProfilPageState extends State<MonProfilPage> {
           icon: const Icon(Icons.delete_forever_outlined),
           label: Text(t('Supprimer mon compte', 'حذف حسابي')),
         ),
+        const SizedBox(height: 16),
+        const LiensLegaux(),
       ],
     );
   }
