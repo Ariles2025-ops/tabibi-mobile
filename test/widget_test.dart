@@ -26,6 +26,14 @@ import 'outils.dart';
 
 /// API factice : aucune requete reseau, donnees fixes. Tous les identifiants sont des UUID en
 /// texte, comme ceux que le backend serialise (jamais des nombres).
+class FakeApiServiceOrdonnanceAnnulee extends FakeApiService {
+  const FakeApiServiceOrdonnanceAnnulee();
+
+  @override
+  Future<Map<String, dynamic>> verifierOrdonnance(String code) async =>
+      {'valide': true, 'emiseLe': '2026-12-03T10:15:00', 'statut': 'ANNULEE'};
+}
+
 class FakeApiService extends ApiService {
   const FakeApiService();
 
@@ -779,6 +787,18 @@ void main() {
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
     expect(find.text('Code inconnu'), findsOneWidget);
+    expect(find.textContaining('Ordonnance authentique'), findsNothing);
+  });
+
+  testWidgets("la verification publique n'appelle pas authentique une ordonnance annulee",
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: VerifierOrdonnancePage(api: FakeApiServiceOrdonnanceAnnulee()),
+    ));
+    await tester.enterText(find.byType(TextField), 'ABC123');
+    await tester.tap(find.text('Vérifier'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Annulée : cette ordonnance a été annulée'), findsOneWidget);
     expect(find.textContaining('Ordonnance authentique'), findsNothing);
   });
 
