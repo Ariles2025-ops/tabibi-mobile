@@ -44,3 +44,27 @@ String libelleStatutRendezVous(Map<String, dynamic> rdv, {DateTime? maintenant})
   if (s == 'ABSENT') return t('Non honoré', 'لم يتم الحضور');
   return libelleStatut(rdv['statut']);
 }
+
+/// Rendez-vous separes comme sur le site : « À venir » (du plus proche au plus lointain)
+/// puis « Passés » (du plus recent au plus ancien).
+class RendezVousClasses {
+  const RendezVousClasses(this.aVenir, this.passes);
+
+  final List<Map<String, dynamic>> aVenir;
+  final List<Map<String, dynamic>> passes;
+}
+
+/// Partitionne [rdvs] avec [estAVenir] ; un rendez-vous sans date lisible passe en fin de
+/// section.
+RendezVousClasses classerRendezVous(List<Map<String, dynamic>> rdvs, {DateTime? maintenant}) {
+  final aVenir = <Map<String, dynamic>>[];
+  final passes = <Map<String, dynamic>>[];
+  for (final rdv in rdvs) {
+    (estAVenir(rdv, maintenant: maintenant) ? aVenir : passes).add(rdv);
+  }
+  final fin = DateTime.fromMillisecondsSinceEpoch(8640000000000000, isUtc: true);
+  DateTime debut(Map<String, dynamic> r) => _debut(r['debut']) ?? fin;
+  aVenir.sort((a, b) => debut(a).compareTo(debut(b)));
+  passes.sort((a, b) => debut(b).compareTo(debut(a)));
+  return RendezVousClasses(aVenir, passes);
+}

@@ -33,4 +33,17 @@ void main() {
     expect(libelleStatutRendezVous(rdv('HONORE', passe), maintenant: maintenant), 'منتهٍ');
     expect(libelleStatutRendezVous(rdv('ABSENT', passe), maintenant: maintenant), 'لم يتم الحضور');
   });
+
+  test('classe les rendez-vous : a venir (proche -> lointain) puis passes (recent -> ancien)', () {
+    final liste = [
+      rdv('HONORE', '2025-12-04T09:00:00'),
+      rdv('CONFIRME', '2026-07-01T09:00:00'),
+      rdv('HONORE', passe),
+      rdv('CONFIRME', futur),
+      rdv('ANNULEE', futur),
+    ];
+    final c = classerRendezVous(liste, maintenant: maintenant);
+    expect(c.aVenir.map((r) => r['debut']), [futur, '2026-07-01T09:00:00']);
+    expect(c.passes.map((r) => r['debut']), [futur, passe, '2025-12-04T09:00:00']);
+  });
 }

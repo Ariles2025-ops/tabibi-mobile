@@ -231,36 +231,51 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_rdvs.isEmpty) return Center(child: Text(t('Aucun rendez-vous.', 'لا توجد مواعيد.')));
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _rdvs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final rdv = _rdvs[i];
-        final texte = Theme.of(context).textTheme;
-        final action = _action(rdv);
-        return CarteTabibi(
-          child: Row(children: [
-            AvatarInitiales(nom: _nomMedecin(rdv)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_dateRdv(rdv),
-                      style: texte.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(_nomMedecin(rdv),
-                      style: texte.bodyMedium?.copyWith(color: Charte.doux)),
-                  const SizedBox(height: 6),
-                  PastilleStatut(libelle: _libelleStatut(rdv), statut: rdv['statut']),
-                ],
-              ),
+    final classes = classerRendezVous(_rdvs);
+    final lignes = <Widget>[
+      if (classes.aVenir.isNotEmpty) ...[
+        _enTete(t('À venir', 'القادمة')),
+        for (final rdv in classes.aVenir) _ligne(rdv, avecAnnee: false),
+      ],
+      if (classes.passes.isNotEmpty) ...[
+        _enTete(t('Passés', 'السابقة')),
+        for (final rdv in classes.passes) _ligne(rdv, avecAnnee: true),
+      ],
+    ];
+    return ListView(padding: const EdgeInsets.all(16), children: lignes);
+  }
+
+  Widget _enTete(String titre) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+        child: Text(titre, style: Theme.of(context).textTheme.titleMedium),
+      );
+
+  Widget _ligne(Map<String, dynamic> rdv, {required bool avecAnnee}) {
+    final texte = Theme.of(context).textTheme;
+    final action = _action(rdv);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: CarteTabibi(
+        child: Row(children: [
+          AvatarInitiales(nom: _nomMedecin(rdv)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(formaterDateIso(rdv['debut'] as String, avecAnnee: avecAnnee),
+                    style: texte.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(_nomMedecin(rdv),
+                    style: texte.bodyMedium?.copyWith(color: Charte.doux)),
+                const SizedBox(height: 6),
+                PastilleStatut(libelle: _libelleStatut(rdv), statut: rdv['statut']),
+              ],
             ),
-            if (action != null) action,
-          ]),
-        );
-      },
+          ),
+          if (action != null) action,
+        ]),
+      ),
     );
   }
 

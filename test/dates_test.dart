@@ -13,6 +13,18 @@ void main() {
     expect(formaterDateIso('n/a'), 'n/a');
   });
 
+  test("affiche l'annee a la demande", () {
+    expect(formaterDateHeure(DateTime(2025, 12, 4, 9, 0), avecAnnee: true), 'jeu. 4 déc. 2025 09:00');
+    expect(formaterDateIso('2025-12-04T09:00:00', avecAnnee: true), 'jeu. 4 déc. 2025 09:00');
+  });
+
+  test("affiche toujours l'heure d'Algerie (UTC+1) pour un instant avec fuseau", () {
+    expect(formaterDateIso('2026-12-03T08:00:00Z'), 'jeu. 3 déc. 09:00');
+    expect(formaterDateIso('2026-12-03T09:00:00+01:00'), 'jeu. 3 déc. 09:00');
+    expect(formaterDateIso('2026-12-03T23:30:00Z'), 'ven. 4 déc. 00:30');
+    expect(formaterDateIso('2026-12-03T09:00:00'), 'jeu. 3 déc. 09:00');
+  });
+
   test('formate un jour sans heure (date de naissance)', () {
     expect(formaterJour(DateTime(1990, 5, 14)), '14 mai 1990');
     expect(formaterJour(DateTime(1985, 12, 3)), '3 déc. 1985');
