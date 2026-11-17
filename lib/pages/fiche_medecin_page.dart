@@ -94,8 +94,10 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final medecin = await widget.api.medecin(widget.medecinId);
       final creneaux = await widget.api.creneaux(widget.medecinId);
       final avis = await _chargerAvis();
+      final dejaInscrit = await _dejaInscrit();
       if (!mounted) return;
       setState(() {
+        if (dejaInscrit) _inscrit = true;
         _medecin = medecin;
         _creneaux = creneaux.where((c) => c['disponible'] != false).toList();
         _avis = avis;
@@ -114,6 +116,23 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       return SyntheseAvis.fromJson(await widget.api.avisDuMedecin(widget.medecinId));
     } on Exception {
       return null;
+    }
+  }
+
+  /// Vrai si le patient connecte est deja sur la liste d'attente de ce praticien
+  /// (GET /api/liste-attente/mes, comme le site) ; faux sans session ou en cas d'echec : la
+  /// fiche reste utilisable et un 409 a l'inscription sera traite comme « deja inscrit ».
+  Future<bool> _dejaInscrit() async {
+    final token = _auth.accessToken;
+    if (!_auth.estConnecte || token == null) return false;
+    try {
+      final inscriptions = await widget.api.mesInscriptionsAttente(token);
+      return inscriptions.any((i) => identifiant(i['medecinId']) == widget.medecinId);
+    } on ApiException catch (e) {
+      if (e.nonAutorise) _auth.seDeconnecter();
+      return false;
+    } on Exception {
+      return false;
     }
   }
 
