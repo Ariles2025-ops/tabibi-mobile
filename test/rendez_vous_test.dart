@@ -23,12 +23,14 @@ void main() {
     expect(libelleStatutRendezVous(rdv('CONFIRME', passe), maintenant: maintenant), 'Terminé');
     expect(libelleStatutRendezVous(rdv('RESERVE', passe), maintenant: maintenant), 'Terminé');
     expect(libelleStatutRendezVous(rdv('CONFIRME', futur), maintenant: maintenant), 'Confirmé');
-    expect(libelleStatutRendezVous(rdv('ABSENT', passe), maintenant: maintenant), 'Absent');
-    expect(libelleStatutRendezVous(rdv('HONORE', passe), maintenant: maintenant), 'Honoré');
+    expect(libelleStatutRendezVous(rdv('ABSENT', passe), maintenant: maintenant), 'Non honoré');
+    expect(libelleStatutRendezVous(rdv('HONORE', passe), maintenant: maintenant), 'Terminé');
   });
 
   test('libelle arabe', () {
     Langue.courante.value = Langue.arabe;
     expect(libelleStatutRendezVous(rdv('CONFIRME', passe), maintenant: maintenant), 'منتهٍ');
+    expect(libelleStatutRendezVous(rdv('HONORE', passe), maintenant: maintenant), 'منتهٍ');
+    expect(libelleStatutRendezVous(rdv('ABSENT', passe), maintenant: maintenant), 'لم يتم الحضور');
   });
 }
