@@ -155,7 +155,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
                         : null)),
           ),
         const SizedBox(height: 8),
-        _carteCode(context, '${ordonnance['codeVerification'] ?? ''}'),
+        _carteCode(context, '${ordonnance['codeVerification'] ?? ''}',
+            aPresenter: !['ANNULEE', 'DELIVREE']
+                .contains('${ordonnance['statut'] ?? ''}'.trim().toUpperCase())),
         const SizedBox(height: 24),
         Text(t('Médicaments', 'الأدوية'), style: texte.titleMedium),
         const SizedBox(height: 8),
@@ -174,7 +176,7 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   }
 
   /// Code de verification en grand, selectionnable, avec bouton de copie.
-  Widget _carteCode(BuildContext context, String code) {
+  Widget _carteCode(BuildContext context, String code, {bool aPresenter = true}) {
     final couleurs = Theme.of(context).colorScheme;
     final texte = Theme.of(context).textTheme;
     return Card(
@@ -205,12 +207,15 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
                 ),
               ],
             ),
+            if (aPresenter) ...[
             const SizedBox(height: 4),
             Text(
               t('À présenter en pharmacie ; vérifiable sans compte via « Vérifier une ordonnance ».',
                   'يُقدَّم في الصيدلية؛ ويمكن التحقق منه دون حساب عبر « التحقق من وصفة ».'),
+              key: const ValueKey('a-presenter-pharmacie'),
               style: texte.bodySmall,
             ),
+            ],
           ],
         ),
       ),
