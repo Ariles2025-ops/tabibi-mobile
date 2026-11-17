@@ -64,4 +64,18 @@ void main() {
       isEmpty,
     );
   });
+
+  test('heure d\'Alger : UTC+1 quel que soit le fuseau du telephone', () {
+    expect(instantAlger(DateTime(2026, 12, 7, 9)), DateTime.utc(2026, 12, 7, 8));
+    expect(instantAlger(DateTime(2026, 12, 7, 0, 30)), DateTime.utc(2026, 12, 6, 23, 30));
+    expect(muraleAlger(DateTime.utc(2026, 12, 7, 23, 30)), DateTime(2026, 12, 8, 0, 30));
+  });
+
+  test('rdvCommence : actions « venu / absent » seulement apres l\'heure du rendez-vous', () {
+    final maintenant = DateTime.utc(2026, 12, 3, 8);
+    expect(rdvCommence('2026-12-03T08:30:00Z', maintenant), isFalse);
+    expect(rdvCommence('2026-12-03T08:00:00Z', maintenant), isTrue);
+    expect(rdvCommence('2026-12-03T07:00:00Z', maintenant), isTrue);
+    expect(rdvCommence('illisible', maintenant), isTrue);
+  });
 }

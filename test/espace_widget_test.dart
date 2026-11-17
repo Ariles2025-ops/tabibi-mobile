@@ -14,6 +14,7 @@ import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
 import 'package:tabibi_mobile/pages/mon_profil_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
+import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 const medecinId = '00000000-0000-0000-0000-000000000001';
 const patientId = 'a1a1a1a1-0000-4000-8000-000000000007';
@@ -138,7 +139,9 @@ class FakeEspaceApi extends ApiService {
   @override
   Future<Map<String, dynamic>> ouvrirCreneauMedecin(
       DateTime debut, int dureeMinutes, String token) async {
-    appels.add('ouvrir ${debut.hour}:${debut.minute} $dureeMinutes');
+    // Heure murale d'Alger de l'instant envoye, quel que soit le fuseau du telephone / du runner.
+    final alger = muraleAlger(debut);
+    appels.add('ouvrir ${alger.hour}:${alger.minute} $dureeMinutes');
     return {};
   }
 
@@ -258,7 +261,7 @@ void main() {
   testWidgets("l'agenda du medecin nomme le patient, traite RESERVE comme confirme et honore",
       (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
-    await afficher(tester, AgendaPage(api: api, auth: SessionTest()));
+    await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
     expect(find.text('Karim Haddad · Confirmé'), findsOneWidget);
     expect(find.text('Karim Haddad · Honoré'), findsOneWidget);
     expect(find.byTooltip('Actions'), findsOneWidget); // seulement sur le rendez-vous confirme
@@ -343,15 +346,16 @@ void main() {
     expect(find.text('12 créneaux créés, 2 ignorés'), findsOneWidget);
   });
 
-  testWidgets('semaine type : un 404 cache le bouton sans erreur', (tester) async {
+  testWidgets('semaine type : un 404 affiche le message du serveur et garde le bouton',
+      (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
     await afficher(tester, CreneauxPage(api: api, auth: SessionTest()));
     await tester.tap(find.text('Semaine type'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Créer les créneaux'));
     await tester.pumpAndSettle();
-    expect(find.text('Semaine type'), findsNothing);
-    expect(find.text('absent'), findsNothing);
+    expect(find.text('Semaine type'), findsOneWidget);
+    expect(find.text('absent'), findsOneWidget);
   });
 
   testWidgets('RDV pris au telephone : seulement pour la secretaire, sur un creneau libre',

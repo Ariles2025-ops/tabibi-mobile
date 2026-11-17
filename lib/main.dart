@@ -31,6 +31,9 @@ import 'widgets/vue_erreur.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Langue.initialiser();
+  brancherRafraichissement();
+  // Session enregistree (jeton rafraichi si besoin) : l'appli fermee ne deconnecte plus.
+  await session.restaurer();
   runApp(const TabibiApp());
 }
 
