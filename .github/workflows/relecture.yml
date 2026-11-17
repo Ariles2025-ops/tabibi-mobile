@@ -19,11 +19,15 @@ jobs:
     name: Relecture
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      HEAD_REF: ${{ github.head_ref }}
+      BASE_REF: ${{ github.base_ref }}
+      DEPOT: ${{ github.repository }}
     steps:
       - name: PR d'agent ?
         id: agent
         run: |
-          case "${{ github.head_ref }}" in claude/*) echo "oui=1" >> "$GITHUB_OUTPUT";; *) echo "PR humaine : pas de relecture automatique.";; esac
+          case "$HEAD_REF" in claude/*) echo "oui=1" >> "$GITHUB_OUTPUT";; *) echo "PR humaine : pas de relecture automatique.";; esac
       - uses: actions/checkout@v4
         if: steps.agent.outputs.oui == '1'
         with:
@@ -31,10 +35,10 @@ jobs:
       - name: Différences à relire
         if: steps.agent.outputs.oui == '1'
         run: |
-          git diff "origin/${{ github.base_ref }}...HEAD" > ../diff.txt
-          git diff --stat "origin/${{ github.base_ref }}...HEAD" | tail -3
+          git diff "origin/$BASE_REF...HEAD" > ../diff.txt
+          git diff --stat "origin/$BASE_REF...HEAD" | tail -3
           for d in tabibi-web tabibi-backend tabibi-mobile; do
-            [ "Ariles2025-ops/$d" = "${{ github.repository }}" ] || git clone -q --depth 1 "https://github.com/Ariles2025-ops/$d.git" "../$d"
+            [ "Ariles2025-ops/$d" = "$DEPOT" ] || git clone -q --depth 1 "https://github.com/Ariles2025-ops/$d.git" "../$d"
           done
       - uses: anthropics/claude-code-action@v1
         if: steps.agent.outputs.oui == '1'
