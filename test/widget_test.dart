@@ -806,6 +806,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: DetailOrdonnancePage(
+        key: const ValueKey('page-annulee'),
         ordonnanceId: FakeApiService.ordonnanceDemo,
         api: const FakeApiServiceOrdonnanceAnnuleeMotif(),
         auth: sessionConnectee(),
@@ -817,6 +818,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(
       home: DetailOrdonnancePage(
+        key: const ValueKey('page-emise'),
         ordonnanceId: FakeApiService.ordonnanceDemo,
         api: const FakeApiService(),
         auth: sessionConnectee(),
