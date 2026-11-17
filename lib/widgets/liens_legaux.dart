@@ -9,8 +9,9 @@ import '../i18n/langue.dart';
 class LiensLegaux extends StatelessWidget {
   const LiensLegaux({super.key});
 
-  static final Uri confidentialite = Uri.parse('https://tabibi.doctor/legal/confidentialite.html');
-  static final Uri conditions = Uri.parse('https://tabibi.doctor/legal/cgu.html');
+  static final Uri confidentialite = Uri.parse('https://ndawik.com/legal/confidentialite.html');
+  static final Uri conditions = Uri.parse('https://ndawik.com/legal/cgu.html');
+  static final Uri mentions = Uri.parse('https://ndawik.com/legal/mentions-legales.html');
 
   Future<void> _ouvrir(Uri lien) => launchUrl(lien, mode: LaunchMode.externalApplication);
 
@@ -30,6 +31,11 @@ class LiensLegaux extends StatelessWidget {
           style: style,
           onPressed: () => _ouvrir(conditions),
           child: Text(t("Conditions d'utilisation", 'شروط الاستخدام')),
+        ),
+        TextButton(
+          style: style,
+          onPressed: () => _ouvrir(mentions),
+          child: Text(t('Mentions légales', 'الإشعارات القانونية')),
         ),
       ],
     );
