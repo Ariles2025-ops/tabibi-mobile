@@ -5,7 +5,6 @@ import '../models/conversation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
-import '../utils/identifiants.dart';
 import '../utils/messagerie.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -82,7 +81,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
 
   /// Noms des praticiens via la fiche publique de l'annuaire (`GET /api/medecins/{id}`,
   /// identifiant UUID en texte, toujours tente) ; un echec n'empeche pas l'affichage,
-  /// « Médecin » et l'identifiant abrege sont alors montres a la place.
+  /// « Médecin » (sans identifiant) est alors montre a la place.
   Future<void> _chargerNomsMedecins(List<Conversation> conversations) async {
     for (final medecinId in conversations.map((c) => c.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
@@ -90,12 +89,13 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
         final Object? nom = (await widget.api.medecin(medecinId))['nomComplet'];
         if (nom is String && nom.isNotEmpty) _nomsMedecins[medecinId] = nom;
       } on Exception {
-        // Fiche indisponible : libelle de repli ([libelleMedecin]).
+        // Fiche indisponible : libelle de repli ([_nomMedecin]).
       }
     }
   }
 
-  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? libelleMedecin(c.medecinId);
+  /// Sans fiche : « Médecin » seul, sans identifiant technique (comme sur le site).
+  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? t('Médecin', 'طبيب');
 
   /// Ouvre le fil ; au retour, les non lus ont pu changer (la lecture les marque lus).
   Future<void> _ouvrir(Conversation c) async {
@@ -103,7 +103,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
       MaterialPageRoute<void>(
         builder: (_) => ConversationPage(
           conversation: c,
-          nomMedecin: _nomsMedecins[c.medecinId],
+          nomMedecin: _nomMedecin(c),
           api: widget.api,
           auth: _auth,
         ),
