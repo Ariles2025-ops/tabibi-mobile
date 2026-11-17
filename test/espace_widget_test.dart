@@ -5,6 +5,7 @@ import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/pages/dawini_page.dart';
 import 'package:tabibi_mobile/pages/espace/agenda_page.dart';
+import 'package:tabibi_mobile/pages/espace/avis_medecin_page.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet_pages.dart';
 import 'package:tabibi_mobile/pages/espace/creneaux_page.dart';
@@ -77,6 +78,22 @@ class FakeEspaceApi extends ApiService {
 
   @override
   Future<int> nombreNonLues(String token) async => 0;
+
+  @override
+  Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async {
+    appels.add('avis $medecinId');
+    return {
+      'moyenne': 4.5,
+      'nombre': 2,
+      'avis': [
+        {'id': 'a1', 'note': 4, 'commentaire': 'Ancien avis', 'deposeLe': '2026-11-01T09:00:00Z'},
+        {'id': 'a2', 'note': 5, 'commentaire': 'Très bien', 'deposeLe': '2026-11-10T09:00:00Z'},
+      ],
+    };
+  }
+
+  @override
+  Future<void> signalerAvis(String avisId, String token) async => appels.add('signaler $avisId');
 
   @override
   Future<Map<String, dynamic>> moi(String token) async =>
@@ -394,6 +411,28 @@ void main() {
     await afficher(tester, MonEspacePage(api: absent, auth: SessionTest()));
     expect(find.text('Mes créneaux'), findsOneWidget);
     expect(find.text('Ma fiche'), findsNothing);
+  });
+
+  testWidgets('avis des patients : le medecin les lit (recents d\'abord) et en signale un',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, AvisMedecinPage(api: api, auth: SessionTest()));
+    expect(api.appels.first, 'avis $patientId');
+    expect(find.textContaining('4,5 / 5 (2 avis)'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Très bien')).dy,
+        lessThan(tester.getTopLeft(find.text('Ancien avis')).dy));
+    await tester.tap(find.text('Signaler').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Signaler').last);
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'signaler a2');
+    expect(find.text('Signalé'), findsOneWidget);
+    expect(find.text('Signaler'), findsOneWidget);
+  });
+
+  testWidgets('mon espace medecin propose les avis des patients', (tester) async {
+    await afficher(tester, MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    expect(find.text('Avis des patients'), findsOneWidget);
   });
 
   testWidgets("ma liste d'attente affiche les patients inscrits", (tester) async {
