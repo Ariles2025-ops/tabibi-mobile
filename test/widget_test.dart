@@ -512,6 +512,18 @@ class FakeApiServiceSansFiche extends FakeApiService {
       throw const ApiException(404, 'Praticien introuvable');
 }
 
+/// Ordonnance annulee par le medecin, avec motif.
+class FakeApiServiceOrdonnanceAnnuleeMotif extends FakeApiService {
+  const FakeApiServiceOrdonnanceAnnuleeMotif();
+
+  @override
+  Future<Map<String, dynamic>> ordonnance(String id, String token) async => {
+        ...await super.ordonnance(id, token),
+        'statut': 'ANNULEE',
+        'motifAnnulation': 'Erreur de dose',
+      };
+}
+
 /// Variante qui conserve les avis deposes : « Mes rendez-vous » les voit au rechargement.
 class FakeApiServiceAvis extends FakeApiService {
   FakeApiServiceAvis();
@@ -788,6 +800,32 @@ void main() {
     expect(find.text('Posologie : 1 comprime matin et soir'), findsOneWidget);
     expect(find.text('Durée : 5 jours'), findsOneWidget);
     expect(find.text('Amoxicilline 500 mg'), findsOneWidget);
+  });
+
+  testWidgets("le detail d'une ordonnance annulee montre le motif, sans « A presenter en pharmacie »",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: DetailOrdonnancePage(
+        key: const ValueKey('page-annulee'),
+        ordonnanceId: FakeApiService.ordonnanceDemo,
+        api: const FakeApiServiceOrdonnanceAnnuleeMotif(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Annulée par le médecin : Erreur de dose'), findsOneWidget);
+    expect(find.byKey(const ValueKey('a-presenter-pharmacie')), findsNothing);
+
+    await tester.pumpWidget(MaterialApp(
+      home: DetailOrdonnancePage(
+        key: const ValueKey('page-emise'),
+        ordonnanceId: FakeApiService.ordonnanceDemo,
+        api: const FakeApiService(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('a-presenter-pharmacie')), findsOneWidget);
   });
 
   testWidgets("la verification publique distingue un code authentique d'un code inconnu",
