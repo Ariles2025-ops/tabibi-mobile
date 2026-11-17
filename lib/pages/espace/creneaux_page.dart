@@ -36,8 +36,8 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
   List<Map<String, dynamic>> _creneaux = [];
 
   /// Passent a faux quand l'API repond 404 : les boutons disparaissent, sans erreur.
-  bool _semaineTypeDispo = true;
-  bool _rdvTelephoneDispo = true;
+  final bool _semaineTypeDispo = true;
+  final bool _rdvTelephoneDispo = true;
 
   @override
   void initState() {
