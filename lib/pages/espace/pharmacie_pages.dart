@@ -7,6 +7,7 @@ import '../../services/session.dart';
 import '../../utils/dates.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
+import '../../utils/ordonnances.dart';
 import '../../widgets/champ_wilaya.dart';
 import 'outils_espace.dart';
 
@@ -225,6 +226,9 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
   final _code = TextEditingController();
   Map<String, dynamic>? _resultat;
 
+  /// Vrai juste après « Marquer délivrée » : le statut DELIVREE est alors un succès, pas un refus.
+  bool _vientDeDelivrer = false;
+
   @override
   void dispose() {
     _code.dispose();
@@ -244,7 +248,12 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
     FocusScope.of(context).unfocus();
     try {
       final r = await widget.api.verifierOrdonnance(_codeSaisi);
-      if (mounted) setState(() => _resultat = r);
+      if (mounted) {
+        setState(() {
+          _resultat = r;
+          _vientDeDelivrer = false;
+        });
+      }
     } on Exception catch (e) {
       message(messageErreur(e));
     }
@@ -253,7 +262,10 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
   Future<void> _delivrer() async {
     final r = await appeler((j) => widget.api.delivrerOrdonnance(_codeSaisi, j));
     if (r == null || !mounted) return;
-    setState(() => _resultat = r);
+    setState(() {
+      _resultat = r;
+      _vientDeDelivrer = true;
+    });
     message(t('Ordonnance marquée délivrée', 'تم تسجيل صرف الوصفة'));
   }
 
@@ -262,6 +274,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
     final r = _resultat;
     final valide = r?['valide'] == true;
     final statut = '${r?['statut'] ?? ''}'.toUpperCase();
+    final refus = r == null || _vientDeDelivrer ? null : avertissementVerification(r);
     return Scaffold(
       appBar: AppBar(title: Text(t('Délivrer une ordonnance', 'صرف وصفة طبية'))),
       body: corps(
@@ -281,9 +294,14 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
             const SizedBox(height: 12),
             FilledButton(onPressed: _verifier, child: Text(t('Vérifier', 'تحقّق'))),
             const SizedBox(height: 16),
-            if (r != null && !valide)
+            if (r != null && !valide && refus == null)
               Text(t('Aucune ordonnance ne correspond à ce code.', 'لا توجد وصفة بهذا الرمز.')),
-            if (r != null && valide) ...[
+            // Comme le site : annulée, expirée ou déjà délivrée = refus net, jamais « valide ».
+            if (r != null && refus != null)
+              Text(refus,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
+            if (r != null && valide && refus == null) ...[
               Text(
                 t('Ordonnance valide · ${libelleStatut(statut)}',
                     'وصفة صالحة · ${libelleStatut(statut)}'),

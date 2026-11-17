@@ -43,7 +43,7 @@ List<Map<String, dynamic>> trierParEmission(List<Map<String, dynamic>> ordonnanc
 }
 
 /// Avertissement a afficher a la verification d'un code dont l'ordonnance ne doit plus etre
-/// delivree (comme le site) : « Déjà délivrée le ... » ou « Annulée : ... » ; null sinon.
+/// delivree (comme le site) : « Déjà délivrée le ... », « Annulée : ... » ou « Expirée : ... » ; null sinon.
 String? avertissementVerification(Map<String, dynamic> resultat) {
   switch ('${resultat['statut'] ?? ''}'.trim().toUpperCase()) {
     case 'DELIVREE':
@@ -55,6 +55,9 @@ String? avertissementVerification(Map<String, dynamic> resultat) {
     case 'ANNULEE':
       return t('Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.',
           'ملغاة: ألغى الطبيب هذه الوصفة ولا يجوز صرفها.');
+    case 'EXPIREE':
+      return t('Expirée : cette ordonnance n\'est plus valable et ne doit pas être délivrée.',
+          'منتهية الصلاحية: لم تعد هذه الوصفة صالحة ولا يجوز صرفها.');
   }
   return null;
 }

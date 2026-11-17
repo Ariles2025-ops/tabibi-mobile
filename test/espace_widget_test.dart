@@ -43,6 +43,9 @@ class FakeEspaceApi extends ApiService {
   /// Quand vrai, les routes semaine type / fiche / RDV telephone repondent 404.
   bool routesAbsentes = false;
 
+  /// Réponse imposée à la vérification d'un code d'ordonnance (sinon : valide, émise).
+  Map<String, dynamic>? resultatVerification;
+
   @override
   Future<Map<String, dynamic>> ficheMedecin(String token) async {
     if (routesAbsentes) throw const ApiException(404, 'absent');
@@ -282,7 +285,7 @@ class FakeEspaceApi extends ApiService {
 
   @override
   Future<Map<String, dynamic>> verifierOrdonnance(String code) async =>
-      {'valide': true, 'emiseLe': '2026-12-03T10:15:00Z', 'statut': 'EMISE'};
+      resultatVerification ?? {'valide': true, 'emiseLe': '2026-12-03T10:15:00Z', 'statut': 'EMISE'};
 
   @override
   Future<Map<String, dynamic>> delivrerOrdonnance(String code, String token) async {
@@ -692,6 +695,27 @@ void main() {
     expect(api.appels, ['delivrer ABC123']);
     expect(find.text('Ordonnance valide · Délivrée'), findsOneWidget);
     expect(find.text('Marquer délivrée'), findsNothing);
+  });
+
+  testWidgets('la pharmacie voit un refus net pour une ordonnance expiree, annulee ou delivree',
+      (tester) async {
+    final cas = {
+      'EXPIREE': 'Expirée : cette ordonnance n\'est plus valable et ne doit pas être délivrée.',
+      'ANNULEE':
+          'Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.',
+      'DELIVREE': 'Déjà délivrée : cette ordonnance ne peut pas être délivrée une nouvelle fois.',
+    };
+    for (final e in cas.entries) {
+      final api = FakeEspaceApi(roles: ['PHARMACIE'])
+        ..resultatVerification = {'valide': true, 'statut': e.key};
+      await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
+      await tester.enterText(find.byType(TextField), 'abc123');
+      await tester.tap(find.text('Vérifier'));
+      await tester.pumpAndSettle();
+      expect(find.text(e.value), findsOneWidget, reason: e.key);
+      expect(find.textContaining('Ordonnance valide'), findsNothing);
+      expect(find.text('Marquer délivrée'), findsNothing);
+    }
   });
 
   testWidgets('dawini sans wilaya au profil exige le choix de la wilaya', (tester) async {
