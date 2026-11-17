@@ -1179,7 +1179,7 @@ void main() {
     // Trois rendez-vous du meme praticien : le libelle de repli, jamais l'UUID entier.
     expect(find.text('Médecin 00000000'), findsNWidgets(3));
     expect(find.text('Confirmé'), findsOneWidget);
-    expect(find.text('Honoré'), findsNWidgets(2));
+    expect(find.text('Terminé'), findsNWidgets(2));
     expect(find.textContaining(FakeApiService.medecinDemo), findsNothing);
     // Les actions restent disponibles (identifiants en texte).
     expect(find.text('Donner mon avis'), findsOneWidget);

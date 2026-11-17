@@ -41,6 +41,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Les PR d'agents sont ouvertes par github-actions[bot] : sans ceci, l'action refuse de relire.
+          allowed_bots: '*'
           prompt: |
             Tu es le relecteur senior de Tabibi (plateforme médicale algérienne : site Angular, API Spring Boot, appli Flutter).
             Un agent développeur propose la PR #${{ github.event.pull_request.number }} dans ${{ github.repository }} :

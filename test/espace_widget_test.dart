@@ -5,6 +5,7 @@ import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/pages/dawini_page.dart';
 import 'package:tabibi_mobile/pages/espace/agenda_page.dart';
+import 'package:tabibi_mobile/pages/espace/avis_medecin_page.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet_pages.dart';
 import 'package:tabibi_mobile/pages/espace/creneaux_page.dart';
@@ -14,9 +15,19 @@ import 'package:tabibi_mobile/pages/espace/pharmacie_pages.dart';
 import 'package:tabibi_mobile/pages/mon_profil_page.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/services/auth_service.dart';
+import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 const medecinId = '00000000-0000-0000-0000-000000000001';
 const patientId = 'a1a1a1a1-0000-4000-8000-000000000007';
+
+/// API factice sans cabinet rattache ni patient en liste d'attente.
+class FakeEspaceVide extends FakeEspaceApi {
+  @override
+  Future<List<Map<String, dynamic>>> cabinetsSecretaire(String token) async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) async => [];
+}
 
 /// API factice des espaces professionnels : donnees fixes, appels notes dans [appels].
 class FakeEspaceApi extends ApiService {
@@ -76,6 +87,22 @@ class FakeEspaceApi extends ApiService {
 
   @override
   Future<int> nombreNonLues(String token) async => 0;
+
+  @override
+  Future<Map<String, dynamic>> avisDuMedecin(String medecinId) async {
+    appels.add('avis $medecinId');
+    return {
+      'moyenne': 4.5,
+      'nombre': 2,
+      'avis': [
+        {'id': 'a1', 'note': 4, 'commentaire': 'Ancien avis', 'deposeLe': '2026-11-01T09:00:00Z'},
+        {'id': 'a2', 'note': 5, 'commentaire': 'Très bien', 'deposeLe': '2026-11-10T09:00:00Z'},
+      ],
+    };
+  }
+
+  @override
+  Future<void> signalerAvis(String avisId, String token) async => appels.add('signaler $avisId');
 
   @override
   Future<Map<String, dynamic>> moi(String token) async =>
@@ -138,7 +165,9 @@ class FakeEspaceApi extends ApiService {
   @override
   Future<Map<String, dynamic>> ouvrirCreneauMedecin(
       DateTime debut, int dureeMinutes, String token) async {
-    appels.add('ouvrir ${debut.hour}:${debut.minute} $dureeMinutes');
+    // Heure murale d'Alger de l'instant envoye, quel que soit le fuseau du telephone / du runner.
+    final alger = muraleAlger(debut);
+    appels.add('ouvrir ${alger.hour}:${alger.minute} $dureeMinutes');
     return {};
   }
 
@@ -247,9 +276,9 @@ void main() {
   testWidgets('mon espace propose les entrees selon les roles', (tester) async {
     await afficher(tester,
         MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN', 'PHARMACIE']), auth: SessionTest()));
-    expect(find.text('Mon agenda'), findsOneWidget);
-    expect(find.text('Mes créneaux'), findsOneWidget);
-    expect(find.text("Ma liste d'attente"), findsOneWidget);
+    expect(find.text('Agenda'), findsOneWidget);
+    expect(find.text('Disponibilités'), findsOneWidget);
+    expect(find.text("Liste d'attente"), findsOneWidget);
     expect(find.text('Besoins Dawini'), findsOneWidget);
     expect(find.text('Cabinets'), findsNothing);
     expect(find.text('Invitations de cabinet'), findsOneWidget);
@@ -258,7 +287,7 @@ void main() {
   testWidgets("l'agenda du medecin nomme le patient, traite RESERVE comme confirme et honore",
       (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
-    await afficher(tester, AgendaPage(api: api, auth: SessionTest()));
+    await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
     expect(find.text('Karim Haddad · Confirmé'), findsOneWidget);
     expect(find.text('Karim Haddad · Honoré'), findsOneWidget);
     expect(find.byTooltip('Actions'), findsOneWidget); // seulement sur le rendez-vous confirme
@@ -343,15 +372,16 @@ void main() {
     expect(find.text('12 créneaux créés, 2 ignorés'), findsOneWidget);
   });
 
-  testWidgets('semaine type : un 404 cache le bouton sans erreur', (tester) async {
+  testWidgets('semaine type : un 404 affiche le message du serveur et garde le bouton',
+      (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
     await afficher(tester, CreneauxPage(api: api, auth: SessionTest()));
     await tester.tap(find.text('Semaine type'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Créer les créneaux'));
     await tester.pumpAndSettle();
-    expect(find.text('Semaine type'), findsNothing);
-    expect(find.text('absent'), findsNothing);
+    expect(find.text('Semaine type'), findsOneWidget);
+    expect(find.text('absent'), findsOneWidget);
   });
 
   testWidgets('RDV pris au telephone : seulement pour la secretaire, sur un creneau libre',
@@ -388,8 +418,30 @@ void main() {
 
     final absent = FakeEspaceApi(roles: ['MEDECIN'])..routesAbsentes = true;
     await afficher(tester, MonEspacePage(api: absent, auth: SessionTest()));
-    expect(find.text('Mes créneaux'), findsOneWidget);
+    expect(find.text('Disponibilités'), findsOneWidget);
     expect(find.text('Ma fiche'), findsNothing);
+  });
+
+  testWidgets('avis des patients : le medecin les lit (recents d\'abord) et en signale un',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, AvisMedecinPage(api: api, auth: SessionTest()));
+    expect(api.appels.first, 'avis $patientId');
+    expect(find.textContaining('4,5 / 5 (2 avis)'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Très bien')).dy,
+        lessThan(tester.getTopLeft(find.text('Ancien avis')).dy));
+    await tester.tap(find.text('Signaler').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Signaler').last);
+    await tester.pumpAndSettle();
+    expect(api.appels.last, 'signaler a2');
+    expect(find.text('Signalé'), findsOneWidget);
+    expect(find.text('Signaler'), findsOneWidget);
+  });
+
+  testWidgets('mon espace medecin propose les avis des patients', (tester) async {
+    await afficher(tester, MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    expect(find.text('Avis des patients'), findsOneWidget);
   });
 
   testWidgets("ma liste d'attente affiche les patients inscrits", (tester) async {
@@ -403,6 +455,18 @@ void main() {
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('Agenda'), findsOneWidget);
     expect(find.text('Créneaux'), findsOneWidget);
+  });
+
+  testWidgets('sans cabinet ni patient, les textes vides sont ceux du site', (tester) async {
+    await afficher(tester, CabinetsPage(api: FakeEspaceVide(), auth: SessionTest()));
+    expect(find.text('Agenda du cabinet'), findsOneWidget);
+    expect(
+        find.text('Aucun médecin ne vous a encore rattachée à son cabinet. '
+            "Communiquez-lui l'adresse e-mail de votre compte Tabibi."),
+        findsOneWidget);
+    await afficher(tester, ListeAttenteMedecinPage(api: FakeEspaceVide(), auth: SessionTest()));
+    expect(find.text("Liste d'attente"), findsOneWidget);
+    expect(find.text("Aucun patient en liste d'attente pour le moment."), findsOneWidget);
   });
 
   testWidgets('une invitation de cabinet peut etre acceptee', (tester) async {

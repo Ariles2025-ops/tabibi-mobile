@@ -47,12 +47,17 @@ android {
 
     buildTypes {
         release {
-            // Signe avec la cle d'upload si key.properties existe, sinon retombe sur debug.
-            signingConfig = if (keystorePropertiesFile.exists())
-                signingConfigs.getByName("release")
-            else
-                signingConfigs.getByName("debug")
+            // Jamais de signature debug en release : sans key.properties, la compilation echoue.
+            signingConfig = signingConfigs.getByName("release")
         }
+    }
+}
+
+// Echec explicite (au lieu d'un AAB signe en debug, refuse par Google Play).
+gradle.taskGraph.whenReady {
+    val releaseDemandee = allTasks.any { it.name.contains("Release", ignoreCase = true) && (it.name.startsWith("assemble") || it.name.startsWith("bundle") || it.name.startsWith("package")) }
+    if (releaseDemandee && !keystorePropertiesFile.exists()) {
+        throw GradleException("key.properties est introuvable : une compilation release exige la cle d'upload (jamais de signature debug).")
     }
 }
 

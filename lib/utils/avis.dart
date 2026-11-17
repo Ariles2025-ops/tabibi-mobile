@@ -40,6 +40,16 @@ String libelleStatutAvis(Object? statut) {
   };
 }
 
+/// Libelle cote patient (page « Mes avis »), comme sur le site : un avis signale est « En cours
+/// de verification », un avis masque l'a ete « par la moderation » ; sinon [libelleStatutAvis].
+String libelleStatutAvisPatient(Object? statut) {
+  return switch (statut?.toString().trim().toUpperCase()) {
+    'SIGNALE' => t('En cours de vérification', 'قيد التحقق'),
+    'MASQUE' => t('Masqué par la modération', 'أخفته الإدارة'),
+    _ => libelleStatutAvis(statut),
+  };
+}
+
 /// Date de depot formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
 String dateAvis(Avis avis) {
   final deposeLe = avis.deposeLe;
