@@ -8,7 +8,7 @@ import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/identifiants.dart';
-import '../utils/libelles.dart';
+import '../utils/rendez_vous.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'deposer_avis_page.dart';
@@ -185,14 +185,11 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     return _nomsMedecins[id] ?? libelleMedecin(id);
   }
 
-  String _statut(Map<String, dynamic> rdv) => '${rdv['statut'] ?? ''}';
+  /// « CONFIRME » -> « Confirmé » (« Terminé » une fois l'heure passée, comme sur le site).
+  String _libelleStatut(Map<String, dynamic> rdv) => libelleStatutRendezVous(rdv);
 
-  /// « CONFIRME » -> « Confirme », « EN_ATTENTE » -> « En attente ».
-  String _libelleStatut(Map<String, dynamic> rdv) => libelleStatut(rdv['statut']);
-
-  /// Annulable tant qu'il n'est ni annule ni honore (un rendez-vous honore est passe).
-  bool _annulable(Map<String, dynamic> rdv) =>
-      !_statut(rdv).toUpperCase().startsWith('ANNUL') && !estHonore(rdv['statut']);
+  /// Annulable tant qu'il est a venir (ni annule, ni honore, ni absent, ni passe).
+  bool _annulable(Map<String, dynamic> rdv) => estAnnulable(rdv);
 
   /// Action d'un rendez-vous : « Donner mon avis » (ou « Avis donné ») s'il est honore,
   /// « Annuler » s'il est encore annulable, rien sinon.
