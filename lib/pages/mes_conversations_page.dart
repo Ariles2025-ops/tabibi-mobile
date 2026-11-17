@@ -5,7 +5,6 @@ import '../models/conversation.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
-import '../utils/identifiants.dart';
 import '../utils/messagerie.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
