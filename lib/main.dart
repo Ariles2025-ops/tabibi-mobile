@@ -339,8 +339,18 @@ class _RecherchePageState extends State<RecherchePage> {
     final connecte = _auth.estConnecte;
     return Scaffold(
       appBar: AppBar(
-        title:
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Image.asset('assets/img/logo-ndawik.png',
+                  width: 28, height: 28, excludeFromSemantics: true),
+            ),
+            const SizedBox(width: 10),
             const Text('Ndawik', style: TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
         actions: [
           const SelecteurLangue(),
           IconButton(
