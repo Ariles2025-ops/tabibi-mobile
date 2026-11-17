@@ -515,7 +515,7 @@ void main() {
 
     await tester.tap(find.text('Inviter cette secrétaire'));
     await tester.pumpAndSettle();
-    expect(find.text("Indiquez l'adresse e-mail du compte Tabibi de votre secrétaire."),
+    expect(find.text("Indiquez l'adresse e-mail du compte Ndawik de votre secrétaire."),
         findsOneWidget);
     expect(api.appels, isEmpty);
 
@@ -579,7 +579,7 @@ void main() {
     expect(find.text('Agenda du cabinet'), findsOneWidget);
     expect(
         find.text('Aucun médecin ne vous a encore rattachée à son cabinet. '
-            "Communiquez-lui l'adresse e-mail de votre compte Tabibi."),
+            "Communiquez-lui l'adresse e-mail de votre compte Ndawik."),
         findsOneWidget);
     await afficher(tester, ListeAttenteMedecinPage(api: FakeEspaceVide(), auth: SessionTest()));
     expect(find.text("Liste d'attente"), findsOneWidget);

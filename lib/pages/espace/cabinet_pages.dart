@@ -134,8 +134,8 @@ class _CabinetsPageState extends State<CabinetsPage> with AppelsEspace {
       appBar: AppBar(title: Text(t('Agenda du cabinet', 'مواعيد العيادة')), actions: actionsActualiser()),
       body: corps(t('Connectez-vous pour gérer vos cabinets.', 'سجّل الدخول لإدارة العيادات.'), () {
         if (_cabinets.isEmpty) {
-          return VueVide(t('Aucun médecin ne vous a encore rattachée à son cabinet. Communiquez-lui l\'adresse e-mail de votre compte Tabibi.',
-              'لم يربطك أي طبيب بعيادته بعد. أرسل إليه عنوان البريد الإلكتروني لحسابك في Tabibi.'));
+          return VueVide(t('Aucun médecin ne vous a encore rattachée à son cabinet. Communiquez-lui l\'adresse e-mail de votre compte Ndawik.',
+              'لم يربطك أي طبيب بعيادته بعد. أرسل إليه عنوان البريد الإلكتروني لحسابك في نداويك.'));
         }
         return ListView(
           padding: const EdgeInsets.all(16),
