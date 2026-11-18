@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:http/http.dart' as http;
 
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -70,8 +73,63 @@ class AuthService {
   /// null hors connexion ou si le jeton ne porte pas de sujet lisible.
   String? get sujet => sujetDuJeton(accessToken);
 
-  /// Ouvre la connexion Keycloak ; false si l'utilisateur annule ou en cas d'echec.
+  /// Ecran de connexion de l'appli (e-mail + mot de passe, sans page web), branche au
+  /// demarrage ; null dans les tests, qui gardent le parcours historique.
+  static Future<bool> Function(AuthService auth)? ecranConnexion;
+
+  /// Connexion : ecran natif de l'appli s'il est branche, sinon page Keycloak (repli).
   Future<bool> seConnecter() async {
+    final ecran = ecranConnexion;
+    if (ecran != null) return ecran(this);
+    return seConnecterParNavigateur();
+  }
+
+  /// Point de jetons du realm (connexion directe, deconnexion).
+  static String get _pointJetons =>
+      '${Configuration.issuer}/protocol/openid-connect/token';
+
+  /// Connexion directe depuis l'ecran de l'appli (grant « password » du client public
+  /// `tabibi-mobile`) : null si les jetons sont obtenus, sinon le code d'erreur Keycloak
+  /// (`invalid_grant`, `account_incomplete`, `reseau`, ...).
+  Future<String?> connexionDirecte(String email, String motDePasse) async {
+    http.Response r;
+    try {
+      r = await http.post(Uri.parse(_pointJetons), body: {
+        'client_id': Configuration.clientId,
+        'grant_type': 'password',
+        'username': email.trim(),
+        'password': motDePasse,
+        'scope': scopes.join(' '),
+      }).timeout(const Duration(seconds: 20));
+    } on Exception {
+      return 'reseau';
+    }
+    Map<String, dynamic> corps;
+    try {
+      corps = jsonDecode(r.body) as Map<String, dynamic>;
+    } on Exception {
+      return 'reseau';
+    }
+    if (r.statusCode != 200) {
+      final description =
+          (corps['error_description'] ?? '').toString().toLowerCase();
+      if (description.contains('not fully set up')) return 'account_incomplete';
+      if (description.contains('disabled')) return 'account_disabled';
+      return (corps['error'] ?? 'invalid_grant').toString();
+    }
+    final duree = corps['expires_in'];
+    await _adopter(
+      corps['access_token'] as String?,
+      corps['refresh_token'] as String?,
+      corps['id_token'] as String?,
+      duree is int ? _maintenant().add(Duration(seconds: duree)) : null,
+    );
+    return accessToken == null ? 'invalid_grant' : null;
+  }
+
+  /// Ouvre la page de connexion Keycloak (navigateur) ; false si l'utilisateur annule ou en
+  /// cas d'echec. Gardee pour un compte a finaliser (mot de passe a definir).
+  Future<bool> seConnecterParNavigateur() async {
     try {
       final result = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
@@ -96,8 +154,8 @@ class AuthService {
 
   /// Retient (en memoire et dans le stockage chiffre) les jetons recus et programme leur
   /// rafraichissement. Un jeton absent de la reponse conserve l'ancienne valeur.
-  Future<void> _adopter(
-      String? acces, String? refresh, String? identite, DateTime? expiration) async {
+  Future<void> _adopter(String? acces, String? refresh, String? identite,
+      DateTime? expiration) async {
     accessToken = acces;
     _refreshToken = refresh ?? _refreshToken;
     idToken = identite ?? idToken;
@@ -107,7 +165,8 @@ class AuthService {
       await _stockage.ecrire('access_token', accessToken);
       await _stockage.ecrire('refresh_token', _refreshToken);
       await _stockage.ecrire('id_token', idToken);
-      await _stockage.ecrire('expiration', expiration?.millisecondsSinceEpoch.toString());
+      await _stockage.ecrire(
+          'expiration', expiration?.millisecondsSinceEpoch.toString());
     } on Exception {
       // Stockage indisponible : la session reste valable tant que l'appli tourne.
     }
@@ -137,7 +196,9 @@ class AuthService {
       return false;
     }
     final fin = _expiration;
-    if (accessToken != null && fin != null && fin.isAfter(_maintenant().add(marge))) {
+    if (accessToken != null &&
+        fin != null &&
+        fin.isAfter(_maintenant().add(marge))) {
       _programmer();
       return true;
     }
@@ -156,8 +217,8 @@ class AuthService {
 
   /// Obtient de nouveaux jetons avec le refresh token (un seul appel a la fois).
   /// Vrai si la session est renouvelee ; faux sinon (refresh absent, refuse ou reseau coupe).
-  Future<bool> rafraichir() =>
-      _rafraichissement ??= _rafraichirVraiment().whenComplete(() => _rafraichissement = null);
+  Future<bool> rafraichir() => _rafraichissement ??=
+      _rafraichirVraiment().whenComplete(() => _rafraichissement = null);
 
   Future<bool> _rafraichirVraiment() async {
     final refresh = _refreshToken;
@@ -166,7 +227,8 @@ class AuthService {
     try {
       final r = await echangerRefreshToken(refresh);
       if (r == null || r.accessToken == null) return false;
-      await _adopter(r.accessToken, r.refreshToken, r.idToken, r.accessTokenExpirationDateTime);
+      await _adopter(r.accessToken, r.refreshToken, r.idToken,
+          r.accessTokenExpirationDateTime);
       return true;
     } on SocketException {
       _echecReseau = true;
@@ -217,6 +279,7 @@ class AuthService {
   /// session echoue (hors ligne, navigateur ferme).
   Future<void> seDeconnecterCompletement() async {
     final jeton = idToken;
+    _refreshAvantDeconnexion = _refreshToken;
     seDeconnecter();
     if (jeton == null) return;
     try {
@@ -226,8 +289,18 @@ class AuthService {
     }
   }
 
-  /// Fin de session Keycloak (surchargeable dans les tests).
+  /// Fin de session Keycloak (surchargeable dans les tests) : appel direct au point de
+  /// deconnexion avec le refresh token, sans ouvrir de navigateur ; a defaut, fin de session
+  /// par la page Keycloak.
   Future<void> finDeSession(String jeton) async {
+    final refresh = _refreshAvantDeconnexion;
+    if (refresh != null) {
+      await http.post(
+        Uri.parse('${Configuration.issuer}/protocol/openid-connect/logout'),
+        body: {'client_id': Configuration.clientId, 'refresh_token': refresh},
+      ).timeout(const Duration(seconds: 15));
+      return;
+    }
     await _appAuth.endSession(
       EndSessionRequest(
         idTokenHint: jeton,
@@ -237,4 +310,7 @@ class AuthService {
       ),
     );
   }
+
+  /// Refresh token retenu juste avant l'effacement local, pour fermer la session Keycloak.
+  String? _refreshAvantDeconnexion;
 }

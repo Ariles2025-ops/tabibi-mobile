@@ -7,6 +7,7 @@ import 'config/theme.dart';
 import 'i18n/langue.dart';
 
 import 'pages/compte_page.dart';
+import 'pages/connexion_page.dart';
 import 'pages/dawini_page.dart';
 import 'pages/espace/mon_espace_page.dart';
 import 'pages/fiche_medecin_page.dart';
@@ -30,10 +31,21 @@ import 'widgets/composants.dart';
 import 'widgets/selecteur_langue.dart';
 import 'widgets/vue_erreur.dart';
 
+/// Navigateur racine : l'ecran de connexion s'ouvre par-dessus la page qui le demande.
+final navigateurPrincipal = GlobalKey<NavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Langue.initialiser();
   brancherRafraichissement();
+  // Connexion dans l'appli (ecran natif), sans page web.
+  AuthService.ecranConnexion = (auth) async {
+    final navigateur = navigateurPrincipal.currentState;
+    if (navigateur == null) return auth.seConnecterParNavigateur();
+    final ok = await navigateur.push<bool>(
+        MaterialPageRoute(builder: (_) => ConnexionPage(auth: auth)));
+    return ok ?? false;
+  };
   // Session enregistree (jeton rafraichi si besoin) : l'appli fermee ne deconnecte plus.
   await session.restaurer();
   runApp(const TabibiApp());
@@ -80,6 +92,7 @@ class _TabibiAppState extends State<TabibiApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ndawik',
+      navigatorKey: navigateurPrincipal,
       debugShowCheckedModeBanner: false,
       theme: Charte.theme(arabe: Langue.estArabe),
       locale: Langue.locale,
