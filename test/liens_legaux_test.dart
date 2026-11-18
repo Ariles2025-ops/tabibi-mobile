@@ -19,6 +19,13 @@ void main() {
     expect(LiensLegaux.aide().toString(), 'https://ndawik.com/ar/aide');
   });
 
+  test('« À propos » et « Nous contacter » comme le pied de page du site', () {
+    expect(LiensLegaux.aPropos().toString(), 'https://ndawik.com/a-propos');
+    expect(LiensLegaux.contact.toString(), 'mailto:contact@tabibi.doctor');
+    Langue.courante.value = Langue.arabe;
+    expect(LiensLegaux.aPropos().toString(), 'https://ndawik.com/ar/a-propos');
+  });
+
   testWidgets('la politique de confidentialite est visible avant connexion (FR et AR)', (tester) async {
     for (final langue in [Langue.francais, Langue.arabe]) {
       Langue.courante.value = langue;
@@ -33,6 +40,8 @@ void main() {
       expect(find.text(langue == Langue.arabe ? 'شروط الاستخدام' : "Conditions d'utilisation"), findsOneWidget);
       expect(find.text(langue == Langue.arabe ? 'الإشعارات القانونية' : 'Mentions légales'), findsOneWidget);
       expect(find.text(langue == Langue.arabe ? 'مركز المساعدة' : "Centre d'aide"), findsOneWidget);
+      expect(find.text(langue == Langue.arabe ? 'عن نداويك' : 'À propos'), findsOneWidget);
+      expect(find.text(langue == Langue.arabe ? 'اتصل بنا' : 'Nous contacter'), findsOneWidget);
     }
   });
 }

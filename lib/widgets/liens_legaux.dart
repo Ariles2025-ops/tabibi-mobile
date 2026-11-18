@@ -16,6 +16,13 @@ class LiensLegaux extends StatelessWidget {
   /// Centre d'aide du site (comme le pied de page du site), dans la langue de l'interface.
   static Uri aide() => Uri.parse(Langue.estArabe ? 'https://ndawik.com/ar/aide' : 'https://ndawik.com/aide');
 
+  /// Page « À propos » du site (comme son pied de page), dans la langue de l'interface.
+  static Uri aPropos() =>
+      Uri.parse(Langue.estArabe ? 'https://ndawik.com/ar/a-propos' : 'https://ndawik.com/a-propos');
+
+  /// Contact, identique au pied de page du site.
+  static final Uri contact = Uri.parse('mailto:contact@tabibi.doctor');
+
   Future<void> _ouvrir(Uri lien) => launchUrl(lien, mode: LaunchMode.externalApplication);
 
   @override
@@ -44,6 +51,16 @@ class LiensLegaux extends StatelessWidget {
           style: style,
           onPressed: () => _ouvrir(aide()),
           child: Text(t("Centre d'aide", 'مركز المساعدة')),
+        ),
+        TextButton(
+          style: style,
+          onPressed: () => _ouvrir(aPropos()),
+          child: Text(t('À propos', 'عن نداويك')),
+        ),
+        TextButton(
+          style: style,
+          onPressed: () => _ouvrir(contact),
+          child: Text(t('Nous contacter', 'اتصل بنا')),
         ),
       ],
     );
