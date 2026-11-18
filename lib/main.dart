@@ -462,6 +462,16 @@ class _RecherchePageState extends State<RecherchePage> {
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(color: Charte.doux)),
+                                if (estReservable(m)) ...[
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: PastilleStatut(
+                                        key: const ValueKey('badge-reservable'),
+                                        libelle: libelleReservable(),
+                                        statut: 'CONFIRME'),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

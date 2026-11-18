@@ -3,6 +3,7 @@ import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/espace_pro.dart';
 import 'package:tabibi_mobile/utils/identifiants.dart';
+import 'package:tabibi_mobile/utils/praticien.dart';
 
 void main() {
   tearDown(() => Langue.courante.value = Langue.francais);
@@ -35,5 +36,16 @@ void main() {
     expect(comptePro({'PATIENT'}), isFalse);
     expect(comptePro({}), isFalse);
     expect(messagePageReservee(), contains('Mon espace'));
+  });
+
+  test('badge « Réservable en ligne » : seulement si reservable == true, FR/AR', () {
+    expect(estReservable({'reservable': true}), isTrue);
+    expect(estReservable({'reservable': false}), isFalse);
+    expect(estReservable({'reservable': null}), isFalse);
+    expect(estReservable({}), isFalse);
+    expect(estReservable({'reservable': 'true'}), isFalse);
+    expect(libelleReservable(), 'Réservable en ligne');
+    Langue.courante.value = Langue.arabe;
+    expect(libelleReservable(), 'الحجز متاح عبر الإنترنت');
   });
 }
