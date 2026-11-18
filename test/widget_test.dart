@@ -761,6 +761,19 @@ class FakeApiServiceRdvExistant extends FakeApiService {
       throw const ApiException(409, message);
 }
 
+/// Variante qui compte les reservations envoyees.
+class FakeApiServiceReservations extends FakeApiService {
+  FakeApiServiceReservations();
+
+  final List<String> reserves = [];
+
+  @override
+  Future<Map<String, dynamic>> reserverCreneau(String creneauId, String token) async {
+    reserves.add(creneauId);
+    return {};
+  }
+}
+
 /// Variante qui conserve les profils enregistres (corps envoyes a PUT /api/moi/profil).
 class FakeApiServiceProfil extends FakeApiService {
   FakeApiServiceProfil();
@@ -1725,9 +1738,38 @@ void main() {
 
     await tester.tap(find.text('Réserver'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmer'));
+    await tester.pumpAndSettle();
     expect(find.text(FakeApiServiceRdvExistant.message), findsOneWidget);
     expect(find.text("Ce créneau vient d'être pris"), findsNothing);
     expect(find.text('Réserver'), findsOneWidget);
+  });
+
+  testWidgets('reserver : fenetre de confirmation, rien n\'est envoye avant « Confirmer »',
+      (tester) async {
+    surfaceHaute(tester);
+    final api = FakeApiServiceReservations();
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+          medecinId: FakeApiService.medecinDemo, api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Réserver'));
+    await tester.pumpAndSettle();
+    expect(find.text('Confirmer le rendez-vous'), findsOneWidget);
+    expect(api.reserves, isEmpty);
+
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(find.text('Confirmer le rendez-vous'), findsNothing);
+    expect(api.reserves, isEmpty);
+
+    await tester.tap(find.text('Réserver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmer'));
+    await tester.pumpAndSettle();
+    expect(api.reserves.length, 1);
   });
 
   testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {
