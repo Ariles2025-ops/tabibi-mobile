@@ -356,13 +356,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                AvatarInitiales(nom: medecin['nomComplet'] as String, rayon: 30),
+                AvatarInitiales(nom: identifiant(medecin['nomComplet']), rayon: 30),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(medecin['nomComplet'] as String,
+                      Text(identifiant(medecin['nomComplet']),
                           style: texte.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
                       Text(sousTitrePraticien(medecin),
@@ -599,7 +599,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(formaterDateIso(creneau['debut'] as String),
+              Text(formaterDateIso(identifiant(creneau['debut'])),
                   style: texte.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
               Text(formaterDuree(creneau['dureeMinutes']),
                   style: texte.bodySmall?.copyWith(color: Charte.doux)),

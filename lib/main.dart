@@ -114,6 +114,9 @@ class _RecherchePageState extends State<RecherchePage> {
   List<Map<String, dynamic>> _resultats = [];
   bool _charge = false;
 
+  /// Vrai une fois une recherche terminee (evite « Aucun médecin » avant la premiere).
+  bool _recherchee = false;
+
   /// Message affiche a la place de la liste quand la recherche echoue (reseau, delai...).
   String? _erreur;
 
@@ -131,7 +134,12 @@ class _RecherchePageState extends State<RecherchePage> {
     try {
       final r = await widget.api.rechercherMedecins(
           specialite: _specialite, wilaya: _wilaya, q: _nom.text);
-      if (mounted) setState(() => _resultats = r);
+      if (mounted) {
+        setState(() {
+          _resultats = r;
+          _recherchee = true;
+        });
+      }
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
@@ -224,7 +232,15 @@ class _RecherchePageState extends State<RecherchePage> {
     await _apresRetour();
   }
 
+  /// Message clair si un compte professionnel (sans role PATIENT) ouvre une page patient.
+  bool _refuserSiPro() {
+    if (!comptePro(_roles)) return false;
+    _message(messagePageReservee());
+    return true;
+  }
+
   Future<void> _ouvrirMesRendezVous() async {
+    if (_refuserSiPro()) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MesRendezVousPage(api: widget.api, auth: _auth),
@@ -234,6 +250,7 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   Future<void> _ouvrirMesOrdonnances() async {
+    if (_refuserSiPro()) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MesOrdonnancesPage(api: widget.api, auth: _auth),
@@ -388,19 +405,29 @@ class _RecherchePageState extends State<RecherchePage> {
                   if (_charge) const LinearProgressIndicator(),
                   if (_erreur != null)
                     VueErreur(message: _erreur!, onReessayer: _rechercher),
+                  if (_recherchee && !_charge && _erreur == null && _resultats.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(messageAucunMedecin(),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: Charte.doux)),
+                    ),
                   for (final m in _resultats)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: CarteTabibi(
                         onTap: () => _ouvrirFiche(identifiant(m['id'])),
                         child: Row(children: [
-                          AvatarInitiales(nom: m['nomComplet'] as String),
+                          AvatarInitiales(nom: identifiant(m['nomComplet'])),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(m['nomComplet'] as String,
+                                Text(identifiant(m['nomComplet']),
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium

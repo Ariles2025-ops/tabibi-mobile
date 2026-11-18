@@ -29,6 +29,19 @@ List<Espace> espacesPour(Set<String> roles) => [
       if (roles.contains('PHARMACIE')) Espace.pharmacie,
     ];
 
+/// Vrai pour un compte professionnel sans role PATIENT : « Mes rendez-vous » et
+/// « Mes ordonnances » (reserves au patient) lui renverraient « Accès refusé ».
+bool comptePro(Set<String> roles) => aUnEspacePro(roles) && !roles.contains('PATIENT');
+
+/// Message affiche a la place de ces pages pour un compte professionnel.
+String messagePageReservee() => t(
+    'Cette page est réservée aux patients. Utilisez « Mon espace ».',
+    'هذه الصفحة مخصصة للمرضى. استخدم «فضائي».');
+
+/// Liste de recherche vide (sans erreur).
+String messageAucunMedecin() =>
+    t('Aucun médecin trouvé pour ces critères', 'لم يُعثر على أي طبيب لهذه المعايير');
+
 /// Vrai si l'entree « Mon espace » doit apparaitre sur l'accueil.
 bool aUnEspacePro(Set<String> roles) => espacesPour(roles).isNotEmpty;
 
