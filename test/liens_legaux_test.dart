@@ -21,7 +21,7 @@ void main() {
 
   test('« À propos » et « Nous contacter » comme le pied de page du site', () {
     expect(LiensLegaux.aPropos().toString(), 'https://ndawik.com/a-propos');
-    expect(LiensLegaux.contact.toString(), 'mailto:contact@tabibi.doctor');
+    expect(LiensLegaux.contact.toString(), 'mailto:contact@ndawik.com');
     Langue.courante.value = Langue.arabe;
     expect(LiensLegaux.aPropos().toString(), 'https://ndawik.com/ar/a-propos');
   });

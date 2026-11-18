@@ -21,7 +21,7 @@ class LiensLegaux extends StatelessWidget {
       Uri.parse(Langue.estArabe ? 'https://ndawik.com/ar/a-propos' : 'https://ndawik.com/a-propos');
 
   /// Contact, identique au pied de page du site.
-  static final Uri contact = Uri.parse('mailto:contact@tabibi.doctor');
+  static final Uri contact = Uri.parse('mailto:contact@ndawik.com');
 
   Future<void> _ouvrir(Uri lien) => launchUrl(lien, mode: LaunchMode.externalApplication);
 
