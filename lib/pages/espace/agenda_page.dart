@@ -8,14 +8,15 @@ import '../../utils/dates.dart';
 import '../../utils/espace_pro.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
+import '../../utils/rendez_vous.dart' show estAnnule;
 import 'cabinet.dart';
 import 'outils_espace.dart';
 
 /// Actions du cabinet sur un rendez-vous confirme.
 enum ActionRdv { honorer, absent, annuler }
 
-/// Agenda du cabinet (medecin connecte, ou medecin choisi par une secretaire) : rendez-vous du
-/// plus proche au plus lointain, nom du patient quand il est connu ; sur un rendez-vous confirme
+/// Agenda du cabinet (medecin connecte, ou medecin choisi par une secretaire) : rendez-vous en
+/// sections Aujourd'hui / À venir / Passés, nom du patient quand il est connu ; sur un rendez-vous confirme
 /// (RESERVE compris) : « Patient venu », « Absent », « Annuler » (avec confirmation).
 class AgendaPage extends StatefulWidget {
   const AgendaPage({
@@ -55,7 +56,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     final rdvs = await chargerAvec((j) => widget.cabinet.agenda(widget.api, j));
     if (rdvs == null || !mounted) return;
     await _chargerPatients();
-    if (mounted) setState(() => _rdvs = trierParDebut(rdvs));
+    if (mounted) setState(() => _rdvs = rdvs);
   }
 
   /// Noms des patients du cabinet ; un echec laisse « Patient » et l'identifiant abrege.
@@ -126,36 +127,52 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
 
   Widget _liste() {
     if (_rdvs.isEmpty) return VueVide(t('Aucun rendez-vous.', 'لا توجد مواعيد.'));
+    final c = classerAgenda(_rdvs, (widget.maintenant ?? DateTime.now)());
+    // Entrees : un titre de section (String) ou un rendez-vous.
+    final entrees = <Object>[
+      if (c.aujourdhui.isNotEmpty) ...[t("Aujourd'hui", 'اليوم'), ...c.aujourdhui],
+      if (c.aVenir.isNotEmpty) ...[t('À venir', 'القادمة'), ...c.aVenir],
+      if (c.passes.isNotEmpty) ...[t('Passés', 'السابقة'), ...c.passes],
+    ];
     return RefreshIndicator(
       onRefresh: recharger,
-      child: ListView.separated(
-        itemCount: _rdvs.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+      child: ListView.builder(
+        itemCount: entrees.length,
         itemBuilder: (_, i) {
-          final rdv = _rdvs[i];
-          return ListTile(
-            leading: const Icon(Icons.event),
-            title: Text(formaterDateIso('${rdv['debut']}')),
-            subtitle: Text('${_patient(rdv)} · ${libelleStatut(statutAgenda(rdv['statut']))}'),
-            trailing: actionsCabinetPossibles(rdv['statut'])
-                ? PopupMenuButton<ActionRdv>(
-                    tooltip: t('Actions', 'إجراءات'),
-                    onSelected: (a) => _agir(rdv, a),
-                    itemBuilder: (_) => [
-                      // Seulement une fois l'heure du rendez-vous atteinte (comme le site).
-                      if (rdvCommence(rdv['debut'], (widget.maintenant ?? DateTime.now)())) ...[
-                        PopupMenuItem(
-                            value: ActionRdv.honorer,
-                            child: Text(t('Patient venu', 'حضر المريض'))),
-                        PopupMenuItem(value: ActionRdv.absent, child: Text(t('Absent', 'غائب'))),
-                      ],
-                      PopupMenuItem(value: ActionRdv.annuler, child: Text(t('Annuler', 'إلغاء'))),
-                    ],
-                  )
-                : null,
-          );
+          final e = entrees[i];
+          if (e is String) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Text(e, style: Theme.of(context).textTheme.titleSmall),
+            );
+          }
+          return _ligne(e as Map<String, dynamic>);
         },
       ),
+    );
+  }
+
+  Widget _ligne(Map<String, dynamic> rdv) {
+    final grise = estAnnule(rdv['statut']) ? Theme.of(context).disabledColor : null;
+    return ListTile(
+      leading: Icon(Icons.event, color: grise),
+      title: Text(formaterDateIso('${rdv['debut']}'), style: TextStyle(color: grise)),
+      subtitle: Text('${_patient(rdv)} · ${libelleStatut(statutAgenda(rdv['statut']))}',
+          style: TextStyle(color: grise)),
+      trailing: actionsCabinetPossibles(rdv['statut'])
+          ? PopupMenuButton<ActionRdv>(
+              tooltip: t('Actions', 'إجراءات'),
+              onSelected: (a) => _agir(rdv, a),
+              itemBuilder: (_) => [
+                // Seulement une fois l'heure du rendez-vous atteinte (comme le site).
+                if (rdvCommence(rdv['debut'], (widget.maintenant ?? DateTime.now)())) ...[
+                  PopupMenuItem(value: ActionRdv.honorer, child: Text(t('Patient venu', 'حضر المريض'))),
+                  PopupMenuItem(value: ActionRdv.absent, child: Text(t('Absent', 'غائب'))),
+                ],
+                PopupMenuItem(value: ActionRdv.annuler, child: Text(t('Annuler', 'إلغاء'))),
+              ],
+            )
+          : null,
     );
   }
 }

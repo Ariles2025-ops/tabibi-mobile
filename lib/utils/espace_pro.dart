@@ -55,6 +55,53 @@ List<Map<String, dynamic>> trierParDebut(List<Map<String, dynamic>> elements) {
   return copie;
 }
 
+/// Agenda du cabinet en trois sections, jours pris a l'heure d'Alger : « Aujourd'hui » et
+/// « À venir » du plus proche au plus lointain, « Passés » du plus recent au plus ancien.
+/// Un rendez-vous sans date lisible ferme les « Passés ».
+class AgendaClasse {
+  const AgendaClasse(this.aujourdhui, this.aVenir, this.passes);
+
+  final List<Map<String, dynamic>> aujourdhui;
+  final List<Map<String, dynamic>> aVenir;
+  final List<Map<String, dynamic>> passes;
+}
+
+AgendaClasse classerAgenda(List<Map<String, dynamic>> rdvs, DateTime maintenant) {
+  final n = muraleAlger(maintenant);
+  final jour = DateTime(n.year, n.month, n.day);
+  final fin = DateTime.utc(275000);
+  final debuts = <Map<String, dynamic>, DateTime?>{};
+  for (final r in rdvs) {
+    final d = DateTime.tryParse('${r['debut']}');
+    // Avec fuseau : heure d'Alger ; sans fuseau : deja l'heure murale algerienne.
+    debuts[r] = d == null ? null : (d.isUtc ? muraleAlger(d) : d);
+  }
+  final auj = <Map<String, dynamic>>[];
+  final avenir = <Map<String, dynamic>>[];
+  final passes = <Map<String, dynamic>>[];
+  for (final r in rdvs) {
+    final d = debuts[r];
+    if (d == null) {
+      passes.add(r);
+      continue;
+    }
+    final j = DateTime(d.year, d.month, d.day);
+    (j == jour ? auj : j.isAfter(jour) ? avenir : passes).add(r);
+  }
+  int croissant(Map<String, dynamic> a, Map<String, dynamic> b) =>
+      (debuts[a] ?? fin).compareTo(debuts[b] ?? fin);
+  auj.sort(croissant);
+  avenir.sort(croissant);
+  passes.sort((a, b) {
+    final da = debuts[a];
+    final db = debuts[b];
+    if (da == null) return db == null ? 0 : 1;
+    if (db == null) return -1;
+    return db.compareTo(da);
+  });
+  return AgendaClasse(auj, avenir, passes);
+}
+
 /// Durees de creneau proposees (minutes).
 const List<int> dureesCreneau = [10, 15, 20, 30, 45, 60];
 
