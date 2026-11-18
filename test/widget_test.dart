@@ -34,6 +34,21 @@ class FakeApiServiceOrdonnanceAnnulee extends FakeApiService {
       {'valide': true, 'emiseLe': '2026-12-03T10:15:00', 'statut': 'ANNULEE'};
 }
 
+/// Vue médecin de la messagerie : `/api/medecin/patients` renvoie le patient de la conversation
+/// (ou rien si [vide]).
+class FakeApiServiceMedecinMessagerie extends FakeApiService {
+  const FakeApiServiceMedecinMessagerie({this.vide = false});
+
+  final bool vide;
+
+  @override
+  Future<List<Map<String, dynamic>>> patientsMedecin(String token) async => vide
+      ? []
+      : [
+          {'patientId': FakeApiService.sujetPatient, 'nomComplet': 'Karim Haddad'}
+        ];
+}
+
 class FakeApiService extends ApiService {
   const FakeApiService();
 
@@ -1142,6 +1157,36 @@ void main() {
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('Bonjour, comment allez-vous ?'), findsOneWidget);
     expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'mes conversations côté médecin affiche le nom du patient (pas le sien), '
+      'et le même titre dans le fil', (tester) async {
+    final auth = AuthService()..accessToken = jetonAvecSujet(FakeApiService.medecinDemo);
+    await tester.pumpWidget(MaterialApp(
+      home: MesConversationsPage(api: const FakeApiServiceMedecinMessagerie(), auth: auth),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Karim Haddad'), findsOneWidget);
+    expect(find.text('Dr Amina Benali'), findsNothing);
+
+    await tester.tap(find.text('Karim Haddad'));
+    await tester.pumpAndSettle();
+    expect(find.text('Karim Haddad'), findsOneWidget); // titre du fil
+    expect(find.text('Dr Amina Benali'), findsNothing);
+  });
+
+  testWidgets(
+      "mes conversations affiche « Patient » et l'identifiant abrégé si le patient est "
+      'inconnu du médecin', (tester) async {
+    final auth = AuthService()..accessToken = jetonAvecSujet(FakeApiService.medecinDemo);
+    await tester.pumpWidget(MaterialApp(
+      home: MesConversationsPage(api: const FakeApiServiceMedecinMessagerie(vide: true), auth: auth),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Patient a1a1a1a1'), findsOneWidget);
   });
 
   testWidgets(

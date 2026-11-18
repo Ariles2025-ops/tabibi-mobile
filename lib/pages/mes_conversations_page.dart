@@ -8,7 +8,36 @@ import '../services/session.dart';
 import '../utils/messagerie.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import '../utils/identifiants.dart';
 import 'conversation_page.dart';
+
+/// Libellé du patient sans fiche : « Patient » et l'identifiant abrégé (comme le site).
+String libellePatientParDefaut(String patientId) =>
+    t('Patient ${abreger(patientId)}', 'مريض ${abreger(patientId)}');
+
+/// Noms des patients du médecin connecté (`GET /api/medecin/patients`), par identifiant ;
+/// vide en cas d'échec (le libellé par défaut prend alors le relais).
+Future<Map<String, String>> nomsPatientsMedecin(ApiService api, String token) async {
+  final noms = <String, String>{};
+  try {
+    for (final p in await api.patientsMedecin(token)) {
+      final Object? nom = p['nomComplet'];
+      if (nom is String && nom.isNotEmpty) noms[identifiant(p['patientId'])] = nom;
+    }
+  } on Exception {
+    // Noms indisponibles.
+  }
+  return noms;
+}
+
+/// Titre du fil pour un médecin (nom du patient) ; null si le jeton n'est pas celui du médecin.
+Future<String?> titrePourMedecin(
+    ApiService api, AuthService auth, Conversation conversation) async {
+  final sujet = auth.sujet;
+  if (sujet == null || sujet != conversation.medecinId) return null;
+  final noms = await nomsPatientsMedecin(api, auth.accessToken ?? '');
+  return noms[conversation.patientId] ?? libellePatientParDefaut(conversation.patientId);
+}
 
 /// Conversations du patient connecte avec ses praticiens : nom du praticien (ou « Médecin »
 /// et son identifiant abrege si sa fiche est indisponible), date du dernier message et
@@ -31,6 +60,8 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
 
   /// Noms des praticiens deja resolus, par identifiant (texte).
   final Map<String, String> _nomsMedecins = {};
+  /// Noms des patients (vue médecin), par identifiant (texte).
+  final Map<String, String> _nomsPatients = {};
   bool _charge = false;
   String? _erreur;
 
@@ -83,6 +114,10 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   /// identifiant UUID en texte, toujours tente) ; un echec n'empeche pas l'affichage,
   /// « Médecin » (sans identifiant) est alors montre a la place.
   Future<void> _chargerNomsMedecins(List<Conversation> conversations) async {
+    final sujet = _auth.sujet;
+    if (sujet != null && conversations.any((c) => c.medecinId == sujet)) {
+      _nomsPatients.addAll(await nomsPatientsMedecin(widget.api, _auth.accessToken ?? ''));
+    }
     for (final medecinId in conversations.map((c) => c.medecinId).toSet()) {
       if (medecinId.isEmpty || _nomsMedecins.containsKey(medecinId)) continue;
       try {
@@ -95,7 +130,13 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
   }
 
   /// Sans fiche : « Médecin » seul, sans identifiant technique (comme sur le site).
-  String _nomMedecin(Conversation c) => _nomsMedecins[c.medecinId] ?? t('Médecin', 'طبيب');
+  /// Si le jeton est celui du médecin de la conversation, c'est le patient qui est affiché.
+  String _nomMedecin(Conversation c) {
+    if (_auth.sujet == c.medecinId) {
+      return _nomsPatients[c.patientId] ?? libellePatientParDefaut(c.patientId);
+    }
+    return _nomsMedecins[c.medecinId] ?? t('Médecin', 'طبيب');
+  }
 
   /// Ouvre le fil ; au retour, les non lus ont pu changer (la lecture les marque lus).
   Future<void> _ouvrir(Conversation c) async {
