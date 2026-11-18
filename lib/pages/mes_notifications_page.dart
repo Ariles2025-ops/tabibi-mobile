@@ -6,18 +6,24 @@ import '../models/notification.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../config/lancement.dart';
 import '../utils/notifications.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 import 'dawini_page.dart';
 import 'detail_ordonnance_page.dart';
+import 'espace/agenda_page.dart';
+import 'espace/avis_medecin_page.dart';
+import 'espace/cabinet_pages.dart';
+import 'espace/secretaires_page.dart';
 import 'fiche_medecin_page.dart';
 import 'mes_avis_page.dart';
 import 'mes_conversations_page.dart';
 import 'mes_listes_attente_page.dart';
 import 'mes_ordonnances_page.dart';
 import 'mes_rendez_vous_page.dart';
+import 'mes_teleconsultations_page.dart';
 
 /// Notifications de l'utilisateur connecte : sujet (en gras tant qu'elle n'est pas lue),
 /// message et date ; un toucher marque la notification lue (si besoin) puis ouvre la page de son lien, l'AppBar permet de tout marquer lu.
@@ -143,6 +149,19 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         return MesAvisPage(api: widget.api, auth: _auth);
       case TypeCible.listeAttente:
         return MesListesAttentePage(api: widget.api, auth: _auth);
+      case TypeCible.agenda:
+        return AgendaPage(api: widget.api, auth: _auth);
+      case TypeCible.avisMedecin:
+        return AvisMedecinPage(api: widget.api, auth: _auth);
+      case TypeCible.secretaires:
+        return SecretairesPage(api: widget.api, auth: _auth);
+      case TypeCible.cabinets:
+        return CabinetsPage(api: widget.api, auth: _auth);
+      case TypeCible.invitations:
+        return InvitationsCabinetPage(api: widget.api, auth: _auth);
+      case TypeCible.teleconsultations:
+        // Visio « Bientôt » : rien a ouvrir tant qu'elle est fermee.
+        return visioActive ? MesTeleconsultationsPage(api: widget.api, auth: _auth) : null;
       case TypeCible.conversations:
         return MesConversationsPage(api: widget.api, auth: _auth);
       case TypeCible.conversation:

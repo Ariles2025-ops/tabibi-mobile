@@ -37,7 +37,7 @@ String libelleNotifications(int? nonLues) {
 }
 
 /// Ecrans de l'appli pouvant etre ouverts depuis le lien d'une notification.
-enum TypeCible { rendezVous, ordonnances, ordonnance, medecin, conversations, conversation, dawini, avis, listeAttente }
+enum TypeCible { rendezVous, ordonnances, ordonnance, medecin, conversations, conversation, dawini, avis, listeAttente, agenda, avisMedecin, secretaires, cabinets, invitations, teleconsultations }
 
 /// Ecran cible d'un lien de notification ; [id] n'est renseigne que pour les ecrans de detail.
 class CibleNotification {
@@ -82,6 +82,25 @@ CibleNotification? cibleDuLien(String lien) {
       return id == null ? const CibleNotification(TypeCible.avis) : null;
     case 'liste-attente':
       return id == null ? const CibleNotification(TypeCible.listeAttente) : null;
+    case 'medecin':
+      // Liens envoyes aux medecins : `/medecin/agenda`, `/medecin/avis`, `/medecin/secretaires`.
+      if (segments.length != 2) return null;
+      switch (segments[1]) {
+        case 'agenda':
+          return const CibleNotification(TypeCible.agenda);
+        case 'avis':
+          return const CibleNotification(TypeCible.avisMedecin);
+        case 'secretaires':
+          return const CibleNotification(TypeCible.secretaires);
+        default:
+          return null;
+      }
+    case 'secretaire':
+      return id == null ? const CibleNotification(TypeCible.cabinets) : null;
+    case 'invitations':
+      return id == null ? const CibleNotification(TypeCible.invitations) : null;
+    case 'teleconsultations':
+      return id == null ? const CibleNotification(TypeCible.teleconsultations) : null;
     default:
       return null;
   }

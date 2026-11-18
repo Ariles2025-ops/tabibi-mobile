@@ -115,6 +115,14 @@ void main() {
     expect(cibleDuLien('/dawini/b-1'), const CibleNotification(TypeCible.dawini));
     expect(cibleDuLien('/mes-avis'), const CibleNotification(TypeCible.avis));
     expect(cibleDuLien('/liste-attente'), const CibleNotification(TypeCible.listeAttente));
+    expect(cibleDuLien('/medecin/agenda'), const CibleNotification(TypeCible.agenda));
+    expect(cibleDuLien('/medecin/avis'), const CibleNotification(TypeCible.avisMedecin));
+    expect(cibleDuLien('/medecin/secretaires'), const CibleNotification(TypeCible.secretaires));
+    expect(cibleDuLien('/secretaire'), const CibleNotification(TypeCible.cabinets));
+    expect(cibleDuLien('/invitations'), const CibleNotification(TypeCible.invitations));
+    expect(cibleDuLien('/teleconsultations'), const CibleNotification(TypeCible.teleconsultations));
+    expect(cibleDuLien('/medecin/inconnu'), isNull);
+    expect(cibleDuLien('/medecin'), isNull);
     expect(cibleDuLien('/mes-avis/x'), isNull);
     expect(cibleDuLien(''), isNull);
     expect(cibleDuLien('/inconnu'), isNull);
