@@ -519,7 +519,7 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Entrees de l'espace personnel sous la recherche, sur une seule rangee defilante
   /// horizontalement (la liste des medecins garde la place) : « Mon espace » (selon le role),
   /// « Notifications (n) », « Téléconsultation · Bientôt » (desactivee tant que la visio est
-  /// fermee), « Messagerie », « Mes avis », « Dawini (pharmacies) », « Liste d'attente »,
+  /// fermee), « Messagerie », « Mes avis », « Dawini (pharmacies) », « Mes listes d'attente »,
   /// « Mon profil ».
   Widget _entrees() {
     Widget puce(IconData icone, String libelle, VoidCallback? action) =>
@@ -550,11 +550,11 @@ class _RecherchePageState extends State<RecherchePage> {
           ),
           puce(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'),
               _ouvrirMessagerie),
-          puce(Icons.star_outline, t('Mes avis', 'تقييماتي'), _ouvrirMesAvis),
+          puce(Icons.star_outline, t('Mes avis', 'آرائي'), _ouvrirMesAvis),
           puce(Icons.local_pharmacy_outlined,
               t('Dawini (pharmacies)', 'داويني (الصيدليات)'), _ouvrirDawini),
           puce(Icons.hourglass_top_outlined,
-              t("Liste d'attente", 'قائمة الانتظار'), _ouvrirListesAttente),
+              t("Mes listes d'attente", 'قوائم الانتظار'), _ouvrirListesAttente),
           puce(Icons.badge_outlined, t('Mon profil', 'ملفي الشخصي'),
               _ouvrirMonProfil),
           puce(

@@ -1199,7 +1199,7 @@ void main() {
 
     await tester.tap(find.text('Donner mon avis'));
     await tester.pumpAndSettle();
-    expect(find.text('Mon avis'), findsOneWidget);
+    expect(find.text('Donner mon avis'), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsOneWidget);
     expect(find.text('mar. 1 sept. 09:00'), findsOneWidget);
     // Note obligatoire : le bouton reste inactif tant qu'aucune note n'est choisie.
@@ -1271,7 +1271,7 @@ void main() {
     await tester.tap(find.text('Envoyer mon avis'));
     await tester.pumpAndSettle();
     expect(find.text(messageAvisDejaDonne), findsOneWidget);
-    expect(find.text('Mon avis'), findsOneWidget);
+    expect(find.text('Donner mon avis'), findsOneWidget);
   });
 
   testWidgets('mes avis liste praticien, note, statut, commentaire et date', (tester) async {
@@ -1420,12 +1420,12 @@ void main() {
     expect(find.text('16 - Alger · Clôturée'), findsOneWidget);
   });
 
-  testWidgets("l'accueil propose l'entree Liste d'attente", (tester) async {
+  testWidgets("l'accueil propose l'entree Mes listes d'attente", (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text("Liste d'attente"), findsOneWidget);
+    expect(find.text("Mes listes d'attente"), findsOneWidget);
   });
 
   testWidgets("la fiche medecin inscrit le patient sur la liste d'attente du praticien",
