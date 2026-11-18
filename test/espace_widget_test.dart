@@ -383,6 +383,24 @@ void main() {
     expect(find.text('Rendez-vous honoré'), findsOneWidget);
   });
 
+  testWidgets("l'agenda met Aujourd'hui en tete, puis A venir, puis Passes (heure d'Alger)",
+      (tester) async {
+    final api = _AgendaDatesApi();
+    // 22 h 30 UTC le 3 dec. = 23 h 30 a Alger, le 3.
+    await afficher(
+        tester,
+        AgendaPage(
+            api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 22, 30)));
+    double y(String texte) => tester.getTopLeft(find.text(texte)).dy;
+    expect(y("Aujourd'hui"), lessThan(y('À venir')));
+    expect(y('À venir'), lessThan(y('Passés')));
+    // Le 3 a 23 h 30 Alger (22 h 30 UTC) est du jour ; le 4 a 00 h 30 Alger (23 h 30 UTC le 3)
+    // est demain, meme si le jour UTC est identique.
+    expect(find.text('Karim Haddad · Confirmé'), findsNWidgets(2));
+    expect(y("Aujourd'hui"), lessThan(tester.getTopLeft(find.text('Karim Haddad · Confirmé').first).dy));
+    expect(find.text('Karim Haddad · Annulé'), findsOneWidget);
+  });
+
   testWidgets("la secretaire annule un rendez-vous de l'agenda du medecin apres confirmation",
       (tester) async {
     final api = FakeEspaceApi(roles: ['SECRETAIRE']);
@@ -876,4 +894,19 @@ void main() {
             telephone: ''),
         isNull);
   });
+}
+
+/// Agenda : un passe annule, un du jour (heure d'Alger), un de demain (minuit passe a Alger).
+class _AgendaDatesApi extends FakeEspaceApi {
+  _AgendaDatesApi() : super(roles: ['MEDECIN']);
+
+  Map<String, dynamic> _r(String id, String statut, String debut) =>
+      {'id': id, 'statut': statut, 'debut': debut, 'patientId': patientId};
+
+  @override
+  Future<List<Map<String, dynamic>>> agendaMedecin(String token) async => [
+        _r('p', 'ANNULE', '2026-11-20T09:00:00Z'),
+        _r('f', 'CONFIRME', '2026-12-03T23:30:00Z'),
+        _r('j', 'CONFIRME', '2026-12-03T09:00:00Z'),
+      ];
 }
