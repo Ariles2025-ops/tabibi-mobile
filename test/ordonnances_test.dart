@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/utils/libelles.dart';
 import 'package:tabibi_mobile/utils/ordonnances.dart';
 
@@ -8,6 +9,15 @@ void main() {
     expect(libelleStatut('EN_ATTENTE'), 'En attente');
     expect(libelleStatut(null), '');
     expect(libelleStatut(''), '');
+  });
+
+  test('libelleStatut : ordonnance délivrée en arabe, comme sur le site (مُسلَّمة)', () {
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(libelleStatut('DELIVREE'), 'مُسلَّمة');
+    expect(libelleStatut('EMISE'), 'صادرة');
+    expect(libelleStatut('ANNULEE'), 'ملغاة');
+    expect(libelleStatut('EXPIREE'), 'منتهية الصلاحية');
   });
 
   test('dateEmission formate emiseLe et signale une date absente', () {

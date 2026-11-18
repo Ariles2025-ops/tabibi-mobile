@@ -26,7 +26,7 @@ const Map<String, (String, String)> _statuts = {
   'CLOTURE': ('Clôturé', 'مغلق'),
   'OUVERT': ('Ouvert', 'مفتوح'),
   'EXPIREE': ('Expirée', 'منتهية الصلاحية'),
-  'DELIVREE': ('Délivrée', 'مصروفة'),
+  'DELIVREE': ('Délivrée', 'مُسلَّمة'),
   'TERMINEE': ('Terminée', 'منتهية'),
   'PLANIFIEE': ('Planifiée', 'مبرمجة'),
   'DEMARREE': ('Démarrée', 'بدأت'),
