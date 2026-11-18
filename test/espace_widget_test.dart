@@ -732,6 +732,21 @@ void main() {
     expect(find.text('Marquer délivrée'), findsNothing);
   });
 
+  testWidgets('modifier le code apres verification retire le resultat et le bouton delivrer',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['PHARMACIE']);
+    await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
+    await tester.enterText(find.byType(TextField), 'abc123');
+    await tester.tap(find.text('Vérifier'));
+    await tester.pumpAndSettle();
+    expect(find.text('Marquer délivrée'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'abc124');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Ordonnance valide'), findsNothing);
+    expect(find.text('Marquer délivrée'), findsNothing);
+    expect(api.appels.where((a) => a.startsWith('delivrer')), isEmpty);
+  });
+
   testWidgets('la pharmacie voit un refus net pour une ordonnance expiree, annulee ou delivree',
       (tester) async {
     final cas = {
