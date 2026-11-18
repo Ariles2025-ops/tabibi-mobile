@@ -110,7 +110,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t('Mon avis', 'رأيي'))),
+      appBar: AppBar(title: Text(t('Donner mon avis', 'أبدِ رأيك'))),
       body: _corps(context),
     );
   }
