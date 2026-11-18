@@ -200,8 +200,10 @@ class _MonProfilPageState extends State<MonProfilPage> {
         title: Text(t('Supprimer mon compte ?', 'حذف حسابي؟')),
         content: Text(t(
             'Votre compte et vos données personnelles seront supprimés définitivement. '
-                'Cette action est irréversible.',
-            'سيتم حذف حسابك وبياناتك الشخصية نهائيًا. لا يمكن التراجع عن هذا الإجراء.')),
+                'Seules les ordonnances et le journal de sécurité sont conservés le temps '
+                'exigé par la loi. Cette action est irréversible.',
+            'سيتم حذف حسابك وبياناتك الشخصية نهائيًا. لا يُحتفظ إلا بالوصفات الطبية وسجل '
+                'الأمان للمدة التي يفرضها القانون. لا يمكن التراجع عن هذا الإجراء.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
