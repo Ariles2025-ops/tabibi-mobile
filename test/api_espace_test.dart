@@ -30,6 +30,17 @@ void main() {
     expect(c, {'debut': '2026-12-03T08:00:00.000Z', 'dureeMinutes': 30});
   });
 
+  test('candidature : GET et POST /api/medecin/candidature avec le jeton', () async {
+    final lue = (await requetes((a) => a.maCandidature('j'))).single;
+    expect('${lue.method} ${lue.url.path}', 'GET /api/medecin/candidature');
+    expect(lue.headers['Authorization'], 'Bearer j');
+    final posee = (await requetes((a) => a.deposerCandidature({'nomComplet': 'Dr A'}, 'j'),
+            statut: 201))
+        .single;
+    expect('${posee.method} ${posee.url.path}', 'POST /api/medecin/candidature');
+    expect(jsonDecode(posee.body), {'nomComplet': 'Dr A'});
+  });
+
   test('supprimerMonCompte appelle DELETE /api/moi avec le jeton', () async {
     final r = (await requetes((a) => a.supprimerMonCompte('j'), corps: null, statut: 204)).single;
     expect(r.method, 'DELETE');

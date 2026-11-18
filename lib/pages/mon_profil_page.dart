@@ -10,6 +10,7 @@ import '../widgets/champ_wilaya.dart';
 import '../widgets/liens_legaux.dart';
 import '../widgets/selecteur_langue.dart';
 import 'espace/cabinet_pages.dart';
+import 'espace/candidature_page.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 
@@ -244,6 +245,15 @@ class _MonProfilPageState extends State<MonProfilPage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _ouvrirCandidature() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CandidaturePage(api: widget.api, auth: _auth),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   void _message(String texte) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
@@ -342,6 +352,15 @@ class _MonProfilPageState extends State<MonProfilPage> {
           title: Text(t('Invitations de cabinet', 'دعوات العيادات')),
           trailing: const Icon(Icons.chevron_right),
           onTap: _ouvrirInvitations,
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.medical_services_outlined),
+          title: Text(t('Ma candidature de médecin', 'ترشحي كطبيب')),
+          subtitle: Text(t('Figurer sur Ndawik : déposer ou suivre ma candidature',
+              'الظهور على نداويك: إيداع ترشحي أو متابعته')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _ouvrirCandidature,
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(

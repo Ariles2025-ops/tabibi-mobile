@@ -6,6 +6,7 @@ import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/pages/dawini_page.dart';
 import 'package:tabibi_mobile/pages/espace/agenda_page.dart';
 import 'package:tabibi_mobile/pages/espace/avis_medecin_page.dart';
+import 'package:tabibi_mobile/pages/espace/candidature_page.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet.dart';
 import 'package:tabibi_mobile/pages/espace/cabinet_pages.dart';
 import 'package:tabibi_mobile/pages/espace/creneaux_page.dart';
@@ -255,6 +256,22 @@ class FakeEspaceApi extends ApiService {
   @override
   Future<void> retirerSecretaire(String rattachementId, String token) async =>
       appels.add('retirer-secretaire $rattachementId');
+
+  /// Derniere candidature (null : aucune, 404) ; mise a jour par [deposerCandidature].
+  Map<String, dynamic>? candidature;
+
+  @override
+  Future<Map<String, dynamic>> maCandidature(String token) async {
+    final c = candidature;
+    if (c == null) throw const ApiException(404, 'Aucune candidature');
+    return c;
+  }
+
+  @override
+  Future<Map<String, dynamic>> deposerCandidature(Map<String, dynamic> corps, String token) async {
+    appels.add('candidature ${corps['nomComplet']} ${corps['specialiteSlug']} ${corps['wilayaCode']} ${corps['numeroOrdre']}');
+    return candidature = {...corps, 'statut': 'EN_ATTENTE', 'deposeeLe': '2026-11-18T09:00:00Z'};
+  }
 
   @override
   Future<List<Map<String, dynamic>>> invitationsCabinet(String token) async =>
@@ -771,5 +788,92 @@ void main() {
     expect(find.text('اسم الطبيب'), findsOneWidget);
     expect(Directionality.of(tester.element(find.text('اسم الطبيب'))), TextDirection.rtl);
     expect((await SharedPreferences.getInstance()).getString(Langue.cle), 'ar');
+  });
+
+  testWidgets('ma candidature : formulaire, champs obligatoires puis dépôt, état « En attente »',
+      (tester) async {
+    final api = FakeEspaceApi();
+    await afficher(tester, CandidaturePage(api: api, auth: SessionTest()));
+    expect(find.text('Déposer ma candidature'), findsOneWidget);
+
+    await tester.tap(find.text('Déposer ma candidature'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("numéro d'inscription à l'ordre"), findsOneWidget);
+    expect(api.appels, isEmpty);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Nom complet *'), ' Dr Amina Belkacem ');
+    await tester.enterText(
+        find.widgetWithText(TextField, "Numéro d'inscription à l'ordre *"), '12345');
+    await tester.tap(find.text('Spécialité *'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cardiologue').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Wilaya *'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('16 - Alger').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Déposer ma candidature'));
+    await tester.pumpAndSettle();
+
+    expect(api.appels, ['candidature Dr Amina Belkacem cardiologue 16 12345']);
+    expect(find.textContaining('En attente'), findsOneWidget);
+    expect(find.text("Votre candidature est en cours d'examen."), findsOneWidget);
+    expect(find.text('Nouvelle candidature'), findsNothing);
+  });
+
+  testWidgets('ma candidature : refusée, le motif est affiché et un nouveau dépôt est possible',
+      (tester) async {
+    final api = FakeEspaceApi()
+      ..candidature = {
+        'nomComplet': 'Dr Amina Belkacem',
+        'specialiteSlug': 'cardiologue',
+        'wilayaCode': '16',
+        'numeroOrdre': '12345',
+        'statut': 'REFUSEE',
+        'motifRefus': 'Numéro illisible',
+        'deposeeLe': '2026-11-10T09:00:00Z',
+      };
+    await afficher(tester, CandidaturePage(api: api, auth: SessionTest()));
+    expect(find.textContaining('Refusée'), findsOneWidget);
+    expect(find.textContaining('Motif : Numéro illisible'), findsOneWidget);
+    expect(find.text('Nouvelle candidature'), findsOneWidget);
+    expect(find.text('Déposer ma candidature'), findsOneWidget);
+  });
+
+  testWidgets('mon profil propose « Ma candidature de médecin », comme le site', (tester) async {
+    await afficher(tester, MonProfilPage(api: FakeEspaceApi(), auth: SessionTest()));
+    await tester.ensureVisible(find.text('Ma candidature de médecin'));
+    await tester.tap(find.text('Ma candidature de médecin'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ma candidature'), findsOneWidget);
+  });
+
+  test('corpsCandidature : champs nettoyés, libellés du référentiel, null si incomplet', () {
+    final corps = corpsCandidature(
+        nomComplet: ' Dr A ',
+        specialiteSlug: 'cardiologue',
+        wilayaCode: '16',
+        ville: ' Bab Ezzouar ',
+        numeroOrdre: ' 42 ',
+        telephone: '');
+    expect(corps, {
+      'nomComplet': 'Dr A',
+      'specialiteSlug': 'cardiologue',
+      'specialiteFr': 'Cardiologue',
+      'wilayaCode': '16',
+      'wilayaFr': 'Alger',
+      'ville': 'Bab Ezzouar',
+      'numeroOrdre': '42',
+      'telephone': '',
+    });
+    expect(
+        corpsCandidature(
+            nomComplet: 'Dr A',
+            specialiteSlug: null,
+            wilayaCode: '16',
+            ville: '',
+            numeroOrdre: '42',
+            telephone: ''),
+        isNull);
   });
 }
