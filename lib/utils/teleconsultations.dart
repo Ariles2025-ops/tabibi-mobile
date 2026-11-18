@@ -45,7 +45,7 @@ String? texteHorsFenetre(Teleconsultation tc, {DateTime? maintenant}) {
   if (dansFenetreAcces(tc, maintenant: maintenant)) return null;
   final debut = tc.debutRendezVous!;
   if ((maintenant ?? DateTime.now()).isBefore(debut)) {
-    return t('Disponible 15 min avant le rendez-vous', 'متاحة قبل 15 دقيقة من الموعد');
+    return t('Disponible 15 min avant le rendez-vous', 'متاحة قبل الموعد بـ 15 دقيقة');
   }
   return t('Le créneau de ce rendez-vous est passé', 'انتهى وقت هذا الموعد');
 }
