@@ -34,6 +34,6 @@ const Map<String, (String, String)> _statuts = {
   'REFUSEE': ('Refusée', 'مرفوضة'),
   'MASQUE': ('Masqué', 'مخفي'),
   'PUBLIE': ('Publié', 'منشور'),
-  'SIGNALE': ('Signalé', 'مُبلّغ عنه'),
+  'SIGNALE': ('Signalé', 'مُبلَّغ عنه'),
   'EMISE': ('Émise', 'صادرة'),
 };

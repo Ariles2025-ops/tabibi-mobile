@@ -43,4 +43,10 @@ void main() {
     expect(_lire('lib/pages/espace/fiche_semaine_pages.dart'), contains("'RDV pris au téléphone', 'موعد عبر الهاتف'"));
     expect(_lire('lib/pages/espace/creneaux_page.dart'), contains("'RDV pris au téléphone', 'موعد عبر الهاتف'"));
   });
+
+  test('« Signalé » s\'écrit pareil (« مُبلَّغ عنه ») dans libelles.dart et avis.dart, comme sur le site', () {
+    expect(_lire('lib/utils/libelles.dart'), contains("'مُبلَّغ عنه'"));
+    expect(_lire('lib/utils/avis.dart'), contains("'مُبلَّغ عنه'"));
+    expect(tous.contains('مُبلّغ'), isFalse);
+  });
 }
