@@ -117,7 +117,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
     if (_ordonnances.isEmpty) {
-      return Center(child: Text(t('Aucune ordonnance.', 'لا توجد وصفات طبية.')));
+      return Center(child: Text(t('Aucune ordonnance pour le moment.', 'لا توجد وصفات طبية حاليًا.')));
     }
     return ListView.separated(
       itemCount: _ordonnances.length,

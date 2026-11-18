@@ -230,13 +230,27 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (_charge) return const Center(child: CircularProgressIndicator());
     final erreur = _erreur;
     if (erreur != null) return VueErreur(message: erreur, onReessayer: _charger);
-    if (_rdvs.isEmpty) return Center(child: Text(t('Aucun rendez-vous.', 'لا توجد مواعيد.')));
+    if (_rdvs.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            t("Aucun rendez-vous pour le moment. Trouvez un praticien depuis l'accueil et réservez en quelques secondes.",
+                'لا توجد مواعيد حاليًا. ابحث عن ممارس من الصفحة الرئيسية واحجز في ثوانٍ.'),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
     final classes = classerRendezVous(_rdvs);
     final lignes = <Widget>[
-      if (classes.aVenir.isNotEmpty) ...[
-        _enTete(t('À venir', 'القادمة')),
-        for (final rdv in classes.aVenir) _ligne(rdv, avecAnnee: false),
-      ],
+      _enTete(t('À venir', 'القادمة')),
+      if (classes.aVenir.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(t('Aucun rendez-vous à venir.', 'لا توجد مواعيد قادمة.')),
+        ),
+      for (final rdv in classes.aVenir) _ligne(rdv, avecAnnee: false),
       if (classes.passes.isNotEmpty) ...[
         _enTete(t('Passés', 'السابقة')),
         for (final rdv in classes.passes) _ligne(rdv, avecAnnee: true),

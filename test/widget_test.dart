@@ -512,6 +512,27 @@ class FakeApiServiceSansFiche extends FakeApiService {
       throw const ApiException(404, 'Praticien introuvable');
 }
 
+/// Aucun rendez-vous ni ordonnance : textes vides comme sur le site.
+class FakeApiServiceVide extends FakeApiService {
+  const FakeApiServiceVide();
+
+  @override
+  Future<List<Map<String, dynamic>>> mesRendezVous(String token) async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> mesOrdonnances(String token) async => [];
+}
+
+/// Seulement un rendez-vous passe : la section « À venir » le dit.
+class FakeApiServiceSeulementPasse extends FakeApiService {
+  const FakeApiServiceSeulementPasse();
+
+  @override
+  Future<List<Map<String, dynamic>>> mesRendezVous(String token) async => [
+        FakeApiService._rendezVous(FakeApiService.rdvHonore, 'HONORE', '2026-09-01T09:00:00'),
+      ];
+}
+
 /// Ordonnance annulee par le medecin, avec motif.
 class FakeApiServiceOrdonnanceAnnuleeMotif extends FakeApiService {
   const FakeApiServiceOrdonnanceAnnuleeMotif();
@@ -750,6 +771,32 @@ void main() {
     expect(find.text('jeu. 3 déc. 09:00'), findsOneWidget);
     expect(find.text('jeu. 3 déc. 09:30'), findsNothing);
     expect(find.text('Réserver'), findsOneWidget);
+  });
+
+  testWidgets('mes rendez-vous et mes ordonnances vides : texte comme sur le site', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: const FakeApiServiceVide(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aucun rendez-vous pour le moment.'), findsOneWidget);
+    expect(find.textContaining('Trouvez un praticien'), findsOneWidget);
+
+    await tester.pumpWidget(MaterialApp(
+      home: MesOrdonnancesPage(api: const FakeApiServiceVide(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Aucune ordonnance pour le moment.'), findsOneWidget);
+  });
+
+  testWidgets("mes rendez-vous : « Aucun rendez-vous à venir. » s'il ne reste que du passe",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: const FakeApiServiceSeulementPasse(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('À venir'), findsOneWidget);
+    expect(find.text('Aucun rendez-vous à venir.'), findsOneWidget);
+    expect(find.text('Passés'), findsOneWidget);
   });
 
   testWidgets('mes ordonnances sans jeton propose de se connecter', (tester) async {
