@@ -238,19 +238,35 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
   @override
   Future<void> recharger() async => setState(() {});
 
+  /// Code qui a été vérifié : c'est le seul sur lequel « Marquer délivrée » peut agir.
+  String? _codeVerifie;
+
   String get _codeSaisi => _code.text.trim().toUpperCase();
 
+  void _codeModifie(String _) {
+    if (_resultat != null && _codeSaisi != _codeVerifie) {
+      setState(() {
+        _resultat = null;
+        _codeVerifie = null;
+        _vientDeDelivrer = false;
+      });
+    }
+  }
+
   Future<void> _verifier() async {
-    if (_codeSaisi.isEmpty) {
+    final code = _codeSaisi;
+    if (code.isEmpty) {
       message(t('Saisissez le code de vérification', 'أدخل رمز التحقق'));
       return;
     }
     FocusScope.of(context).unfocus();
     try {
-      final r = await widget.api.verifierOrdonnance(_codeSaisi);
-      if (mounted) {
+      final r = await widget.api.verifierOrdonnance(code);
+      // Ignore la réponse si le champ a changé pendant l'appel.
+      if (mounted && code == _codeSaisi) {
         setState(() {
           _resultat = r;
+          _codeVerifie = code;
           _vientDeDelivrer = false;
         });
       }
@@ -260,7 +276,9 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
   }
 
   Future<void> _delivrer() async {
-    final r = await appeler((j) => widget.api.delivrerOrdonnance(_codeSaisi, j));
+    final code = _codeVerifie;
+    if (code == null) return;
+    final r = await appeler((j) => widget.api.delivrerOrdonnance(code, j));
     if (r == null || !mounted) return;
     setState(() {
       _resultat = r;
@@ -289,6 +307,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
                 labelText: t('Code de vérification', 'رمز التحقق'),
                 prefixIcon: const Icon(Icons.qr_code_2),
               ),
+              onChanged: _codeModifie,
               onSubmitted: (_) => _verifier(),
             ),
             const SizedBox(height: 12),
