@@ -35,4 +35,12 @@ void main() {
         contains("'Mes ordonnances rédigées', 'وصفاتي التي حررتها'"));
     expect(_lire('lib/pages/mes_ordonnances_page.dart'), contains("'Mes ordonnances', 'وصفاتي الطبية'"));
   });
+
+  test('« Présentation » et « RDV pris au téléphone » ont les mêmes mots arabes que le site', () {
+    expect(tous.contains("'Présentation', 'التعريف'"), isFalse);
+    expect(tous.contains("'Présentation', 'تقديم'"), isTrue);
+    expect(tous.contains('موعد بالهاتف'), isFalse);
+    expect(_lire('lib/pages/espace/fiche_semaine_pages.dart'), contains("'RDV pris au téléphone', 'موعد عبر الهاتف'"));
+    expect(_lire('lib/pages/espace/creneaux_page.dart'), contains("'RDV pris au téléphone', 'موعد عبر الهاتف'"));
+  });
 }

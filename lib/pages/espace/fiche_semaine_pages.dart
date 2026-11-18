@@ -350,7 +350,7 @@ class _MaFichePageState extends State<MaFichePage> with AppelsEspace {
                         'رقم جزائري مطلوب (0XX XX XX XX أو ‎+213…).')
                     : null),
             _champ(_horaires, t('Horaires', 'أوقات العمل'), Icons.access_time, maxHoraires),
-            _champ(_presentation, t('Présentation', 'التعريف'), Icons.notes, maxPresentation,
+            _champ(_presentation, t('Présentation', 'تقديم'), Icons.notes, maxPresentation,
                 lignes: 4),
             Text(t('Langues', 'اللغات'), style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
@@ -468,7 +468,7 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t('RDV pris au téléphone', 'موعد بالهاتف'))),
+      appBar: AppBar(title: Text(t('RDV pris au téléphone', 'موعد عبر الهاتف'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
