@@ -57,7 +57,7 @@ void main() {
       (tester) async {
     Langue.courante.value = Langue.arabe;
     await afficher(tester);
-    expect(find.text('صحتك لا يجب أن تنتظر'), findsOneWidget);
+    expect(find.text('صحتك لا تحتمل الانتظار'), findsOneWidget);
     expect(find.text('اسم الطبيب'), findsOneWidget);
     expect(find.text('التخصص'), findsOneWidget);
     expect(find.text('الولاية'), findsOneWidget);

@@ -76,7 +76,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
   Widget build(BuildContext context) {
     return Scaffold(
       appBar:
-          AppBar(title: Text(t('Besoins Dawini', 'طلبات دَويني')), actions: actionsActualiser()),
+          AppBar(title: Text(t('Besoins Dawini', 'طلبات داويني')), actions: actionsActualiser()),
       body: corps(
           t('Connectez-vous pour voir les besoins de votre wilaya.',
               'سجّل الدخول لعرض طلبات ولايتك.'), () {

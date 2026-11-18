@@ -89,7 +89,7 @@ class _AvisMedecinPageState extends State<AvisMedecinPage> with AppelsEspace {
       body: corps(t('Connectez-vous pour voir vos avis.', 'سجّل الدخول لعرض آرائك.'), () {
         if (_synthese.avis.isEmpty) {
           return VueVide(t("Aucun avis publié sur votre fiche pour l'instant.",
-              'لا توجد آراء منشورة على بطاقتك حاليًا.'));
+              'لا توجد آراء منشورة على صفحتك حاليًا.'));
         }
         final avis = [..._synthese.avis]..sort((a, b) {
             final da = a.deposeLe;

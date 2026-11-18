@@ -180,7 +180,7 @@ class _DawiniPageState extends State<DawiniPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(t('Dawini', 'دَويني')),
+        title: Text(t('Dawini', 'داويني')),
         actions: [
           if (_auth.estConnecte)
             IconButton(
