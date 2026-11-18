@@ -64,6 +64,7 @@ void main() {
     await noter((a) => a.honorerRendezVous('r1', 'j'));
     await noter((a) => a.marquerAbsentMedecin('r1', 'j'));
     await noter((a) => a.annulerParMedecin('r1', 'j'));
+    await noter((a) => a.deplacerParMedecin('r1', 'c9', 'j'));
     await noter((a) => a.creneauxMedecin('j'), corps: []);
     await noter((a) => a.supprimerCreneauMedecin('c1', 'j'));
     await noter((a) => a.listeAttenteMedecin('j'), corps: []);
@@ -73,11 +74,17 @@ void main() {
       'POST /api/rendezvous/r1/honorer',
       'POST /api/medecin/rendezvous/r1/absent',
       'POST /api/medecin/rendezvous/r1/annuler',
+      'POST /api/medecin/rendezvous/r1/deplacer',
       'GET /api/medecin/creneaux',
       'DELETE /api/medecin/creneaux/c1',
       'GET /api/medecin/liste-attente',
       'GET /api/medecin/patients',
     ]);
+  });
+
+  test('deplacerParMedecin poste le nouveau creneau en JSON', () async {
+    final r = (await requetes((a) => a.deplacerParMedecin('r1', 'c9', 'j'))).single;
+    expect(jsonDecode(r.body), {'nouveauCreneauId': 'c9'});
   });
 
   test('ouvrirCreneauMedecin poste le corps JSON du creneau', () async {
@@ -102,6 +109,7 @@ void main() {
     await noter((a) => a.honorerParSecretaire('r1', 'j'));
     await noter((a) => a.absentParSecretaire('r1', 'j'));
     await noter((a) => a.annulerParSecretaire('r1', 'j'));
+    await noter((a) => a.deplacerParSecretaire('r1', 'c9', 'j'));
     await noter((a) => a.patientsCabinet('m1', 'j'), corps: []);
     await noter((a) => a.invitationsCabinet('j'), corps: []);
     await noter((a) => a.accepterInvitation('i1', 'j'));
@@ -115,6 +123,7 @@ void main() {
       'POST /api/secretaire/rendezvous/r1/honorer',
       'POST /api/secretaire/rendezvous/r1/absent',
       'POST /api/secretaire/rendezvous/r1/annuler',
+      'POST /api/secretaire/rendezvous/r1/deplacer',
       'GET /api/secretaire/medecins/m1/patients',
       'GET /api/moi/invitations-cabinet',
       'POST /api/moi/invitations-cabinet/i1/accepter',

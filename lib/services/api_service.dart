@@ -495,6 +495,13 @@ class ApiService {
   Future<void> annulerParMedecin(String rdvId, String token) =>
       _post('/api/medecin/rendezvous/${Uri.encodeComponent(rdvId)}/annuler', token);
 
+  /// Deplacement par le medecin vers un autre de ses creneaux libres (409 si le creneau vient
+  /// d'etre pris : rien ne change).
+  Future<Map<String, dynamic>> deplacerParMedecin(
+          String rdvId, String nouveauCreneauId, String token) =>
+      _postJson('/api/medecin/rendezvous/${Uri.encodeComponent(rdvId)}/deplacer', token,
+          {'nouveauCreneauId': nouveauCreneauId});
+
   /// Creneaux a venir du medecin connecte : {id, medecinId, debut, dureeMinutes, disponible}.
   Future<List<Map<String, dynamic>>> creneauxMedecin(String token) =>
       _get('/api/medecin/creneaux', token);
@@ -629,6 +636,11 @@ class ApiService {
 
   Future<void> annulerParSecretaire(String rdvId, String token) =>
       _post('/api/secretaire/rendezvous/${Uri.encodeComponent(rdvId)}/annuler', token);
+
+  Future<Map<String, dynamic>> deplacerParSecretaire(
+          String rdvId, String nouveauCreneauId, String token) =>
+      _postJson('/api/secretaire/rendezvous/${Uri.encodeComponent(rdvId)}/deplacer', token,
+          {'nouveauCreneauId': nouveauCreneauId});
 
   // --- Invitations a rejoindre un cabinet (tout compte connecte) ---
 
