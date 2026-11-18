@@ -512,6 +512,36 @@ class FakeApiServiceSansFiche extends FakeApiService {
       throw const ApiException(404, 'Praticien introuvable');
 }
 
+/// Fiche complete : adresse, telephone, horaires, presentation et langues.
+class FakeApiServiceFicheComplete extends FakeApiService {
+  const FakeApiServiceFicheComplete();
+
+  @override
+  Future<Map<String, dynamic>> medecin(String id) async => {
+        ...await super.medecin(id),
+        'adresse': '12 rue Didouche Mourad, Alger',
+        'telephoneCabinet': '023 45 67 89',
+        'horaires': 'Dim-Jeu 9h-17h',
+        'presentation': 'Cardiologue depuis 15 ans.',
+        'langues': ['fr', 'ar'],
+      };
+}
+
+/// Fiche avec champs vides ou nuls : aucune ligne ne doit apparaitre.
+class FakeApiServiceFicheVide extends FakeApiService {
+  const FakeApiServiceFicheVide();
+
+  @override
+  Future<Map<String, dynamic>> medecin(String id) async => {
+        ...await super.medecin(id),
+        'adresse': null,
+        'telephoneCabinet': '  ',
+        'horaires': '',
+        'presentation': null,
+        'langues': [],
+      };
+}
+
 /// Aucun rendez-vous ni ordonnance : textes vides comme sur le site.
 class FakeApiServiceVide extends FakeApiService {
   const FakeApiServiceVide();
@@ -1242,6 +1272,37 @@ void main() {
     expect(find.text('jeu. 5 nov. 16:30'), findsOneWidget);
     // Les creneaux restent proposes au-dessus des avis.
     expect(find.text('Réserver'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin affiche les informations pratiques', (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(const MaterialApp(
+      home: FicheMedecinPage(
+          medecinId: FakeApiService.medecinDemo, api: FakeApiServiceFicheComplete()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Informations pratiques'), findsOneWidget);
+    expect(find.text('12 rue Didouche Mourad, Alger'), findsOneWidget);
+    expect(find.text('023 45 67 89'), findsOneWidget);
+    expect(find.text('Dim-Jeu 9h-17h'), findsOneWidget);
+    expect(find.text('Cardiologue depuis 15 ans.'), findsOneWidget);
+    expect(find.text('Français · Arabe'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin sans informations pratiques masque les lignes vides',
+      (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(const MaterialApp(
+      home: FicheMedecinPage(
+          medecinId: FakeApiService.medecinDemo, api: FakeApiServiceFicheVide()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Informations pratiques'), findsNothing);
+    expect(find.text('Adresse'), findsNothing);
+    expect(find.text('Téléphone'), findsNothing);
+    expect(find.textContaining('null'), findsNothing);
   });
 
   testWidgets('la fiche medecin sans avis publie le signale', (tester) async {

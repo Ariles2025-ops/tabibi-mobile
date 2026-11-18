@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/theme.dart';
 import '../i18n/langue.dart';
@@ -11,6 +12,7 @@ import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
+import '../utils/fiche_semaine.dart';
 import '../utils/identifiants.dart';
 import '../widgets/composants.dart';
 import '../widgets/vue_erreur.dart';
@@ -342,6 +344,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             ],
           ),
         ),
+        ..._informationsPratiques(context, medecin),
         const SizedBox(height: 24),
         Text(t('Créneaux disponibles', 'المواعيد المتاحة'), style: texte.titleMedium),
         const SizedBox(height: 8),
@@ -356,6 +359,84 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         ..._derniersAvis(context),
       ],
     );
+  }
+
+  /// Texte non vide (espaces retires) d'un champ de la fiche, sinon null.
+  String? _champTexte(Map<String, dynamic> medecin, String cle) {
+    final v = medecin[cle];
+    if (v is! String || v.trim().isEmpty) return null;
+    return v.trim();
+  }
+
+  /// « Informations pratiques » : adresse, telephone (lien tel:), horaires, presentation et
+  /// langues ; chaque ligne vide est masquee, la section aussi si tout est vide.
+  List<Widget> _informationsPratiques(BuildContext context, Map<String, dynamic> medecin) {
+    final adresse = _champTexte(medecin, 'adresse');
+    final telephone = _champTexte(medecin, 'telephoneCabinet');
+    final horaires = _champTexte(medecin, 'horaires');
+    final presentation = _champTexte(medecin, 'presentation');
+    final langues = [
+      for (final l in languesFiche)
+        if (languesDe(medecin['langues']).contains(l.$1)) t(l.$2, l.$3),
+    ];
+    if ([adresse, telephone, horaires, presentation].every((v) => v == null) &&
+        langues.isEmpty) {
+      return const [];
+    }
+    final texte = Theme.of(context).textTheme;
+    Widget ligne(IconData icone, String libelle, Widget contenu) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icone, size: 20, color: Charte.vertFonce),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(libelle, style: texte.bodySmall?.copyWith(color: Charte.doux)),
+                    contenu,
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+    return [
+      const SizedBox(height: 24),
+      Text(t('Informations pratiques', 'معلومات عملية'), style: texte.titleMedium),
+      const SizedBox(height: 8),
+      CarteTabibi(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (adresse != null) ligne(Icons.place_outlined, t('Adresse', 'العنوان'), Text(adresse)),
+            if (telephone != null)
+              ligne(
+                Icons.phone_outlined,
+                t('Téléphone', 'الهاتف'),
+                InkWell(
+                  onTap: () => launchUrl(
+                    Uri(scheme: 'tel', path: telephone.replaceAll(RegExp(r'[\s.\-()]'), '')),
+                  ),
+                  child: Text(telephone,
+                      style: const TextStyle(
+                          color: Charte.vertFonce, decoration: TextDecoration.underline)),
+                ),
+              ),
+            if (horaires != null)
+              ligne(Icons.access_time, t('Horaires', 'أوقات العمل'), Text(horaires)),
+            if (presentation != null)
+              ligne(Icons.notes, t('Présentation', 'تقديم'), Text(presentation)),
+            if (langues.isNotEmpty)
+              ligne(Icons.translate, t('Langues parlées', 'اللغات المتحدث بها'),
+                  Text(langues.join(' · '))),
+          ],
+        ),
+      ),
+    ];
   }
 
   /// « 4,5 / 5 (12 avis) » (ou « Aucun avis »), precede d'une etoile ; masquee si la
