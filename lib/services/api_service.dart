@@ -162,6 +162,19 @@ class ApiService {
     _verifier(res, chemin);
   }
 
+  /// Deplace un rendez-vous du patient connecte vers un autre creneau du meme praticien
+  /// (POST /api/rendezvous/{id}/deplacer) ; 409 si le nouveau creneau vient d'etre pris,
+  /// auquel cas rien ne change.
+  Future<Map<String, dynamic>> deplacer(String rdvId, String nouveauCreneauId, String token) async {
+    final chemin = '/api/rendezvous/${Uri.encodeComponent(rdvId)}/deplacer';
+    final res = await _Http.post(
+      Uri.parse('$base$chemin'),
+      headers: {..._bearer(token), 'Content-Type': 'application/json'},
+      body: jsonEncode({'nouveauCreneauId': nouveauCreneauId}),
+    );
+    return _objet(res, chemin);
+  }
+
   /// Ordonnances du patient connecte : {id, medecinId, patientId, rendezVousId,
   /// lignes: [{medicament, posologie, duree}], emiseLe (ISO 8601), codeVerification, statut}.
   Future<List<Map<String, dynamic>>> mesOrdonnances(String token) async {

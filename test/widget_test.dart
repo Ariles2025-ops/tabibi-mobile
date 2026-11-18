@@ -582,6 +582,32 @@ class FakeApiServiceAvisDejaDonne extends FakeApiService {
       throw const ApiException(409, 'Un avis existe deja pour ce rendez-vous');
 }
 
+/// Variante pour « Déplacer » : un creneau libre lointain ; [conflit] simule un creneau pris (409).
+class FakeApiServiceDeplacer extends FakeApiService {
+  FakeApiServiceDeplacer({this.conflit = false});
+
+  final bool conflit;
+  final List<String> deplacements = [];
+
+  @override
+  Future<List<Map<String, dynamic>>> creneaux(String medecinId) async => [
+        {
+          'id': FakeApiService.creneauLibre,
+          'medecinId': medecinId,
+          'debut': '2099-12-03T09:00:00',
+          'dureeMinutes': 30,
+          'disponible': true,
+        },
+      ];
+
+  @override
+  Future<Map<String, dynamic>> deplacer(String rdvId, String nouveauCreneauId, String token) async {
+    if (conflit) throw const ApiException(409, 'Créneau déjà pris');
+    deplacements.add('$rdvId>$nouveauCreneauId');
+    return {'id': rdvId};
+  }
+}
+
 /// Variante qui conserve les demandes publiees et les clotures demandees.
 class FakeApiServiceDawini extends FakeApiService {
   FakeApiServiceDawini();
@@ -1228,6 +1254,46 @@ void main() {
     expect(find.text('Aucun avis'), findsOneWidget);
     expect(find.text('Aucun avis pour le moment.'), findsOneWidget);
     expect(find.textContaining('/ 5'), findsNothing);
+  });
+
+  testWidgets('mes rendez-vous : Déplacer choisit un créneau, confirme, puis déplace',
+      (tester) async {
+    final api = FakeApiServiceDeplacer();
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Déplacer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choisir un nouveau créneau'), findsOneWidget);
+    await tester.tap(find.byType(SimpleDialogOption));
+    await tester.pumpAndSettle();
+    expect(find.text('Déplacer ce rendez-vous ?'), findsOneWidget);
+    await tester.tap(find.text('Oui, déplacer'));
+    await tester.pumpAndSettle();
+
+    expect(api.deplacements, ['${FakeApiService.rdvConfirme}>${FakeApiService.creneauLibre}']);
+    expect(find.text('Rendez-vous déplacé'), findsOneWidget);
+  });
+
+  testWidgets('mes rendez-vous : Déplacer sur un créneau pris explique que rien n\'a changé',
+      (tester) async {
+    final api = FakeApiServiceDeplacer(conflit: true);
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Déplacer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(SimpleDialogOption));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oui, déplacer'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ce créneau vient d\'être pris'), findsOneWidget);
+    expect(api.deplacements, isEmpty);
   });
 
   testWidgets(
