@@ -127,18 +127,27 @@ class ApiService {
   static Future<String?> Function(String ancien)? rafraichisseur;
 
   /// Recherche publique de praticiens (sans jeton).
+  ///
+  /// L'API renvoie au plus 50 praticiens par page ([page] : 0, 1, 2...) ; le nombre total de
+  /// resultats (en-tete `X-Total-Count`) est transmis a [surTotal] quand il est present.
   Future<List<Map<String, dynamic>>> rechercherMedecins({
     String? specialite,
     String? wilaya,
     String? q,
+    int page = 0,
+    void Function(int total)? surTotal,
   }) async {
     final params = <String, String>{};
     if (specialite != null && specialite.isNotEmpty) params['specialite'] = specialite;
     if (wilaya != null && wilaya.isNotEmpty) params['wilaya'] = wilaya;
     if (q != null && q.isNotEmpty) params['q'] = q;
+    if (page > 0) params['page'] = '$page';
     final uri = Uri.parse('$base/api/medecins').replace(queryParameters: params);
     final res = await _Http.get(uri);
-    return _liste(res, '/api/medecins');
+    final liste = _liste(res, '/api/medecins');
+    final total = int.tryParse(res.headers['x-total-count'] ?? '');
+    if (total != null) surTotal?.call(total);
+    return liste;
   }
 
   /// Fiche publique d'un praticien ([id] : UUID en texte) :

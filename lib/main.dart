@@ -126,17 +126,32 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Roles du compte connecte (GET /api/moi) ; vide hors connexion.
   Set<String> _roles = {};
 
-  Future<void> _rechercher() async {
+  /// Nombre total de praticiens trouves (X-Total-Count) ; null s'il est inconnu.
+  int? _total;
+
+  /// Page deja chargee (0 = la premiere).
+  int _page = 0;
+
+  /// Lance la recherche ; avec [suite], ajoute la page suivante aux resultats affiches.
+  Future<void> _rechercher({bool suite = false}) async {
+    final page = suite ? _page + 1 : 0;
+    int? total;
     setState(() {
       _charge = true;
       _erreur = null;
     });
     try {
       final r = await widget.api.rechercherMedecins(
-          specialite: _specialite, wilaya: _wilaya, q: _nom.text);
+          specialite: _specialite,
+          wilaya: _wilaya,
+          q: _nom.text,
+          page: page,
+          surTotal: (n) => total = n);
       if (mounted) {
         setState(() {
-          _resultats = r;
+          _resultats = suite ? [..._resultats, ...r] : r;
+          _page = page;
+          _total = total;
           _recherchee = true;
         });
       }
@@ -415,6 +430,15 @@ class _RecherchePageState extends State<RecherchePage> {
                               .bodyMedium
                               ?.copyWith(color: Charte.doux)),
                     ),
+                  if (_total != null && _resultats.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(messageNombreMedecins(_resultats.length, _total!),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: Charte.doux)),
+                    ),
                   for (final m in _resultats)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -444,6 +468,11 @@ class _RecherchePageState extends State<RecherchePage> {
                           const Icon(Icons.chevron_right),
                         ]),
                       ),
+                    ),
+                  if (_total != null && _resultats.length < _total! && !_charge)
+                    OutlinedButton(
+                      onPressed: () => _rechercher(suite: true),
+                      child: Text(messageAfficherPlus()),
                     ),
                 ],
               ),

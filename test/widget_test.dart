@@ -96,6 +96,8 @@ class FakeApiService extends ApiService {
     String? specialite,
     String? wilaya,
     String? q,
+    int page = 0,
+    void Function(int total)? surTotal,
   }) async =>
       [await medecin(medecinDemo)];
 

@@ -81,7 +81,11 @@ class FakeEspaceApi extends ApiService {
 
   @override
   Future<List<Map<String, dynamic>>> rechercherMedecins(
-          {String? specialite, String? wilaya, String? q}) async =>
+          {String? specialite,
+            String? wilaya,
+            String? q,
+            int page = 0,
+            void Function(int total)? surTotal}) async =>
       [await medecin(medecinId)];
 
   @override

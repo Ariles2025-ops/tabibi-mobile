@@ -25,6 +25,7 @@ Future<List<http.Request>> requetes(
 }
 
 void main() {
+  testRechercheMedecinsPagination();
   test('corpsCreneau envoie le debut en UTC ISO 8601 et la duree', () {
     final c = corpsCreneau(DateTime.utc(2026, 12, 3, 8), 30);
     expect(c, {'debut': '2026-12-03T08:00:00.000Z', 'dureeMinutes': 30});
@@ -196,4 +197,23 @@ class _AuthEspion extends AuthService {
     finsDeSession.add(jeton);
     if (echec) throw Exception('hors ligne');
   }
+}
+
+void testRechercheMedecinsPagination() {
+  test('rechercherMedecins : page demandee et total lu dans X-Total-Count', () async {
+    int? total;
+    final vues = <http.Request>[];
+    await http.runWithClient(
+      () => const ApiService(base: 'https://api.test')
+          .rechercherMedecins(specialite: 'generaliste', page: 2, surTotal: (n) => total = n),
+      () => MockClient((r) async {
+        vues.add(r);
+        return http.Response('[]', 200,
+            headers: {'content-type': 'application/json', 'x-total-count': '312'});
+      }),
+    );
+    expect(vues.single.url.queryParameters['page'], '2');
+    expect(vues.single.url.queryParameters['specialite'], 'generaliste');
+    expect(total, 312);
+  });
 }
