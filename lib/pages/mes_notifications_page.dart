@@ -149,7 +149,12 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         final conversation = await _conversation(id);
         return conversation == null
             ? MesConversationsPage(api: widget.api, auth: _auth)
-            : ConversationPage(conversation: conversation, api: widget.api, auth: _auth);
+            : ConversationPage(
+                conversation: conversation,
+                nomMedecin: await titrePourMedecin(widget.api, _auth, conversation),
+                api: widget.api,
+                auth: _auth,
+              );
     }
   }
 
