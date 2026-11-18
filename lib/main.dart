@@ -873,7 +873,7 @@ class _BandeauConfiance extends StatelessWidget {
       child: Row(children: [
         point(Icons.volunteer_activism_outlined,
             t('Gratuit pour les patients', 'مجاني للمرضى')),
-        point(Icons.map_outlined, t('58 wilayas', '58 ولاية')),
+        point(Icons.map_outlined, t('69 wilayas', '69 ولاية')),
         point(Icons.lock_outline, t('Données protégées', 'بيانات محمية')),
       ]),
     );
@@ -936,15 +936,69 @@ class _CoqueAppState extends State<CoqueApp> {
   int _onglet = 0;
   int _visite = 0;
 
+  /// Roles du compte connecte : un compte pro sans role PATIENT est renvoye vers « Mon espace »
+  /// sur les onglets Rendez-vous et Ordonnances.
+  Set<String> _roles = {};
+
+  AuthService get _auth => widget.auth ?? session;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerRoles();
+  }
+
+  Future<void> _chargerRoles() async {
+    final token = _auth.accessToken;
+    var roles = <String>{};
+    if (token != null) {
+      try {
+        roles = rolesDe(await widget.api.moi(token));
+      } on Exception {
+        roles = _roles;
+      }
+    }
+    if (mounted) setState(() => _roles = roles);
+  }
+
+  /// Page reservee aux patients : message guide et acces direct a « Mon espace ».
+  Widget _reservePatient(String titre) => Scaffold(
+        appBar: AppBar(title: Text(titre)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(messagePageReservee(),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) =>
+                            MonEspacePage(api: widget.api, auth: _auth))),
+                icon: const Icon(Icons.work_outline),
+                label: Text(t('Mon espace', 'فضائي')),
+              ),
+            ]),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final auth = widget.auth ?? session;
+    final auth = _auth;
+    final pro = comptePro(_roles);
     final pages = <Widget>[
       RecherchePage(api: widget.api, auth: auth),
-      MesRendezVousPage(
-          key: ValueKey('rdv-$_visite'), api: widget.api, auth: auth),
-      MesOrdonnancesPage(
-          key: ValueKey('ord-$_visite'), api: widget.api, auth: auth),
+      pro
+          ? _reservePatient(t('Mes rendez-vous', 'مواعيدي'))
+          : MesRendezVousPage(
+              key: ValueKey('rdv-$_visite'), api: widget.api, auth: auth),
+      pro
+          ? _reservePatient(t('Mes ordonnances', 'وصفاتي الطبية'))
+          : MesOrdonnancesPage(
+              key: ValueKey('ord-$_visite'), api: widget.api, auth: auth),
       ComptePage(key: ValueKey('compte-$_visite'), api: widget.api, auth: auth),
     ];
     return Scaffold(
@@ -954,10 +1008,13 @@ class _CoqueAppState extends State<CoqueApp> {
             border: Border(top: BorderSide(color: Charte.bordure))),
         child: NavigationBar(
           selectedIndex: _onglet,
-          onDestinationSelected: (i) => setState(() {
-            _onglet = i;
-            _visite++;
-          }),
+          onDestinationSelected: (i) {
+            setState(() {
+              _onglet = i;
+              _visite++;
+            });
+            _chargerRoles();
+          },
           destinations: [
             NavigationDestination(
                 icon: const Icon(Icons.home_outlined),
