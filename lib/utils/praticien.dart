@@ -1,5 +1,12 @@
 import '../i18n/langue.dart';
 
+/// Vrai si l'API marque le praticien comme réservable en ligne (`reservable == true`).
+bool estReservable(Map<String, dynamic> m) => m['reservable'] == true;
+
+/// Texte du badge du site, dans la langue courante.
+String libelleReservable() =>
+    t('Réservable en ligne', 'الحجز متاح عبر الإنترنت');
+
 /// Ligne « spécialité · ville (wilaya) » d'un praticien, sans « null » quand une donnée manque.
 /// En arabe, la specialite et la wilaya viennent du referentiel (slug, code), avec repli sur
 /// les libelles francais renvoyes par l'API.
