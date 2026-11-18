@@ -83,10 +83,17 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
   Future<void> _agir(Map<String, dynamic> rdv, ActionRdv action) async {
     final id = identifiant(rdv['id']);
     if (action == ActionRdv.annuler) {
+      // Rendez-vous pris par téléphone : le patient n'a pas de compte et l'API ne lui envoie
+      // aucun message ; comme sur le site, on ne prétend donc pas qu'il sera prévenu.
+      final telephone = '${rdv['source']}'.trim().toUpperCase() == 'TELEPHONE';
+      final date = formaterDateIso('${rdv['debut']}');
       final ok = await confirmer(
         t('Annuler ce rendez-vous ?', 'إلغاء هذا الموعد؟'),
-        t('${_patient(rdv)}\n${formaterDateIso('${rdv['debut']}')}\nLe patient sera prévenu.',
-            '${_patient(rdv)}\n${formaterDateIso('${rdv['debut']}')}\nسيتم إعلام المريض.'),
+        telephone
+            ? t('${_patient(rdv)}\n$date\nPensez à prévenir le patient par téléphone.',
+                '${_patient(rdv)}\n$date\nيرجى إبلاغ المريض هاتفيًا.')
+            : t('${_patient(rdv)}\n$date\nLe patient sera prévenu.',
+                '${_patient(rdv)}\n$date\nسيتم إعلام المريض.'),
         t('Oui, annuler', 'نعم، إلغاء'),
       );
       if (!ok) return;
