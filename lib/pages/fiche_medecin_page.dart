@@ -139,9 +139,42 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     }
   }
 
+  /// Fenetre de recapitulatif (medecin, jour et heure d'Alger, duree, adresse si connue) ;
+  /// vrai uniquement si le patient appuie sur « Confirmer ».
+  Future<bool> _confirmerReservation(Map<String, dynamic> creneau) async {
+    final nom = _champTexte(_medecin ?? const {}, 'nomComplet');
+    final adresse = _champTexte(_medecin ?? const {}, 'adresse');
+    final duree = formaterDuree(creneau['dureeMinutes']);
+    final debut = creneau['debut'];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('Confirmer le rendez-vous', 'تأكيد الموعد')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (nom != null) Text(nom, style: const TextStyle(fontWeight: FontWeight.w800)),
+            if (debut is String) Text(formaterDateIso(debut, avecAnnee: true)),
+            if (duree.isNotEmpty) Text('${t('Durée', 'المدة')} : $duree'),
+            if (adresse != null) Text('${t('Adresse', 'العنوان')} : $adresse'),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false), child: Text(t('Annuler', 'إلغاء'))),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true), child: Text(t('Confirmer', 'تأكيد'))),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   Future<void> _reserver(Map<String, dynamic> creneau) async {
     final creneauId = identifiant(creneau['id']);
     if (creneauId.isEmpty) return;
+    if (!await _confirmerReservation(creneau) || !mounted) return;
     if (!_auth.estConnecte) {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
