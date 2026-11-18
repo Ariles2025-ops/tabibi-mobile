@@ -540,6 +540,18 @@ class ApiService {
   Future<void> retirerSecretaire(String rattachementId, String token) =>
       _post('/api/medecin/secretaires/${Uri.encodeComponent(rattachementId)}/retirer', token);
 
+  /// Derniere candidature du compte connecte (comme « Ma candidature » du site) : 404 s'il n'en a
+  /// deposee aucune. Champs : statut (EN_ATTENTE, VALIDEE, REFUSEE), motifRefus, deposeeLe, traiteeLe...
+  Future<Map<String, dynamic>> maCandidature(String token) async {
+    final res = await _Http.get(Uri.parse('$base/api/medecin/candidature'), headers: _bearer(token));
+    return _objet(res, '/api/medecin/candidature');
+  }
+
+  /// Depose une candidature de medecin (201) ; 400 si incomplete, 409 si une candidature est deja
+  /// en attente ou validee. Corps : nomComplet, specialiteSlug/Fr, wilayaCode/Fr, ville, numeroOrdre, telephone.
+  Future<Map<String, dynamic>> deposerCandidature(Map<String, dynamic> corps, String token) =>
+      _postJson('/api/medecin/candidature', token, corps);
+
   // --- Espace secretaire ---
 
   /// Patients du cabinet d'un medecin, pour une secretaire rattachee (memes champs).
