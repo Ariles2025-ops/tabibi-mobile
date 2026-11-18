@@ -43,7 +43,7 @@ bool telephoneValide(String? telephone) {
 
 /// « 14 mai 1990 » ; « Non renseignée » sans date.
 String libelleDateNaissance(DateTime? dateNaissance) =>
-    dateNaissance == null ? t('Non renseignée', 'غير محدّد') : formaterJour(dateNaissance);
+    dateNaissance == null ? t('Non renseignée', 'غير محدّدة') : formaterJour(dateNaissance);
 
 /// « Mis à jour le jeu. 4 dec. 09:00 » ; « Profil non enregistré » tant que le serveur n'a
 /// jamais date le profil.
