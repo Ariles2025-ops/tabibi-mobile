@@ -351,149 +351,179 @@ class _RecherchePageState extends State<RecherchePage> {
     super.dispose();
   }
 
+  /// Specialites mises en avant sur l'accueil (emoji sur pastille verte).
+  static const _populaires = <(String, String, String, String)>[
+    ('medecin-generaliste', '🩺', 'Généraliste', 'طبيب عام'),
+    ('dentiste', '🦷', 'Dentiste', 'أسنان'),
+    ('pediatre', '👶', 'Pédiatre', 'أطفال'),
+    ('gynecologue', '🤰', 'Gynéco', 'نساء وتوليد'),
+    ('cardiologue', '❤️', 'Cardiologue', 'قلب'),
+    ('dermatologue', '✨', 'Dermato', 'جلد'),
+    ('ophtalmologue', '👁️', 'Ophtalmo', 'عيون'),
+    ('ORL', '👂', 'ORL', 'أنف وأذن'),
+  ];
+
+  /// Sans filtre, l'accueil montre quelques praticiens puis « Voir tous les médecins ».
+  static const _apercu = 5;
+  bool _tousMedecins = false;
+
+  bool get _filtre =>
+      _specialite != null || _wilaya != null || _nom.text.trim().isNotEmpty;
+
+  void _choisirSpecialite(String? slug) {
+    setState(() => _specialite = _specialite == slug ? null : slug);
+    _rechercher();
+  }
+
   @override
   Widget build(BuildContext context) {
     final connecte = _auth.estConnecte;
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(8),
               child: Image.asset('assets/img/logo-ndawik.png',
-                  width: 28, height: 28, excludeFromSemantics: true),
+                  width: 30, height: 30, excludeFromSemantics: true),
             ),
             const SizedBox(width: 10),
-            const Text('Ndawik', style: TextStyle(fontWeight: FontWeight.w800)),
+            const Text('Ndawik',
+                style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3)),
           ],
         ),
         actions: [
           const SelecteurLangue(),
           IconButton(
-            tooltip: t('Mes ordonnances', 'وصفاتي الطبية'),
-            onPressed: _ouvrirMesOrdonnances,
-            icon: const Icon(Icons.description_outlined),
-          ),
-          IconButton(
-            tooltip: t('Mes rendez-vous', 'مواعيدي'),
-            onPressed: _ouvrirMesRendezVous,
-            icon: const Icon(Icons.calendar_month),
-          ),
-          IconButton(
             tooltip: connecte
                 ? t('Connecté', 'متصل')
                 : t('Se connecter', 'تسجيل الدخول'),
             onPressed: _seConnecter,
-            icon: Icon(connecte ? Icons.person : Icons.person_outline),
+            icon: Icon(connecte ? Icons.account_circle : Icons.account_circle_outlined),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _enTete(context),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (prelancement) const _BandeauLancement(),
-                  _entrees(),
-                  const SizedBox(height: 12),
-                  if (_charge) const LinearProgressIndicator(),
-                  if (_erreur != null)
-                    VueErreur(message: _erreur!, onReessayer: _rechercher),
-                  if (_recherchee && !_charge && _erreur == null && _resultats.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Text(messageAucunMedecin(),
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: Charte.doux)),
+      body: RefreshIndicator(
+        color: Charte.vert,
+        onRefresh: _rechercher,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _enTete(context),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (prelancement) const _BandeauLancement(),
+                    _raccourcis(),
+                    const SizedBox(height: 24),
+                    _TitreSection(t('Spécialités populaires', 'التخصصات الأكثر طلبًا')),
+                    const SizedBox(height: 12),
+                    _specialitesPopulaires(),
+                    const SizedBox(height: 24),
+                    _TitreSection(t('Mon compte', 'حسابي')),
+                    const SizedBox(height: 10),
+                    _entrees(),
+                    const SizedBox(height: 24),
+                    const _CommentCaMarche(),
+                    const SizedBox(height: 24),
+                    _TitreSection(
+                      _specialite == null
+                          ? t('Médecins sur Ndawik', 'الأطباء على نداويك')
+                          : nomSpecialite(
+                              specialites.firstWhere((s) => s.slug == _specialite)),
+                      suffixe: _resultats.isEmpty ? null : '${_resultats.length}',
                     ),
-                  for (final m in _resultats)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: CarteTabibi(
-                        onTap: () => _ouvrirFiche(identifiant(m['id'])),
-                        child: Row(children: [
-                          AvatarInitiales(nom: identifiant(m['nomComplet'])),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(identifiant(m['nomComplet']),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 2),
-                                Text(sousTitrePraticien(m),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(color: Charte.doux)),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right),
-                        ]),
+                    const SizedBox(height: 12),
+                    if (_charge) const LinearProgressIndicator(),
+                    if (_erreur != null)
+                      VueErreur(message: _erreur!, onReessayer: _rechercher),
+                    if (_recherchee && !_charge && _erreur == null && _resultats.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(messageAucunMedecin(),
+                            textAlign: TextAlign.center,
+                            style: tt.bodyMedium?.copyWith(color: Charte.doux)),
                       ),
-                    ),
-                ],
+                    for (final m in (_tousMedecins || _filtre)
+                        ? _resultats
+                        : _resultats.take(_apercu))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _CarteMedecin(
+                            medecin: m, onTap: () => _ouvrirFiche(identifiant(m['id']))),
+                      ),
+                    if (!_tousMedecins && !_filtre && _resultats.length > _apercu)
+                      OutlinedButton.icon(
+                        onPressed: () => setState(() => _tousMedecins = true),
+                        icon: const Icon(Icons.expand_more),
+                        label: Text(t('Voir tous les médecins', 'عرض كل الأطباء')),
+                      ),
+                    const SizedBox(height: 16),
+                    const _BandeauConfiance(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// En-tete vert en degrade : titre d'accroche et recherche (nom, specialite, wilaya)
-  /// dans une carte blanche.
+  /// En-tete vert en degrade : accroche, puis carte de recherche (nom, specialite, wilaya)
+  /// qui deborde legerement sur le fond.
   Widget _enTete(BuildContext context) {
     final clair = Theme.of(context).colorScheme.onPrimary;
     return Container(
-      decoration: const BoxDecoration(gradient: Charte.degrade),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      decoration: const BoxDecoration(
+        gradient: Charte.degrade,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             t('Votre santé ne devrait jamais attendre', 'صحتك لا تحتمل الانتظار'),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: clair, fontWeight: FontWeight.w800, height: 1.25),
+                color: clair, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.4),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            t('Trouvez un médecin et prenez rendez-vous, gratuitement.', 'ابحث عن طبيب واحجز موعدك مجانًا.'),
+            style: TextStyle(color: clair.withValues(alpha: 0.85), fontSize: 14),
           ),
           const SizedBox(height: 16),
           Container(
-            decoration: Charte.carte(),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(color: Color(0x1A102822), blurRadius: 24, offset: Offset(0, 8)),
+              ],
+            ),
             padding: const EdgeInsets.all(12),
             child: Column(children: [
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _nom,
-                    decoration: InputDecoration(
-                        labelText: t('Nom du médecin', 'اسم الطبيب')),
-                    onSubmitted: (_) => _rechercher(),
-                  ),
+              TextField(
+                controller: _nom,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  labelText: t('Nom du médecin', 'اسم الطبيب'),
+                  prefixIcon: const Icon(Icons.search, color: Charte.vert),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  tooltip: t('Rechercher', 'بحث'),
-                  onPressed: _rechercher,
-                  icon: const Icon(Icons.search),
-                ),
-              ]),
+                onSubmitted: (_) => _rechercher(),
+              ),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    key: ValueKey('specialite-$_specialite'),
                     initialValue: _specialite,
                     isExpanded: true,
                     decoration:
@@ -536,6 +566,15 @@ class _RecherchePageState extends State<RecherchePage> {
                   ),
                 ),
               ]),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _rechercher,
+                  icon: const Icon(Icons.search),
+                  label: Text(t('Rechercher', 'بحث')),
+                ),
+              ),
             ]),
           ),
         ],
@@ -543,17 +582,107 @@ class _RecherchePageState extends State<RecherchePage> {
     );
   }
 
-  /// Entrees de l'espace personnel sous la recherche, sur une seule rangee defilante
-  /// horizontalement (la liste des medecins garde la place) : « Mon espace » (selon le role),
+  /// Quatre grandes tuiles : rendez-vous, ordonnances, Dawini, verification d'ordonnance.
+  Widget _raccourcis() {
+    Widget tuile(IconData icone, String titre, String sous, VoidCallback action) => Expanded(
+          child: CarteTabibi(
+            onTap: action,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+            child: Column(children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                    color: Charte.pastille, borderRadius: BorderRadius.circular(14)),
+                child: Icon(icone, color: Charte.vert),
+              ),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(titre,
+                    maxLines: 1,
+                    style: const TextStyle(
+                        fontSize: 12.5, fontWeight: FontWeight.w700, color: Charte.texte)),
+              ),
+              const SizedBox(height: 2),
+              Text(sous,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10.5, color: Charte.doux)),
+            ]),
+          ),
+        );
+    return Row(children: [
+      tuile(Icons.calendar_month, t('Mes RDV', 'مواعيدي'), t('À venir', 'القادمة'),
+          _ouvrirMesRendezVous),
+      const SizedBox(width: 8),
+      tuile(Icons.description_outlined, t('Ordonnances', 'الوصفات'), t('Les miennes', 'وصفاتي'),
+          _ouvrirMesOrdonnances),
+      const SizedBox(width: 8),
+      tuile(Icons.local_pharmacy_outlined, 'Dawini', t('Pharmacies', 'الصيدليات'),
+          _ouvrirDawini),
+      const SizedBox(width: 8),
+      tuile(Icons.verified_outlined, t('Vérifier', 'تحقق'), t('Une ordonnance', 'من وصفة'),
+          _ouvrirVerification),
+    ]);
+  }
+
+  /// Rangee defilante de specialites : un appui filtre la liste (second appui : retire le filtre).
+  Widget _specialitesPopulaires() {
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _populaires.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final (slug, emoji, court, courtAr) = _populaires[i];
+          final choisie = _specialite == slug;
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => _choisirSpecialite(slug),
+            child: SizedBox(
+              width: 76,
+              child: Column(children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 60,
+                  height: 60,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: choisie ? Charte.vert : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: choisie ? Charte.vert : Charte.bordure),
+                  ),
+                  child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                ),
+                const SizedBox(height: 6),
+                Text(t(court, courtAr),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: choisie ? FontWeight.w800 : FontWeight.w600,
+                        color: choisie ? Charte.vert : Charte.texte)),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Entrees de l'espace personnel, sur une rangee defilante : « Mon espace » (selon le role),
   /// « Notifications (n) », « Téléconsultation · Bientôt » (desactivee tant que la visio est
-  /// fermee), « Messagerie », « Mes avis », « Dawini (pharmacies) », « Mes listes d'attente »,
-  /// « Mon profil ».
+  /// fermee), « Messagerie », « Mes avis », « Mes listes d'attente », « Mon profil ».
   Widget _entrees() {
     Widget puce(IconData icone, String libelle, VoidCallback? action) =>
         Padding(
           padding: const EdgeInsetsDirectional.only(end: 8),
           child: ActionChip(
-            avatar: Icon(icone, size: 18),
+            avatar: Icon(icone, size: 18, color: Charte.vert),
             label: Text(libelle),
             onPressed: action,
           ),
@@ -578,18 +707,175 @@ class _RecherchePageState extends State<RecherchePage> {
           puce(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'),
               _ouvrirMessagerie),
           puce(Icons.star_outline, t('Mes avis', 'آرائي'), _ouvrirMesAvis),
-          puce(Icons.local_pharmacy_outlined,
-              t('Dawini (pharmacies)', 'داويني (الصيدليات)'), _ouvrirDawini),
           puce(Icons.hourglass_top_outlined,
               t("Mes listes d'attente", 'قوائم الانتظار'), _ouvrirListesAttente),
           puce(Icons.badge_outlined, t('Mon profil', 'ملفي الشخصي'),
               _ouvrirMonProfil),
-          puce(
-              Icons.verified_outlined,
-              t('Vérifier une ordonnance', 'التحقق من وصفة طبية'),
-              _ouvrirVerification),
         ],
       ),
+    );
+  }
+}
+
+/// Titre de section de l'accueil, avec un compteur facultatif en pastille.
+class _TitreSection extends StatelessWidget {
+  const _TitreSection(this.texte, {this.suffixe});
+
+  final String texte;
+  final String? suffixe;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Flexible(
+        child: Text(texte,
+            style: const TextStyle(
+                fontSize: 17, fontWeight: FontWeight.w800, color: Charte.texte, letterSpacing: -0.2)),
+      ),
+      if (suffixe != null) ...[
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+              color: Charte.pastille, borderRadius: BorderRadius.circular(999)),
+          child: Text(suffixe!,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: Charte.vertFonce)),
+        ),
+      ],
+    ]);
+  }
+}
+
+/// Carte praticien de la liste : avatar, nom, specialite et ville, bouton « Prendre RDV ».
+class _CarteMedecin extends StatelessWidget {
+  const _CarteMedecin({required this.medecin, required this.onTap});
+
+  final Map<String, dynamic> medecin;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final nom = identifiant(medecin['nomComplet']);
+    return CarteTabibi(
+      onTap: onTap,
+      child: Row(children: [
+        AvatarInitiales(nom: nom, rayon: 26),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(nom,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 3),
+              Row(children: [
+                const Icon(Icons.location_on_outlined, size: 14, color: Charte.doux),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(sousTitrePraticien(medecin),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Charte.doux)),
+                ),
+              ]),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+              color: Charte.pastille, borderRadius: BorderRadius.circular(999)),
+          child: Text(t('Voir', 'عرض'),
+              style: const TextStyle(
+                  color: Charte.vert, fontWeight: FontWeight.w700, fontSize: 13)),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Trois etapes : chercher, choisir un creneau, recevoir la confirmation.
+class _CommentCaMarche extends StatelessWidget {
+  const _CommentCaMarche();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget etape(String numero, String titre, String texte) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: Charte.vert, shape: BoxShape.circle),
+              child: Text(numero,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(titre,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: Charte.texte, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(texte,
+                    style: const TextStyle(color: Charte.doux, fontSize: 13, height: 1.4)),
+              ]),
+            ),
+          ]),
+        );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      decoration: Charte.carte(fond: Charte.pastille),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(t('Comment ça marche ?', 'كيف يعمل؟'),
+            style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w800, color: Charte.vertFonce)),
+        const SizedBox(height: 12),
+        etape('1', t('Cherchez', 'ابحث'),
+            t('Un médecin par nom, spécialité ou wilaya.', 'عن طبيب بالاسم أو التخصص أو الولاية.')),
+        etape('2', t('Choisissez un créneau', 'اختر موعدًا'),
+            t('Les disponibilités réelles du cabinet.', 'المواعيد المتاحة فعلًا في العيادة.')),
+        etape('3', t('Recevez la confirmation', 'استلم التأكيد'),
+            t('Et un rappel avant votre rendez-vous.', 'وتذكيرًا قبل موعدك.')),
+      ]),
+    );
+  }
+}
+
+/// Bandeau de confiance en bas de l'accueil.
+class _BandeauConfiance extends StatelessWidget {
+  const _BandeauConfiance();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget point(IconData icone, String texte) => Expanded(
+          child: Column(children: [
+            Icon(icone, color: Charte.or, size: 22),
+            const SizedBox(height: 4),
+            Text(texte,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 11.5, fontWeight: FontWeight.w600, color: Charte.texte)),
+          ]),
+        );
+    return CarteTabibi(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      child: Row(children: [
+        point(Icons.money_off_outlined, t('Gratuit pour les patients', 'مجاني للمرضى')),
+        point(Icons.map_outlined, t('58 wilayas', '58 ولاية')),
+        point(Icons.lock_outline, t('Données protégées', 'بيانات محمية')),
+      ]),
     );
   }
 }
@@ -602,26 +888,32 @@ class _BandeauLancement extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: Charte.degrade,
+        color: Charte.orClair,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Charte.or.withValues(alpha: 0.35)),
       ),
-      child: DefaultTextStyle.merge(
-        style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimary, fontSize: 13, height: 1.4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(t('Lancement prochainement', 'الإطلاق قريبًا'),
-                style: const TextStyle(fontWeight: FontWeight.w800)),
-            Text(t(
-                "La prise de rendez-vous en ligne ouvre très bientôt. Trouvez déjà un médecin sur la plateforme.",
-                'حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. منصة طبية: ابحث عن طبيب من الآن.')),
-          ],
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.rocket_launch_outlined, color: Charte.orTexte, size: 22),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t('Lancement prochainement', 'الإطلاق قريبًا'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, color: Charte.orTexte, fontSize: 14)),
+              const SizedBox(height: 2),
+              Text(
+                  t("La prise de rendez-vous en ligne ouvre très bientôt. Trouvez déjà un médecin sur la plateforme.",
+                      'حجز المواعيد عبر الإنترنت يفتح قريبًا جدًا. منصة طبية: ابحث عن طبيب من الآن.'),
+                  style: const TextStyle(color: Charte.texte, fontSize: 13, height: 1.4)),
+            ],
+          ),
         ),
-      ),
+      ]),
     );
   }
 }

@@ -1524,7 +1524,8 @@ void main() {
       home: RecherchePage(api: const FakeApiService(), auth: AuthService()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Dawini (pharmacies)'), findsOneWidget);
+    expect(find.text('Dawini'), findsOneWidget);
+    expect(find.text('Pharmacies'), findsOneWidget);
   });
 
   testWidgets('dawini sans jeton propose de se connecter', (tester) async {
