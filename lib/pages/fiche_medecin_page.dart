@@ -33,8 +33,8 @@ String get texteListeAttente => t(
     'سيظهر لك إشعار داخل التطبيق فور توفر موعد.');
 
 /// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
-String get messageDejaInscrit => t('Vous êtes déjà inscrit sur cette liste.',
-    'أنت مسجل بالفعل في هذه القائمة.');
+String get messageDejaInscrit =>
+    t('Vous êtes déjà inscrit sur cette liste.', 'أنت مسجّل بالفعل في هذه القائمة.');
 
 /// Etat affiche a la place du bouton une fois le patient inscrit.
 String get texteInscrit => t(
@@ -655,7 +655,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
               ligne(
                   Icons.notes, t('Présentation', 'تقديم'), Text(presentation)),
             if (langues.isNotEmpty)
-              ligne(Icons.translate, t('Langues parlées', 'اللغات المتحدث بها'),
+              ligne(Icons.translate, t('Langues parlées', 'اللغات المتحدَّث بها'),
                   Text(langues.join(' · '))),
           ],
         ),

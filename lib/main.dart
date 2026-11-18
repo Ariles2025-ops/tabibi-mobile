@@ -146,10 +146,14 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Page deja chargee (0 = la premiere).
   int _page = 0;
 
+  /// Numero de la derniere demande : une reponse plus ancienne est ignoree.
+  int _seq = 0;
+
   /// Lance la recherche ; avec [suite], ajoute la page suivante aux resultats affiches.
   Future<void> _rechercher({bool suite = false}) async {
     final page = suite ? _page + 1 : 0;
     int? total;
+    final id = ++_seq;
     setState(() {
       _charge = true;
       _erreur = null;
@@ -161,7 +165,7 @@ class _RecherchePageState extends State<RecherchePage> {
           q: _nom.text,
           page: page,
           surTotal: (n) => total = n);
-      if (mounted) {
+      if (mounted && id == _seq) {
         setState(() {
           _resultats = suite ? [..._resultats, ...r] : r;
           _page = page;
@@ -170,9 +174,17 @@ class _RecherchePageState extends State<RecherchePage> {
         });
       }
     } on Exception catch (e) {
-      if (mounted) setState(() => _erreur = messageErreur(e));
+      if (mounted && id == _seq) {
+        setState(() {
+          _erreur = messageErreur(e);
+          if (!suite) {
+            _resultats = [];
+            _total = null;
+          }
+        });
+      }
     } finally {
-      if (mounted) setState(() => _charge = false);
+      if (mounted && id == _seq) setState(() => _charge = false);
     }
   }
 
@@ -779,6 +791,13 @@ class _CarteMedecin extends StatelessWidget {
                       style: tt.bodySmall),
                 ),
               ]),
+              if (estReservable(medecin)) ...[
+                const SizedBox(height: 8),
+                PastilleStatut(
+                    key: const ValueKey('badge-reservable'),
+                    libelle: libelleReservable(),
+                    statut: 'CONFIRME'),
+              ],
             ],
           ),
         ),

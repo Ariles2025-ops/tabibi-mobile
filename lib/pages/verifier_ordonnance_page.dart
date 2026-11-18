@@ -89,7 +89,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           FilledButton.icon(
             onPressed: _charge ? null : _verifier,
             icon: const Icon(Icons.verified_outlined),
-            label: Text(t('Vérifier', 'تحقق')),
+            label: Text(t('Vérifier', 'تحقّق')),
           ),
           const SizedBox(height: 24),
           _zoneResultat(context),

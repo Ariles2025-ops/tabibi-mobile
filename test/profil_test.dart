@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/models/profil.dart';
 import 'package:tabibi_mobile/utils/profil.dart';
 
@@ -128,5 +129,11 @@ void main() {
       'Mis à jour le ven. 20 nov. 09:00',
     );
     expect(libelleMiseAJour(const Profil(nomComplet: 'Karim')), 'Profil non enregistré');
+  });
+
+  test('libelleDateNaissance en arabe : féminin, comme sur le site', () {
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(libelleDateNaissance(null), 'غير محدّدة');
   });
 }

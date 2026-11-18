@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +32,35 @@ class _ApiAccueil extends ApiService {
         },
       ];
 }
+
+/// API factice dont chaque reponse est liberee a la main (pour inverser l'ordre d'arrivee).
+class _ApiLente extends ApiService {
+  _ApiLente();
+  final demandes = <Completer<List<Map<String, dynamic>>>>[];
+
+  @override
+  Future<List<Map<String, dynamic>>> rechercherMedecins({
+    String? specialite,
+    String? wilaya,
+    String? q,
+    int page = 0,
+    void Function(int total)? surTotal,
+  }) {
+    final c = Completer<List<Map<String, dynamic>>>();
+    demandes.add(c);
+    return c.future;
+  }
+}
+
+Map<String, dynamic> _medecin(String nom) => {
+      'id': '00000000-0000-0000-0000-000000000002',
+      'nomComplet': nom,
+      'specialiteSlug': 'cardiologue',
+      'specialiteFr': 'Cardiologue',
+      'wilayaCode': '16',
+      'wilayaFr': 'Alger',
+      'ville': 'Alger',
+    };
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -68,5 +99,50 @@ void main() {
     expect(find.textContaining('دليل'), findsNothing);
     expect(find.text('Votre santé ne devrait jamais attendre'), findsNothing);
     expect(Directionality.of(tester.element(find.text('اسم الطبيب'))), TextDirection.rtl);
+  });
+
+  testWidgets("une reponse de recherche plus ancienne n'ecrase pas la plus recente",
+      (tester) async {
+    final api = _ApiLente();
+    await tester.pumpWidget(TabibiApp(api: api, auth: AuthService()));
+    await tester.pump();
+    api.demandes[0].complete([]); // recherche initiale
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField).first, 'a');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).first, 'b');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    expect(api.demandes.length, 3);
+
+    // La plus recente repond d'abord, puis l'ancienne : l'ancienne est ignoree.
+    api.demandes[2].complete([_medecin('Dr Recent')]);
+    await tester.pump();
+    api.demandes[1].complete([_medecin('Dr Ancien')]);
+    await tester.pump();
+    expect(find.text('Dr Recent'), findsOneWidget);
+    expect(find.text('Dr Ancien'), findsNothing);
+  });
+
+  testWidgets("une reponse ancienne ne coupe pas l'indicateur de chargement", (tester) async {
+    final api = _ApiLente();
+    await tester.pumpWidget(TabibiApp(api: api, auth: AuthService()));
+    await tester.pump();
+    api.demandes[0].complete([]);
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField).first, 'a');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).first, 'b');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    api.demandes[1].complete([_medecin('Dr Ancien')]);
+    await tester.pump();
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.text('Dr Ancien'), findsNothing);
   });
 }
