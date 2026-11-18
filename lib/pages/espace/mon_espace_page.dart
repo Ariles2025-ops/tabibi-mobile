@@ -139,7 +139,7 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
                     Icons.badge_outlined,
                     t('Ma fiche', 'صفحتي'),
                     t('Adresse, téléphone, horaires, présentation et langues',
-                        'العنوان والهاتف وأوقات العمل والتعريف واللغات'),
+                        'العنوان والهاتف وأوقات العمل والتقديم واللغات'),
                     MaFichePage(api: api, auth: auth)),
             ],
             if (_espaces.contains(Espace.secretaire)) ...[

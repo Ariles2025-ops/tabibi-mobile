@@ -175,7 +175,7 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
                           ? Row(mainAxisSize: MainAxisSize.min, children: [
                               if (widget.cabinet.parSecretaire && _rdvTelephoneDispo)
                                 IconButton(
-                                  tooltip: t('RDV pris au téléphone', 'موعد بالهاتف'),
+                                  tooltip: t('RDV pris au téléphone', 'موعد عبر الهاتف'),
                                   onPressed: () => _rdvTelephone(c),
                                   icon: const Icon(Icons.phone_in_talk_outlined),
                                 ),
