@@ -15,6 +15,8 @@ class _ApiAccueil extends ApiService {
     String? specialite,
     String? wilaya,
     String? q,
+    int page = 0,
+    void Function(int total)? surTotal,
   }) async =>
       [
         {

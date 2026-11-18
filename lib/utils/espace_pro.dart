@@ -42,6 +42,13 @@ String messagePageReservee() => t(
 String messageAucunMedecin() =>
     t('Aucun médecin trouvé pour ces critères', 'لم يُعثر على أي طبيب لهذه المعايير');
 
+/// Compteur de la recherche : « 50 sur 312 médecins » (le total vient de X-Total-Count).
+String messageNombreMedecins(int affiches, int total) => t(
+    '$affiches sur $total médecins', '$affiches من أصل $total طبيب');
+
+/// Bouton qui charge la page suivante de résultats.
+String messageAfficherPlus() => t('Afficher plus', 'عرض المزيد');
+
 /// Vrai si l'entree « Mon espace » doit apparaitre sur l'accueil.
 bool aUnEspacePro(Set<String> roles) => espacesPour(roles).isNotEmpty;
 
