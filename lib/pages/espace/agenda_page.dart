@@ -166,6 +166,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
           await c.absent(widget.api, id, j);
         case ActionRdv.annuler:
           await c.annuler(widget.api, id, j);
+        case ActionRdv.deplacer:
+          break; // traité plus haut par _deplacer
       }
       return true;
     });
