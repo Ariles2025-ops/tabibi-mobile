@@ -26,9 +26,10 @@ String get messageConversationRefusee => t(
 /// Nombre de derniers avis affiches sur la fiche.
 const int nombreAvisAffiches = 5;
 
-/// Ce que promet la liste d'attente : une notification des qu'un creneau se libere.
-String get texteListeAttente =>
-    t("Vous serez notifié dès qu'un créneau se libère.", 'سيصلك إشعار فور توفر موعد.');
+/// Ce que promet la liste d'attente : une notification DANS L'APPLI (pas de push tant que
+/// l'enregistrement d'appareil et FCM ne sont pas en place, ticket #90).
+String get texteListeAttente => t("Vous verrez une notification dans l'appli dès qu'un créneau se libère.",
+    'سيظهر لك إشعار داخل التطبيق فور توفر موعد.');
 
 /// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
 String get messageDejaInscrit =>

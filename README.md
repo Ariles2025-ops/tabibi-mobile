@@ -415,7 +415,7 @@ Simulateur iOS en developpement : `flutter run --dart-define=TABIBI_API_URL=http
 
 ## v0.12.0 — Liste d'attente par medecin (mobile)
 - Fiche medecin : section « Liste d'attente » sous les creneaux (surtout utile quand aucun creneau
-  n'est disponible) avec le rappel « Vous serez notifié dès qu'un créneau se libère. » et le bouton
+  n'est disponible) avec le rappel « Vous verrez une notification dans l'appli dès qu'un créneau se libère. » et le bouton
   « M'inscrire sur la liste d'attente » (`POST /api/medecins/{id}/liste-attente`, connexion Keycloak
   a la volee si necessaire) ; « Inscription enregistrée. ... » puis texte d'etat « Vous êtes inscrit
   sur la liste d'attente de ce médecin. » ; 409 -> « Vous êtes déjà inscrit sur cette liste. » (meme
