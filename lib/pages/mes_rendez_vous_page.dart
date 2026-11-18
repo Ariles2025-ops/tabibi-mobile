@@ -187,9 +187,9 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
           .where((c) =>
               c['disponible'] != false &&
               identifiant(c['id']) != identifiant(rdv['creneauId']) &&
-              DateTime.parse(c['debut'] as String).isAfter(maintenant))
+              (DateTime.tryParse(identifiant(c['debut']))?.isAfter(maintenant) ?? false))
           .toList()
-        ..sort((a, b) => (a['debut'] as String).compareTo(b['debut'] as String));
+        ..sort((a, b) => identifiant(a['debut']).compareTo(identifiant(b['debut'])));
     } on Exception catch (e) {
       _message(messageErreur(e));
       return;
@@ -211,7 +211,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
                 for (final c in libres)
                   SimpleDialogOption(
                     onPressed: () => Navigator.pop(ctx, c),
-                    child: Text(formaterDateIso(c['debut'] as String)),
+                    child: Text(formaterDateIso(identifiant(c['debut']))),
                   ),
               ],
       ),
@@ -222,7 +222,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       builder: (ctx) => AlertDialog(
         title: Text(t('Déplacer ce rendez-vous ?', 'نقل هذا الموعد؟')),
         content: Text('${_nomMedecin(rdv)}\n${_dateRdv(rdv)} → '
-            '${formaterDateIso(choisi['debut'] as String)}'),
+            '${formaterDateIso(identifiant(choisi['debut']))}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -261,7 +261,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
-  String _dateRdv(Map<String, dynamic> rdv) => formaterDateIso(rdv['debut'] as String);
+  String _dateRdv(Map<String, dynamic> rdv) => formaterDateIso(identifiant(rdv['debut']));
 
   /// Nom du praticien ; « Médecin » suivi de l'identifiant abrege s'il n'a pu etre resolu.
   String _nomMedecin(Map<String, dynamic> rdv) {
@@ -362,7 +362,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(formaterDateIso(rdv['debut'] as String, avecAnnee: avecAnnee),
+                Text(formaterDateIso(identifiant(rdv['debut']), avecAnnee: avecAnnee),
                     style: texte.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text(_nomMedecin(rdv),

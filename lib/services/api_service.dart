@@ -100,6 +100,23 @@ String messageErreur(Object erreur) {
 ///
 /// L'adresse de base vient de la configuration par environnement ([Configuration.apiUrl],
 /// `--dart-define=TABIBI_API_URL=...`) ; les tests peuvent en fournir une autre.
+/// Textes du serveur (toujours en français) les plus fréquents, rendus en arabe quand
+/// l'appli est en arabe ; tout autre texte est affiché tel quel.
+String traduireErreurServeur(int statut, String texte) {
+  if (!Langue.estArabe) return texte;
+  final minuscule = texte.toLowerCase();
+  if (statut == 409) {
+    if (minuscule.contains('déjà passé') || minuscule.contains('deja passe')) {
+      return 'هذا الموعد قد مضى بالفعل.';
+    }
+    if (minuscule.contains('créneau') || minuscule.contains('creneau')) {
+      return 'هذا الموعد لم يعد متاحًا.';
+    }
+    return 'تعذّر الإجراء: تغيّر الوضع في الأثناء';
+  }
+  return texte;
+}
+
 class ApiService {
   const ApiService({this.base = Configuration.apiUrl});
 
@@ -724,7 +741,7 @@ class ApiService {
         for (final cle in ['erreur', 'message']) {
           final v = corps[cle];
           if (v is String && v.isNotEmpty && res.statusCode != 429 && res.statusCode < 500) {
-            return v;
+            return traduireErreurServeur(res.statusCode, v);
           }
         }
       }
