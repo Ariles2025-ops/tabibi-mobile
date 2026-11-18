@@ -13,7 +13,9 @@ import 'conversation_page.dart';
 import 'dawini_page.dart';
 import 'detail_ordonnance_page.dart';
 import 'fiche_medecin_page.dart';
+import 'mes_avis_page.dart';
 import 'mes_conversations_page.dart';
+import 'mes_listes_attente_page.dart';
 import 'mes_ordonnances_page.dart';
 import 'mes_rendez_vous_page.dart';
 
@@ -137,6 +139,10 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         return FicheMedecinPage(medecinId: id, api: widget.api, auth: _auth);
       case TypeCible.dawini:
         return DawiniPage(api: widget.api, auth: _auth);
+      case TypeCible.avis:
+        return MesAvisPage(api: widget.api, auth: _auth);
+      case TypeCible.listeAttente:
+        return MesListesAttentePage(api: widget.api, auth: _auth);
       case TypeCible.conversations:
         return MesConversationsPage(api: widget.api, auth: _auth);
       case TypeCible.conversation:
