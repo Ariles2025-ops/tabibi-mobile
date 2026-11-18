@@ -28,15 +28,17 @@ const int nombreAvisAffiches = 5;
 
 /// Ce que promet la liste d'attente : une notification DANS L'APPLI (pas de push tant que
 /// l'enregistrement d'appareil et FCM ne sont pas en place, ticket #90).
-String get texteListeAttente => t("Vous verrez une notification dans l'appli dès qu'un créneau se libère.",
+String get texteListeAttente => t(
+    "Vous verrez une notification dans l'appli dès qu'un créneau se libère.",
     'سيظهر لك إشعار داخل التطبيق فور توفر موعد.');
 
 /// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
-String get messageDejaInscrit =>
-    t('Vous êtes déjà inscrit sur cette liste.', 'أنت مسجل بالفعل في هذه القائمة.');
+String get messageDejaInscrit => t('Vous êtes déjà inscrit sur cette liste.',
+    'أنت مسجل بالفعل في هذه القائمة.');
 
 /// Etat affiche a la place du bouton une fois le patient inscrit.
-String get texteInscrit => t("Vous êtes inscrit sur la liste d'attente de ce médecin.",
+String get texteInscrit => t(
+    "Vous êtes inscrit sur la liste d'attente de ce médecin.",
     'أنت مسجل في قائمة انتظار هذا الطبيب.');
 
 /// Fiche d'un praticien : informations, moyenne des avis, ouverture d'une conversation,
@@ -72,6 +74,32 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// Identifiant (texte) du creneau en cours de reservation (boutons desactives).
   String? _enCours;
+
+  /// Jour choisi (« jeu. 3 déc. ») et creneau choisi (identifiant) dans le selecteur.
+  String? _jourChoisi;
+  String? _creneauChoisi;
+
+  /// « jeu. 3 déc. 09:00 » -> (« jeu. 3 déc. », « 09:00 »).
+  static (String, String) _jourEtHeure(Map<String, dynamic> c) {
+    final texte = formaterDateIso(identifiant(c['debut']));
+    final i = texte.lastIndexOf(' ');
+    return i < 0
+        ? (texte, '')
+        : (texte.substring(0, i), texte.substring(i + 1));
+  }
+
+  /// Jours ayant au moins un creneau, dans l'ordre des creneaux.
+  List<String> get _jours => [
+        for (final c in _creneaux) _jourEtHeure(c).$1,
+      ].fold<List<String>>([], (l, j) => l.contains(j) ? l : (l..add(j)));
+
+  Map<String, dynamic>? get _creneauSelectionne {
+    if (_creneaux.isEmpty) return null;
+    final jour = _jours.contains(_jourChoisi) ? _jourChoisi! : _jours.first;
+    final duJour = _creneaux.where((c) => _jourEtHeure(c).$1 == jour).toList();
+    return duJour.firstWhere((c) => identifiant(c['id']) == _creneauChoisi,
+        orElse: () => duJour.first);
+  }
 
   /// Vrai pendant l'ouverture de la conversation (bouton desactive).
   bool _conversationEnCours = false;
@@ -116,7 +144,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// l'affichage de la fiche, la section indique alors que les avis sont indisponibles.
   Future<SyntheseAvis?> _chargerAvis() async {
     try {
-      return SyntheseAvis.fromJson(await widget.api.avisDuMedecin(widget.medecinId));
+      return SyntheseAvis.fromJson(
+          await widget.api.avisDuMedecin(widget.medecinId));
     } on Exception {
       return null;
     }
@@ -130,7 +159,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     if (!_auth.estConnecte || token == null) return false;
     try {
       final inscriptions = await widget.api.mesInscriptionsAttente(token);
-      return inscriptions.any((i) => identifiant(i['medecinId']) == widget.medecinId);
+      return inscriptions
+          .any((i) => identifiant(i['medecinId']) == widget.medecinId);
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       return false;
@@ -154,7 +184,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (nom != null) Text(nom, style: const TextStyle(fontWeight: FontWeight.w800)),
+            if (nom != null)
+              Text(nom, style: const TextStyle(fontWeight: FontWeight.w800)),
             if (debut is String) Text(formaterDateIso(debut, avecAnnee: true)),
             if (duree.isNotEmpty) Text('${t('Durée', 'المدة')} : $duree'),
             if (adresse != null) Text('${t('Adresse', 'العنوان')} : $adresse'),
@@ -162,9 +193,11 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false), child: Text(t('Annuler', 'إلغاء'))),
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(t('Annuler', 'إلغاء'))),
           FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true), child: Text(t('Confirmer', 'تأكيد'))),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(t('Confirmer', 'تأكيد'))),
         ],
       ),
     );
@@ -179,7 +212,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message(t('Connexion nécessaire pour réserver', 'يجب تسجيل الدخول للحجز'));
+        _message(
+            t('Connexion nécessaire pour réserver', 'يجب تسجيل الدخول للحجز'));
         return;
       }
     }
@@ -218,7 +252,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     try {
       final creneaux = await widget.api.creneaux(widget.medecinId);
       if (!mounted) return;
-      setState(() => _creneaux = creneaux.where((c) => c['disponible'] != false).toList());
+      setState(() =>
+          _creneaux = creneaux.where((c) => c['disponible'] != false).toList());
     } on Exception {
       // Liste inchangee : le message de l'API a deja ete affiche.
     }
@@ -237,8 +272,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message(
-            t('Connexion nécessaire pour écrire au médecin', 'يجب تسجيل الدخول لمراسلة الطبيب'));
+        _message(t('Connexion nécessaire pour écrire au médecin',
+            'يجب تسجيل الدخول لمراسلة الطبيب'));
         return;
       }
     }
@@ -289,7 +324,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final ok = await _auth.seConnecter();
       if (!mounted) return;
       if (!ok) {
-        _message(t("Connexion nécessaire pour s'inscrire sur la liste d'attente",
+        _message(t(
+            "Connexion nécessaire pour s'inscrire sur la liste d'attente",
             'يجب تسجيل الدخول للتسجيل في قائمة الانتظار'));
         return;
       }
@@ -301,7 +337,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     try {
       await widget.api.inscrireListeAttente(widget.medecinId, token);
       inscrit = true;
-      _message('${t('Inscription enregistrée.', 'تم التسجيل.')} $texteListeAttente');
+      _message(
+          '${t('Inscription enregistrée.', 'تم التسجيل.')} $texteListeAttente');
     } on ApiException catch (e) {
       if (e.conflit) {
         inscrit = true;
@@ -344,47 +381,81 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     final medecin = _medecin;
     if (erreur != null || medecin == null) {
       return VueErreur(
-          message: erreur ?? t('Médecin introuvable', 'الطبيب غير موجود'), onReessayer: _charger);
+          message: erreur ?? t('Médecin introuvable', 'الطبيب غير موجود'),
+          onReessayer: _charger);
     }
     final texte = Theme.of(context).textTheme;
+    final nom = identifiant(medecin['nomComplet']);
+    final telephone = _champTexte(medecin, 'telephoneCabinet');
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        CarteTabibi(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                AvatarInitiales(nom: identifiant(medecin['nomComplet']), rayon: 30),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(identifiant(medecin['nomComplet']),
-                          style: texte.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
-                      Text(sousTitrePraticien(medecin),
-                          style: texte.bodyMedium?.copyWith(color: Charte.doux)),
-                    ],
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 10),
-              _ligneMoyenne(context),
-              const SizedBox(height: 12),
-              _boutonConversation(),
-            ],
+        Container(
+          decoration: BoxDecoration(
+            gradient: Charte.degrade,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Charte.ombreCarte,
           ),
+          padding: const EdgeInsets.all(20),
+          child: Column(children: [
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                  color: Colors.white, shape: BoxShape.circle),
+              child: AvatarInitiales(nom: nom, rayon: 36),
+            ),
+            const SizedBox(height: 12),
+            Text(nom,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3)),
+            const SizedBox(height: 4),
+            Text(sousTitrePraticien(medecin),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85), fontSize: 14)),
+            const SizedBox(height: 12),
+            _ligneMoyenne(context),
+          ]),
         ),
-        ..._informationsPratiques(context, medecin),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _boutonConversation()),
+          if (telephone != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => launchUrl(Uri(
+                    scheme: 'tel',
+                    path: telephone.replaceAll(RegExp(r'[\s.\-()]'), ''))),
+                icon: const Icon(Icons.phone_outlined),
+                label: Text(t('Appeler', 'اتصال')),
+              ),
+            ),
+          ],
+        ]),
         const SizedBox(height: 24),
-        Text(t('Créneaux disponibles', 'المواعيد المتاحة'), style: texte.titleMedium),
-        const SizedBox(height: 8),
+        Text(t('Créneaux disponibles', 'المواعيد المتاحة'),
+            style: texte.titleMedium),
+        const SizedBox(height: 12),
         if (_creneaux.isEmpty)
-          Text(t('Aucun créneau disponible pour le moment.', 'لا توجد مواعيد متاحة حاليًا.')),
-        Wrap(spacing: 10, runSpacing: 10, children: [for (final c in _creneaux) _creneauTile(c)]),
+          CarteTabibi(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              const Icon(Icons.event_busy_outlined, color: Charte.meta),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(t('Aucun créneau disponible pour le moment.',
+                    'لا توجد مواعيد متاحة حاليًا.')),
+              ),
+            ]),
+          )
+        else
+          _selecteurCreneaux(context),
+        ..._informationsPratiques(context, medecin),
         const SizedBox(height: 24),
         _listeAttente(context),
         const SizedBox(height: 24),
@@ -392,6 +463,115 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         const SizedBox(height: 8),
         ..._derniersAvis(context),
       ],
+    );
+  }
+
+  /// Choix du jour (pastilles defilantes), puis de l'heure (grille), puis un seul bouton
+  /// « Réserver » qui rappelle le creneau choisi.
+  Widget _selecteurCreneaux(BuildContext context) {
+    final choisi = _creneauSelectionne!;
+    final jourCourant = _jourEtHeure(choisi).$1;
+    final duJour =
+        _creneaux.where((c) => _jourEtHeure(c).$1 == jourCourant).toList();
+    final enCours = _enCours == identifiant(choisi['id']);
+    return CarteTabibi(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SizedBox(
+          height: 64,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _jours.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final jour = _jours[i];
+              final actif = jour == jourCourant;
+              final morceaux = jour.split(' ');
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => setState(() {
+                  _jourChoisi = jour;
+                  _creneauChoisi = null;
+                }),
+                child: Container(
+                  width: 72,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: actif ? Charte.vert : Charte.fond,
+                    borderRadius: BorderRadius.circular(14),
+                    border:
+                        Border.all(color: actif ? Charte.vert : Charte.bordure),
+                  ),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(morceaux.first,
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                color: actif ? Colors.white : Charte.meta,
+                                fontWeight: FontWeight.w600)),
+                        Text(morceaux.skip(1).join(' '),
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: actif ? Colors.white : Charte.texte,
+                                fontWeight: FontWeight.w800)),
+                      ]),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final c in duJour)
+            ChoiceChip(
+              label: Text(_jourEtHeure(c).$2),
+              selected: identifiant(c['id']) == identifiant(choisi['id']),
+              showCheckmark: false,
+              selectedColor: Charte.vert,
+              labelStyle: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: identifiant(c['id']) == identifiant(choisi['id'])
+                    ? Colors.white
+                    : Charte.vertFonce,
+              ),
+              backgroundColor: Charte.pastille,
+              side: BorderSide.none,
+              onSelected: (_) =>
+                  setState(() => _creneauChoisi = identifiant(c['id'])),
+            ),
+        ]),
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        Row(children: [
+          const Icon(Icons.event_available_outlined, color: Charte.vert),
+          const SizedBox(width: 8),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(formaterDateIso(identifiant(choisi['debut'])),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Charte.texte,
+                      fontSize: 15)),
+              Text(formaterDuree(choisi['dureeMinutes']),
+                  style: Theme.of(context).textTheme.bodySmall),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          onPressed: _enCours == null ? () => _reserver(choisi) : null,
+          child: enCours
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(t('Réserver', 'احجز')),
+        ),
+      ]),
     );
   }
 
@@ -404,7 +584,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// « Informations pratiques » : adresse, telephone (lien tel:), horaires, presentation et
   /// langues ; chaque ligne vide est masquee, la section aussi si tout est vide.
-  List<Widget> _informationsPratiques(BuildContext context, Map<String, dynamic> medecin) {
+  List<Widget> _informationsPratiques(
+      BuildContext context, Map<String, dynamic> medecin) {
     final adresse = _champTexte(medecin, 'adresse');
     final telephone = _champTexte(medecin, 'telephoneCabinet');
     final horaires = _champTexte(medecin, 'horaires');
@@ -429,7 +610,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(libelle, style: texte.bodySmall?.copyWith(color: Charte.doux)),
+                    Text(libelle,
+                        style: texte.bodySmall?.copyWith(color: Charte.doux)),
                     contenu,
                   ],
                 ),
@@ -439,31 +621,39 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         );
     return [
       const SizedBox(height: 24),
-      Text(t('Informations pratiques', 'معلومات عملية'), style: texte.titleMedium),
+      Text(t('Informations pratiques', 'معلومات عملية'),
+          style: texte.titleMedium),
       const SizedBox(height: 8),
       CarteTabibi(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (adresse != null) ligne(Icons.place_outlined, t('Adresse', 'العنوان'), Text(adresse)),
+            if (adresse != null)
+              ligne(
+                  Icons.place_outlined, t('Adresse', 'العنوان'), Text(adresse)),
             if (telephone != null)
               ligne(
                 Icons.phone_outlined,
                 t('Téléphone', 'الهاتف'),
                 InkWell(
                   onTap: () => launchUrl(
-                    Uri(scheme: 'tel', path: telephone.replaceAll(RegExp(r'[\s.\-()]'), '')),
+                    Uri(
+                        scheme: 'tel',
+                        path: telephone.replaceAll(RegExp(r'[\s.\-()]'), '')),
                   ),
                   child: Text(telephone,
                       style: const TextStyle(
-                          color: Charte.vertFonce, decoration: TextDecoration.underline)),
+                          color: Charte.vertFonce,
+                          decoration: TextDecoration.underline)),
                 ),
               ),
             if (horaires != null)
-              ligne(Icons.access_time, t('Horaires', 'أوقات العمل'), Text(horaires)),
+              ligne(Icons.access_time, t('Horaires', 'أوقات العمل'),
+                  Text(horaires)),
             if (presentation != null)
-              ligne(Icons.notes, t('Présentation', 'تقديم'), Text(presentation)),
+              ligne(
+                  Icons.notes, t('Présentation', 'تقديم'), Text(presentation)),
             if (langues.isNotEmpty)
               ligne(Icons.translate, t('Langues parlées', 'اللغات المتحدث بها'),
                   Text(langues.join(' · '))),
@@ -478,12 +668,23 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   Widget _ligneMoyenne(BuildContext context) {
     final avis = _avis;
     if (avis == null) return const SizedBox.shrink();
-    return Row(
-      children: [
-        Icon(Icons.star, size: 18, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 4),
-        Text(formaterMoyenne(avis), style: Theme.of(context).textTheme.bodyMedium),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, size: 18, color: Charte.or),
+          const SizedBox(width: 4),
+          Text(formaterMoyenne(avis),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13)),
+        ],
+      ),
     );
   }
 
@@ -491,12 +692,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   List<Widget> _derniersAvis(BuildContext context) {
     final avis = _avis;
     if (avis == null) {
-      return [Text(t('Avis indisponibles pour le moment.', 'الآراء غير متاحة حاليًا.'))];
+      return [
+        Text(
+            t('Avis indisponibles pour le moment.', 'الآراء غير متاحة حاليًا.'))
+      ];
     }
     if (!avis.aDesAvis || avis.avis.isEmpty) {
       return [Text(t('Aucun avis pour le moment.', 'لا توجد آراء حاليًا.'))];
     }
-    return [for (final a in avis.avis.take(nombreAvisAffiches)) _carteAvis(context, a)];
+    return [
+      for (final a in avis.avis.take(nombreAvisAffiches)) _carteAvis(context, a)
+    ];
   }
 
   /// Un avis anonyme : « 4 / 5 », commentaire s'il existe, date de depot.
@@ -555,7 +761,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.hourglass_top_outlined),
-              label: Text(t("M'inscrire sur la liste d'attente", 'التسجيل في قائمة الانتظار')),
+              label: Text(t("M'inscrire sur la liste d'attente",
+                  'التسجيل في قائمة الانتظار')),
             ),
           ),
       ],
@@ -564,8 +771,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
 
   /// « Ouvrir une conversation » (messagerie avec ce praticien), aligne a gauche.
   Widget _boutonConversation() {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
+    return SizedBox(
+      width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: _conversationEnCours ? null : _ouvrirConversation,
         icon: _conversationEnCours
@@ -576,47 +783,6 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
               )
             : const Icon(Icons.chat_bubble_outline),
         label: Text(t('Ouvrir une conversation', 'بدء محادثة')),
-      ),
-    );
-  }
-
-  /// Creneau en pastille : date, duree et bouton « Réserver ».
-  Widget _creneauTile(Map<String, dynamic> creneau) {
-    final enCours = _enCours == identifiant(creneau['id']);
-    final texte = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 8, 8),
-      decoration: BoxDecoration(
-        color: Charte.pastille,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.schedule, size: 18, color: Charte.vertFonce),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(formaterDateIso(identifiant(creneau['debut'])),
-                  style: texte.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-              Text(formaterDuree(creneau['dureeMinutes']),
-                  style: texte.bodySmall?.copyWith(color: Charte.doux)),
-            ],
-          ),
-          const SizedBox(width: 12),
-          FilledButton(
-            onPressed: _enCours == null ? () => _reserver(creneau) : null,
-            child: enCours
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(t('Réserver', 'احجز')),
-          ),
-        ],
       ),
     );
   }
