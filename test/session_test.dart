@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,12 +33,14 @@ class AuthTest extends AuthService {
   final DateTime maintenantFixe;
   int echanges = 0;
   bool refuser = false;
+  bool horsLigne = false;
   final List<String> refreshRecus = [];
 
   @override
   Future<TokenResponse?> echangerRefreshToken(String refresh) async {
     echanges++;
     refreshRecus.add(refresh);
+    if (horsLigne) throw const SocketException('hors ligne');
     if (refuser) throw Exception('invalid_grant');
     return TokenResponse('acces$echanges', 'refresh$echanges', maintenantFixe.add(const Duration(minutes: 5)),
         'id$echanges', 'Bearer', null, null);
@@ -82,6 +85,22 @@ void main() {
     final auth = AuthTest(s, maintenant)..refuser = true;
     expect(await auth.restaurer(), isFalse);
     expect(auth.estConnecte, isFalse);
+  });
+
+  test('scopes : offline_access demande', () {
+    expect(AuthService.scopes, contains('offline_access'));
+  });
+
+  test('restaurer : sans reseau, jetons gardes puis nouvel essai reussi', () async {
+    final s = await avecSession(validite: const Duration(minutes: -1));
+    final auth = AuthTest(s, maintenant)..horsLigne = true;
+    expect(await auth.restaurer(), isTrue);
+    expect(auth.estConnecte, isTrue);
+    expect(s.donnees['refresh_token'], 'r0');
+    auth.horsLigne = false;
+    expect(await auth.jetonApres401('ancien'), 'acces2');
+    expect(auth.refreshRecus, ['r0', 'r0']);
+    auth.seDeconnecter();
   });
 
   test('rafraichir : appels simultanes = un seul echange', () async {

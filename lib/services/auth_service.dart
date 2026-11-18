@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -47,11 +48,16 @@ class AuthService {
   /// Marge avant l'expiration a partir de laquelle le jeton est rafraichi.
   static const Duration marge = Duration(seconds: 30);
 
+  /// Perimetre demande : `offline_access` donne un refresh token hors ligne, qui ne meurt pas
+  /// apres 30 min d'inactivite (ssoSessionIdleTimeout) comme un jeton de session ordinaire.
+  static const List<String> scopes = ['openid', 'profile', 'offline_access'];
+
   String? accessToken;
   String? _refreshToken;
   DateTime? _expiration;
   Timer? _minuteur;
   Future<bool>? _rafraichissement;
+  bool _echecReseau = false;
 
   /// Jeton d'identite conserve a la connexion : il designe la session Keycloak a fermer
   /// lors de la deconnexion ([seDeconnecterCompletement]).
@@ -72,7 +78,7 @@ class AuthService {
           Configuration.clientId,
           Configuration.redirect,
           issuer: Configuration.issuer,
-          scopes: ['openid', 'profile'],
+          scopes: scopes,
           // Comme le site : mot de passe (ou code) exige a chaque connexion.
           promptValues: ['login'],
           // Developpement local uniquement (http://localhost) ; la production est en https.
@@ -118,7 +124,8 @@ class AuthService {
   }
 
   /// Restaure la session enregistree au demarrage : jeton encore valide, sinon rafraichi.
-  /// Faux (sans effacer le stockage) si rien n'est enregistre ou si le rafraichissement echoue.
+  /// Faux (sans effacer le stockage) si rien n'est enregistre ou si le rafraichissement est refuse ;
+  /// sans reseau, les jetons sont conserves et la session reste ouverte (nouvel essai au premier appel).
   Future<bool> restaurer() async {
     try {
       accessToken = await _stockage.lire('access_token');
@@ -139,8 +146,12 @@ class AuthService {
       return false;
     }
     final ok = await rafraichir();
-    if (!ok) accessToken = null;
-    return ok;
+    if (ok) return true;
+    // Reseau absent (et non refus) : on garde les jetons ; le premier appel en 401 (ou un
+    // prochain rafraichir) retentera l'echange. Seul un refus declare la session perdue.
+    if (_echecReseau && accessToken != null) return true;
+    if (!_echecReseau) accessToken = null;
+    return false;
   }
 
   /// Obtient de nouveaux jetons avec le refresh token (un seul appel a la fois).
@@ -151,11 +162,18 @@ class AuthService {
   Future<bool> _rafraichirVraiment() async {
     final refresh = _refreshToken;
     if (refresh == null) return false;
+    _echecReseau = false;
     try {
       final r = await echangerRefreshToken(refresh);
       if (r == null || r.accessToken == null) return false;
       await _adopter(r.accessToken, r.refreshToken, r.idToken, r.accessTokenExpirationDateTime);
       return true;
+    } on SocketException {
+      _echecReseau = true;
+      return false;
+    } on TimeoutException {
+      _echecReseau = true;
+      return false;
     } on Exception {
       return false;
     }
@@ -168,7 +186,7 @@ class AuthService {
           Configuration.redirect,
           issuer: Configuration.issuer,
           refreshToken: refresh,
-          scopes: ['openid', 'profile'],
+          scopes: scopes,
           allowInsecureConnections: Configuration.issuer.startsWith('http://'),
         ),
       );
