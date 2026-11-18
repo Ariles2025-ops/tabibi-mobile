@@ -174,6 +174,88 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     }
   }
 
+  /// Deplacer : choix d'un autre creneau libre du meme praticien, confirmation, puis
+  /// POST .../deplacer. Si le creneau est pris (409), rien ne change et on le dit.
+  Future<void> _deplacer(Map<String, dynamic> rdv) async {
+    final token = _auth.accessToken;
+    if (token == null) return;
+    final List<Map<String, dynamic>> libres;
+    try {
+      final tous = await widget.api.creneaux(identifiant(rdv['medecinId']));
+      final maintenant = DateTime.now();
+      libres = tous
+          .where((c) =>
+              c['disponible'] != false &&
+              identifiant(c['id']) != identifiant(rdv['creneauId']) &&
+              DateTime.parse(c['debut'] as String).isAfter(maintenant))
+          .toList()
+        ..sort((a, b) => (a['debut'] as String).compareTo(b['debut'] as String));
+    } on Exception catch (e) {
+      _message(messageErreur(e));
+      return;
+    }
+    if (!mounted) return;
+    final choisi = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(t('Choisir un nouveau créneau', 'اختر موعدًا جديدًا')),
+        children: libres.isEmpty
+            ? [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(t('Aucun autre créneau disponible pour le moment.',
+                      'لا توجد مواعيد أخرى متاحة حاليًا.')),
+                ),
+              ]
+            : [
+                for (final c in libres)
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(ctx, c),
+                    child: Text(formaterDateIso(c['debut'] as String)),
+                  ),
+              ],
+      ),
+    );
+    if (choisi == null || !mounted) return;
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('Déplacer ce rendez-vous ?', 'نقل هذا الموعد؟')),
+        content: Text('${_nomMedecin(rdv)}\n${_dateRdv(rdv)} → '
+            '${formaterDateIso(choisi['debut'] as String)}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t('Non', 'لا')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t('Oui, déplacer', 'نعم، انقل')),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true) return;
+    try {
+      await widget.api.deplacer(identifiant(rdv['id']), identifiant(choisi['id']), token);
+      _message(t('Rendez-vous déplacé', 'تم نقل الموعد'));
+    } on ApiException catch (e) {
+      if (e.nonAutorise) _auth.seDeconnecter();
+      _message(e.conflit
+          ? t("Ce créneau vient d'être pris. Votre rendez-vous n'a pas changé : choisissez un autre créneau.",
+              'تم حجز هذا الموعد للتو. موعدك لم يتغيّر، اختر موعدًا آخر.')
+          : e.message);
+    } on Exception catch (e) {
+      _message(messageErreur(e));
+    }
+    if (!mounted) return;
+    if (_auth.estConnecte) {
+      await _charger();
+    } else {
+      setState(() {});
+    }
+  }
+
   void _message(String texte) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
@@ -202,7 +284,10 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
           onPressed: () => _donnerAvis(rdv), child: Text(t('Donner mon avis', 'أبدِ رأيك')));
     }
     if (_annulable(rdv)) {
-      return TextButton(onPressed: () => _annuler(rdv), child: Text(t('Annuler', 'إلغاء')));
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        TextButton(onPressed: () => _deplacer(rdv), child: Text(t('Déplacer', 'نقل'))),
+        TextButton(onPressed: () => _annuler(rdv), child: Text(t('Annuler', 'إلغاء'))),
+      ]);
     }
     return null;
   }
