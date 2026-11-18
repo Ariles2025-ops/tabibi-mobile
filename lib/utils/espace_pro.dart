@@ -54,6 +54,26 @@ String statutAgenda(Object? statut) {
 /// Honorer, marquer absent ou annuler : seulement pour un rendez-vous confirme (ou reserve).
 bool actionsCabinetPossibles(Object? statut) => statutAgenda(statut) == 'CONFIRME';
 
+/// « Déplacer » : seulement un rendez-vous confirme (ou reserve) qui n'a pas encore commence,
+/// comme sur le site.
+bool peutDeplacerCabinet(Object? statut, Object? debut, DateTime maintenant) =>
+    actionsCabinetPossibles(statut) && !rdvCommence(debut, maintenant);
+
+/// Creneaux proposes pour deplacer [rdv] : libres, a venir et differents du creneau actuel,
+/// du plus proche au plus lointain.
+List<Map<String, dynamic>> creneauxPourDeplacer(
+    List<Map<String, dynamic>> creneaux, Map<String, dynamic> rdv, DateTime maintenant) {
+  final actuel = '${rdv['creneauId'] ?? ''}';
+  final libres = creneaux.where((c) {
+    final debut = DateTime.tryParse('${c['debut']}');
+    return c['disponible'] == true &&
+        '${c['id']}' != actuel &&
+        debut != null &&
+        debut.isAfter(maintenant);
+  }).toList();
+  return trierParDebut(libres);
+}
+
 /// Rendez-vous tries du plus proche au plus lointain (champ `debut`, ISO 8601).
 List<Map<String, dynamic>> trierParDebut(List<Map<String, dynamic>> elements) {
   final copie = List<Map<String, dynamic>>.of(elements);

@@ -189,6 +189,24 @@ class FakeEspaceApi extends ApiService {
   Future<void> annulerParSecretaire(String rdvId, String token) async =>
       appels.add('annuler secretaire $rdvId');
 
+  /// Quand vrai, le déplacement répond 409 (créneau pris entre-temps).
+  bool creneauPris = false;
+
+  @override
+  Future<Map<String, dynamic>> deplacerParMedecin(
+      String rdvId, String nouveauCreneauId, String token) async {
+    if (creneauPris) throw const ApiException(409, 'pris');
+    appels.add('deplacer $rdvId $nouveauCreneauId');
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> deplacerParSecretaire(
+      String rdvId, String nouveauCreneauId, String token) async {
+    appels.add('deplacer secretaire $rdvId $nouveauCreneauId');
+    return {};
+  }
+
   @override
   Future<List<Map<String, dynamic>>> creneauxMedecin(String token) async => [
         {'id': 'c1', 'debut': '2026-12-03T08:00:00Z', 'dureeMinutes': 30, 'disponible': true},
@@ -418,6 +436,66 @@ void main() {
     await tester.tap(find.text('Oui, annuler'));
     await tester.pumpAndSettle();
     expect(api.appels, ['annuler secretaire r3']);
+  });
+
+  testWidgets("le medecin deplace un rendez-vous a venir vers un autre creneau libre",
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester,
+        AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 1, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Patient venu'), findsNothing); // pas encore commence
+    await tester.tap(find.text('Déplacer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choisir un nouveau créneau'), findsOneWidget);
+    // Seul c1 est libre (c2 est reserve).
+    await tester.tap(find.byType(SimpleDialogOption));
+    await tester.pumpAndSettle();
+    expect(find.text('Déplacer ce rendez-vous ?'), findsOneWidget);
+    expect(find.textContaining('Le patient sera prévenu.'), findsOneWidget);
+    await tester.tap(find.text('Oui, déplacer'));
+    await tester.pumpAndSettle();
+    expect(api.appels, ['deplacer r1 c1']);
+    expect(find.textContaining('Rendez-vous déplacé'), findsOneWidget);
+  });
+
+  testWidgets("la secretaire deplace par sa propre route, et un creneau pris (409) ne change rien",
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['SECRETAIRE']);
+    await afficher(
+        tester,
+        AgendaPage(
+            cabinet: const Cabinet.pourSecretaire(medecinId),
+            api: api,
+            auth: SessionTest(),
+            maintenant: () => DateTime.utc(2026, 12, 1, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Déplacer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(SimpleDialogOption));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oui, déplacer'));
+    await tester.pumpAndSettle();
+    expect(api.appels, ['deplacer secretaire r3 c1']);
+  });
+
+  testWidgets("deplacer un rendez-vous dont le creneau est pris dit que rien n'a change",
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN'])..creneauPris = true;
+    await afficher(tester,
+        AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 1, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Déplacer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(SimpleDialogOption));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oui, déplacer'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Ce créneau vient d'être pris"), findsOneWidget);
+    expect(find.textContaining('Rendez-vous déplacé'), findsNothing);
   });
 
   testWidgets("annuler un rendez-vous pris par telephone n'annonce pas que le patient sera prevenu",

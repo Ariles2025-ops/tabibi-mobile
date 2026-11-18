@@ -13,11 +13,12 @@ import 'cabinet.dart';
 import 'outils_espace.dart';
 
 /// Actions du cabinet sur un rendez-vous confirme.
-enum ActionRdv { honorer, absent, annuler }
+enum ActionRdv { honorer, absent, annuler, deplacer }
 
 /// Agenda du cabinet (medecin connecte, ou medecin choisi par une secretaire) : rendez-vous en
 /// sections Aujourd'hui / À venir / Passés, nom du patient quand il est connu ; sur un rendez-vous confirme
-/// (RESERVE compris) : « Patient venu », « Absent », « Annuler » (avec confirmation).
+/// (RESERVE compris) : « Patient venu », « Absent », « Annuler » (avec confirmation) et, tant qu'il n'a pas
+/// commence, « Déplacer » vers un autre créneau libre (comme sur le site).
 class AgendaPage extends StatefulWidget {
   const AgendaPage({
     super.key,
@@ -80,7 +81,65 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     return _patients[id] ?? t('Patient ${abreger(id)}', 'مريض ${abreger(id)}');
   }
 
+  /// Déplacer : choix d'un autre créneau libre du cabinet, confirmation, puis POST .../deplacer.
+  /// Si le créneau vient d'être pris (409), rien ne change et on le dit.
+  Future<void> _deplacer(Map<String, dynamic> rdv) async {
+    final id = identifiant(rdv['id']);
+    final maintenant = (widget.maintenant ?? DateTime.now)();
+    final creneaux = await appeler((j) => widget.cabinet.creneaux(widget.api, j));
+    if (creneaux == null || !mounted) return;
+    final libres = creneauxPourDeplacer(creneaux, rdv, maintenant);
+    final choisi = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(t('Choisir un nouveau créneau', 'اختر موعدًا جديدًا')),
+        children: libres.isEmpty
+            ? [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(t('Aucun autre créneau disponible pour le moment.',
+                      'لا توجد مواعيد أخرى متاحة حاليًا.')),
+                ),
+              ]
+            : [
+                for (final c in libres)
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(ctx, c),
+                    child: Text(formaterDateIso('${c['debut']}')),
+                  ),
+              ],
+      ),
+    );
+    if (choisi == null || !mounted) return;
+    final nouvelleDate = formaterDateIso('${choisi['debut']}');
+    // Rendez-vous pris par téléphone : le patient n'a pas de compte, personne ne le prévient.
+    final telephone = '${rdv['source']}'.trim().toUpperCase() == 'TELEPHONE';
+    final ok = await confirmer(
+      t('Déplacer ce rendez-vous ?', 'نقل هذا الموعد؟'),
+      '${_patient(rdv)}\n${formaterDateIso('${rdv['debut']}')} → $nouvelleDate\n'
+      '${telephone ? t('Pensez à prévenir le patient par téléphone.', 'يرجى إبلاغ المريض هاتفيًا.') : t('Le patient sera prévenu.', 'سيتم إعلام المريض.')}',
+      t('Oui, déplacer', 'نعم، انقل'),
+    );
+    if (!ok) return;
+    final fait = await appeler<bool>((j) async {
+      try {
+        await widget.cabinet.deplacer(widget.api, id, identifiant(choisi['id']), j);
+        return true;
+      } on ApiException catch (e) {
+        if (!e.conflit) rethrow;
+        message(t("Ce créneau vient d'être pris. Le rendez-vous n'a pas changé : choisissez un autre créneau.",
+            'تم حجز هذا الموعد للتو. لم يتغيّر الموعد: اختر موعدًا آخر.'));
+        return false;
+      }
+    });
+    if (fait == true) {
+      message(t('Rendez-vous déplacé au $nouvelleDate', 'تم نقل الموعد إلى $nouvelleDate'));
+    }
+    if (fait != null) await recharger();
+  }
+
   Future<void> _agir(Map<String, dynamic> rdv, ActionRdv action) async {
+    if (action == ActionRdv.deplacer) return _deplacer(rdv);
     final id = identifiant(rdv['id']);
     if (action == ActionRdv.annuler) {
       // Rendez-vous pris par téléphone : le patient n'a pas de compte et l'API ne lui envoie
@@ -115,6 +174,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       ActionRdv.honorer => t('Rendez-vous honoré', 'تم تأكيد حضور المريض'),
       ActionRdv.absent => t('Patient marqué absent', 'تم تسجيل غياب المريض'),
       ActionRdv.annuler => t('Rendez-vous annulé', 'تم إلغاء الموعد'),
+      ActionRdv.deplacer => '',
     });
     await recharger();
   }
@@ -176,6 +236,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
                   PopupMenuItem(value: ActionRdv.honorer, child: Text(t('Patient venu', 'حضر المريض'))),
                   PopupMenuItem(value: ActionRdv.absent, child: Text(t('Absent', 'غائب'))),
                 ],
+                if (peutDeplacerCabinet(rdv['statut'], rdv['debut'], (widget.maintenant ?? DateTime.now)()))
+                  PopupMenuItem(value: ActionRdv.deplacer, child: Text(t('Déplacer', 'نقل'))),
                 PopupMenuItem(value: ActionRdv.annuler, child: Text(t('Annuler', 'إلغاء'))),
               ],
             )

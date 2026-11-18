@@ -35,6 +35,29 @@ void main() {
     expect(actionsCabinetPossibles('HONORE'), isFalse);
   });
 
+  test('deplacer : seulement un rendez-vous confirme qui n\'a pas commence', () {
+    final maintenant = DateTime.utc(2026, 12, 3, 9);
+    expect(peutDeplacerCabinet('CONFIRME', '2026-12-03T10:00:00Z', maintenant), isTrue);
+    expect(peutDeplacerCabinet('RESERVE', '2026-12-03T10:00:00Z', maintenant), isTrue);
+    expect(peutDeplacerCabinet('CONFIRME', '2026-12-03T08:00:00Z', maintenant), isFalse);
+    expect(peutDeplacerCabinet('ANNULE', '2026-12-03T10:00:00Z', maintenant), isFalse);
+    expect(peutDeplacerCabinet('HONORE', '2026-12-03T10:00:00Z', maintenant), isFalse);
+    expect(peutDeplacerCabinet('CONFIRME', null, maintenant), isFalse);
+  });
+
+  test('creneauxPourDeplacer : libres, a venir, autres que le creneau actuel, tries', () {
+    final maintenant = DateTime.utc(2026, 12, 3, 9);
+    final propositions = creneauxPourDeplacer([
+      {'id': 'actuel', 'debut': '2026-12-03T10:00:00Z', 'disponible': true},
+      {'id': 'pris', 'debut': '2026-12-03T11:00:00Z', 'disponible': false},
+      {'id': 'passe', 'debut': '2026-12-03T08:00:00Z', 'disponible': true},
+      {'id': 'tard', 'debut': '2026-12-05T10:00:00Z', 'disponible': true},
+      {'id': 'tot', 'debut': '2026-12-04T10:00:00Z', 'disponible': true},
+      {'id': 'sans-date', 'disponible': true},
+    ], {'creneauId': 'actuel'}, maintenant);
+    expect(propositions.map((c) => c['id']), ['tot', 'tard']);
+  });
+
   test('trierParDebut range du plus proche au plus lointain, dates absentes a la fin', () {
     final tries = trierParDebut([
       {'id': 'b', 'debut': '2026-12-04T09:00:00Z'},

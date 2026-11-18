@@ -31,6 +31,12 @@ class Cabinet {
   Future<void> annuler(ApiService api, String rdvId, String jeton) =>
       parSecretaire ? api.annulerParSecretaire(rdvId, jeton) : api.annulerParMedecin(rdvId, jeton);
 
+  Future<Map<String, dynamic>> deplacer(
+          ApiService api, String rdvId, String creneauId, String jeton) =>
+      parSecretaire
+          ? api.deplacerParSecretaire(rdvId, creneauId, jeton)
+          : api.deplacerParMedecin(rdvId, creneauId, jeton);
+
   Future<List<Map<String, dynamic>>> creneaux(ApiService api, String jeton) =>
       parSecretaire ? api.creneauxSecretaire(medecinId!, jeton) : api.creneauxMedecin(jeton);
 
