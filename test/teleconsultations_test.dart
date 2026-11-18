@@ -104,4 +104,23 @@ void main() {
     );
     expect(dateTeleconsultation(Teleconsultation.fromJson({})), 'Date inconnue');
   });
+
+  test("fenetre d'acces : de 15 min avant a 2 h apres le rendez-vous", () {
+    final rdv = DateTime(2026, 12, 3, 10);
+    final tc = Teleconsultation.fromJson({
+      'id': 'tc',
+      'statut': 'PLANIFIEE',
+      'lienSalle': 'https://meet.jit.si/x',
+    }).avecContexte(debutRendezVous: rdv);
+    expect(peutRejoindre(tc, maintenant: DateTime(2026, 12, 1, 10)), isFalse);
+    expect(texteHorsFenetre(tc, maintenant: DateTime(2026, 12, 1, 10)),
+        'Disponible 15 min avant le rendez-vous');
+    expect(peutRejoindre(tc, maintenant: DateTime(2026, 12, 3, 9, 44)), isFalse);
+    expect(peutRejoindre(tc, maintenant: DateTime(2026, 12, 3, 9, 45)), isTrue);
+    expect(peutRejoindre(tc, maintenant: DateTime(2026, 12, 3, 12)), isTrue);
+    expect(peutRejoindre(tc, maintenant: DateTime(2026, 12, 3, 12, 1)), isFalse);
+    expect(texteHorsFenetre(tc, maintenant: DateTime(2026, 12, 3, 12, 1)),
+        'Le créneau de ce rendez-vous est passé');
+    expect(texteHorsFenetre(tc, maintenant: DateTime(2026, 12, 3, 10)), isNull);
+  });
 }

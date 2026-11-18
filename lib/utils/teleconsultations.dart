@@ -22,14 +22,42 @@ String libelleStatutTeleconsultation(Object? statut) {
 /// Vrai si la session peut encore avoir lieu : planifiee ou en cours.
 bool estActive(Teleconsultation tc) => tc.statut == 'PLANIFIEE' || tc.statut == 'EN_COURS';
 
-/// Vrai si le patient peut rejoindre la salle : lien remis (donc consentement donne)
-/// et session planifiee ou en cours.
-bool peutRejoindre(Teleconsultation tc) => tc.lienSalle != null && estActive(tc);
+/// Fenetre d'acces a la salle, comme sur le site : de 15 min avant le rendez-vous a 2 h apres.
+const Duration avanceAcces = Duration(minutes: 15);
+const Duration dureeAcces = Duration(hours: 2);
+
+/// Vrai si [maintenant] est dans la fenetre d'acces du rendez-vous ; vrai aussi si la date du
+/// rendez-vous est inconnue (on ne bloque pas sans information).
+bool dansFenetreAcces(Teleconsultation tc, {DateTime? maintenant}) {
+  final debut = tc.debutRendezVous;
+  if (debut == null) return true;
+  final now = maintenant ?? DateTime.now();
+  return !now.isBefore(debut.subtract(avanceAcces)) && !now.isAfter(debut.add(dureeAcces));
+}
+
+/// Vrai si le patient peut rejoindre la salle : lien remis (donc consentement donne),
+/// session planifiee ou en cours et fenetre d'acces ouverte.
+bool peutRejoindre(Teleconsultation tc, {DateTime? maintenant}) =>
+    tc.lienSalle != null && estActive(tc) && dansFenetreAcces(tc, maintenant: maintenant);
+
+/// Texte affiche a la place du bouton « Rejoindre » hors fenetre ; null si la fenetre est ouverte.
+String? texteHorsFenetre(Teleconsultation tc, {DateTime? maintenant}) {
+  if (dansFenetreAcces(tc, maintenant: maintenant)) return null;
+  final debut = tc.debutRendezVous!;
+  if ((maintenant ?? DateTime.now()).isBefore(debut)) {
+    return t('Disponible 15 min avant le rendez-vous', 'متاحة قبل 15 دقيقة من الموعد');
+  }
+  return t('Le créneau de ce rendez-vous est passé', 'انتهى وقت هذا الموعد');
+}
 
 /// Date a afficher selon l'avancement : « Terminee le ... », « Demarree le ... » ou
 /// « Proposee le ... » (date de planification, format « jeu. 4 dec. 09:00 ») ;
 /// « Date inconnue » si aucune date n'est lisible.
 String dateTeleconsultation(Teleconsultation tc) {
+  final rdv = tc.debutRendezVous;
+  if (rdv != null && tc.termineeLe == null && tc.demarreeLe == null) {
+    return '${t('Rendez-vous le', 'الموعد في')} ${formaterDateHeure(rdv)}';
+  }
   final termineeLe = tc.termineeLe;
   if (termineeLe != null) {
     return '${t('Terminée le', 'انتهت في')} ${formaterDateHeure(termineeLe)}';

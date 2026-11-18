@@ -51,6 +51,8 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
   /// Identifiant de la teleconsultation dont le consentement est en cours d'envoi.
   String? _enCours;
 
+  final Map<String, String> _nomsMedecins = {};
+
   @override
   void initState() {
     super.initState();
@@ -76,10 +78,10 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     });
     try {
       final teleconsultations = await widget.api.mesTeleconsultations(token);
+      final liste = teleconsultations.map(Teleconsultation.fromJson).toList();
+      final enrichies = await _enrichir(liste, token);
       if (!mounted) return;
-      setState(() {
-        _teleconsultations = teleconsultations.map(Teleconsultation.fromJson).toList();
-      });
+      setState(() => _teleconsultations = enrichies);
     } on ApiException catch (e) {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
@@ -92,6 +94,34 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     }
   }
 
+  /// Ajoute la date du rendez-vous lie et le nom du medecin ; un echec n'empeche pas
+  /// l'affichage (la fenetre d'acces n'est alors pas appliquee).
+  Future<List<Teleconsultation>> _enrichir(List<Teleconsultation> liste, String token) async {
+    final debuts = <String, DateTime>{};
+    try {
+      for (final rdv in await widget.api.mesRendezVous(token)) {
+        final debut = DateTime.tryParse(rdv['debut']?.toString() ?? '');
+        if (debut != null) debuts[rdv['id']?.toString() ?? ''] = debut;
+      }
+    } on Exception {
+      // Dates indisponibles.
+    }
+    for (final id in liste.map((tc) => tc.medecinId).toSet()) {
+      if (id.isEmpty || _nomsMedecins.containsKey(id)) continue;
+      try {
+        final Object? nom = (await widget.api.medecin(id))['nomComplet'];
+        if (nom is String && nom.isNotEmpty) _nomsMedecins[id] = nom;
+      } on Exception {
+        // Nom indisponible.
+      }
+    }
+    return [
+      for (final tc in liste)
+        tc.avecContexte(
+            debutRendezVous: debuts[tc.rendezVousId], nomMedecin: _nomsMedecins[tc.medecinId]),
+    ];
+  }
+
   /// Consentement explicite (POST /api/teleconsultations/{id}/consentir) ; la vue renvoyee,
   /// qui porte desormais le lien de salle, remplace l'element.
   Future<void> _consentir(Teleconsultation tc) async {
@@ -100,7 +130,8 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     if (token == null) return;
     setState(() => _enCours = tc.id);
     try {
-      final consentie = Teleconsultation.fromJson(await widget.api.consentir(tc.id, token));
+      final consentie = Teleconsultation.fromJson(await widget.api.consentir(tc.id, token))
+          .avecContexte(debutRendezVous: tc.debutRendezVous, nomMedecin: tc.nomMedecin);
       if (!mounted) return;
       setState(() {
         _teleconsultations = [
@@ -198,7 +229,10 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.videocam_outlined),
               title: Text(dateTeleconsultation(tc)),
-              subtitle: Text(libelleStatutTeleconsultation(tc.statut)),
+              subtitle: Text([
+                if (tc.nomMedecin != null) tc.nomMedecin!,
+                libelleStatutTeleconsultation(tc.statut),
+              ].join(' · ')),
             ),
             const SizedBox(height: 8),
             _zoneAction(context, tc),
@@ -210,6 +244,14 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
 
   Widget _zoneAction(BuildContext context, Teleconsultation tc) {
     if (!tc.aConsenti && estActive(tc)) return _carteConsentement(context, tc);
+    final horsFenetre = tc.lienSalle != null && estActive(tc) ? texteHorsFenetre(tc) : null;
+    if (horsFenetre != null) {
+      return FilledButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.schedule),
+        label: Text(horsFenetre),
+      );
+    }
     if (peutRejoindre(tc)) {
       return FilledButton.icon(
         onPressed: () => _rejoindre(tc),
