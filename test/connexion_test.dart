@@ -15,6 +15,14 @@ class _AuthFausse extends AuthService {
     if (reponse == null) accessToken = 'jeton';
     return reponse;
   }
+
+  bool navigateurOuvert = false;
+  @override
+  Future<bool> seConnecterParNavigateur() async {
+    navigateurOuvert = true;
+    accessToken = 'jeton';
+    return true;
+  }
 }
 
 Future<bool?> _ouvrir(WidgetTester tester, AuthService auth) async {
@@ -73,5 +81,13 @@ void main() {
     await _saisir(tester, 'dr@exemple.dz', 'provisoire');
     expect(find.textContaining('Votre compte doit être finalisé'), findsOneWidget);
     expect(find.text('Définir mon mot de passe'), findsOneWidget);
+  });
+
+  testWidgets('connexion directe interdite : repli sur le navigateur', (tester) async {
+    final auth = _AuthFausse('unauthorized_client');
+    await _ouvrir(tester, auth);
+    await _saisir(tester, 'dr@exemple.dz', 'bon');
+    expect(auth.navigateurOuvert, isTrue);
+    expect(find.byType(ConnexionPage), findsNothing);
   });
 }

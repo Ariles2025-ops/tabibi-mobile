@@ -69,6 +69,15 @@ class _ConnexionPageState extends State<ConnexionPage> {
       Navigator.of(context).pop(true);
       return;
     }
+    if (code == 'unauthorized_client') {
+      // Le serveur n'autorise pas (encore) la connexion directe : parcours habituel par le navigateur.
+      final ok = await widget.auth.seConnecterParNavigateur();
+      if (!mounted) return;
+      if (ok) {
+        Navigator.of(context).pop(true);
+        return;
+      }
+    }
     setState(() {
       _enCours = false;
       _erreur = messageErreurConnexion(code);
