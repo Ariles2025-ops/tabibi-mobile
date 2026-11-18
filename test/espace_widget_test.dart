@@ -420,6 +420,29 @@ void main() {
     expect(api.appels, ['annuler secretaire r3']);
   });
 
+  testWidgets("annuler un rendez-vous pris par telephone n'annonce pas que le patient sera prevenu",
+      (tester) async {
+    await afficher(tester,
+        AgendaPage(api: _AgendaSourceApi('TELEPHONE'), auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Le patient sera prévenu.'), findsNothing);
+    expect(find.textContaining('Pensez à prévenir le patient par téléphone.'), findsOneWidget);
+  });
+
+  testWidgets('annuler un rendez-vous pris en ligne annonce que le patient sera prevenu',
+      (tester) async {
+    await afficher(tester,
+        AgendaPage(api: _AgendaSourceApi('EN_LIGNE'), auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Le patient sera prévenu.'), findsOneWidget);
+  });
+
   testWidgets('mes creneaux supprime un creneau libre et en ajoute un', (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
     await afficher(tester, CreneauxPage(api: api, auth: SessionTest()));
@@ -908,5 +931,21 @@ class _AgendaDatesApi extends FakeEspaceApi {
         _r('p', 'ANNULE', '2026-11-20T09:00:00Z'),
         _r('f', 'CONFIRME', '2026-12-03T23:30:00Z'),
         _r('j', 'CONFIRME', '2026-12-03T09:00:00Z'),
+      ];
+}
+
+class _AgendaSourceApi extends FakeEspaceApi {
+  _AgendaSourceApi(this.source) : super(roles: ['MEDECIN']);
+  final String source;
+
+  @override
+  Future<List<Map<String, dynamic>>> agendaMedecin(String token) async => [
+        {
+          'id': 's1',
+          'statut': 'CONFIRME',
+          'debut': '2026-12-03T09:00:00Z',
+          'patientId': patientId,
+          'source': source,
+        },
       ];
 }
