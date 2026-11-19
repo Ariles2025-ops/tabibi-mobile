@@ -1348,6 +1348,8 @@ void main() {
     expect(find.text('Dim-Jeu 9h-17h'), findsOneWidget);
     expect(find.text('Cardiologue depuis 15 ans.'), findsOneWidget);
     expect(find.text('Français · Arabe'), findsOneWidget);
+    expect(find.text('Vous réglez la consultation directement sur place.'), findsOneWidget);
+    expect(find.text('Votre rendez-vous est enregistré dès la réservation.'), findsOneWidget);
   });
 
   testWidgets('la fiche medecin sans informations pratiques masque les lignes vides',
@@ -1359,7 +1361,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Informations pratiques'), findsNothing);
+    // Seules les lignes communes (paiement, confirmation, annulation) restent, comme sur le site.
+    expect(find.text('Informations pratiques'), findsOneWidget);
+    expect(find.text('Paiement au cabinet'), findsOneWidget);
+    expect(find.text('Confirmation immédiate'), findsOneWidget);
+    expect(find.text('Un empêchement ?'), findsOneWidget);
     expect(find.text('Adresse'), findsNothing);
     expect(find.text('Téléphone'), findsNothing);
     expect(find.textContaining('null'), findsNothing);
