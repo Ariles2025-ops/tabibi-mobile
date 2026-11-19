@@ -13,10 +13,21 @@ import 'outils_espace.dart';
 /// facultativement un rendez-vous confirme ou honore, puis saisit les lignes (seul le medicament est
 /// obligatoire) et emet l'ordonnance (POST /api/ordonnances). Se ferme avec `true` une fois emise.
 class NouvelleOrdonnancePage extends StatefulWidget {
-  const NouvelleOrdonnancePage({super.key, this.api = const ApiService(), this.auth});
+  const NouvelleOrdonnancePage({
+    super.key,
+    this.api = const ApiService(),
+    this.auth,
+    this.patientId = '',
+    this.rendezVousId = '',
+  });
 
   final ApiService api;
   final AuthService? auth;
+
+  /// Patient et rendez-vous preselectionnes (depuis l'agenda, comme `?patientId=&rendezVousId=` sur le site) ;
+  /// ignores s'ils ne figurent pas parmi les patients / rendez-vous proposes.
+  final String patientId;
+  final String rendezVousId;
 
   @override
   State<NouvelleOrdonnancePage> createState() => _NouvelleOrdonnancePageState();
@@ -78,6 +89,12 @@ class _NouvelleOrdonnancePageState extends State<NouvelleOrdonnancePage> with Ap
     setState(() {
       _patients = tries;
       _rendezVous = rdv;
+      if (_patientId.isEmpty && tries.any((p) => identifiant(p['patientId']) == widget.patientId)) {
+        _patientId = widget.patientId;
+        if (rendezVousLiables(rdv, _patientId).any((r) => identifiant(r['id']) == widget.rendezVousId)) {
+          _rendezVousId = widget.rendezVousId;
+        }
+      }
     });
   }
 

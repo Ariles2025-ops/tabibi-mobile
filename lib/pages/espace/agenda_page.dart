@@ -10,10 +10,11 @@ import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
 import '../../utils/rendez_vous.dart' show estAnnule;
 import 'cabinet.dart';
+import 'nouvelle_ordonnance_page.dart';
 import 'outils_espace.dart';
 
 /// Actions du cabinet sur un rendez-vous confirme.
-enum ActionRdv { honorer, absent, annuler, deplacer }
+enum ActionRdv { honorer, absent, annuler, deplacer, ordonnance }
 
 /// Agenda du cabinet (medecin connecte, ou medecin choisi par une secretaire) : rendez-vous en
 /// sections Aujourd'hui / À venir / Passés, nom du patient quand il est connu ; sur un rendez-vous confirme
@@ -138,8 +139,18 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     if (fait != null) await recharger();
   }
 
+  /// « Rédiger une ordonnance » : formulaire avec le patient et le rendez-vous déjà choisis.
+  Future<void> _ordonnance(Map<String, dynamic> rdv) => Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+          builder: (_) => NouvelleOrdonnancePage(
+              api: widget.api,
+              auth: widget.auth,
+              patientId: identifiant(rdv['patientId']),
+              rendezVousId: identifiant(rdv['id']))));
+
   Future<void> _agir(Map<String, dynamic> rdv, ActionRdv action) async {
     if (action == ActionRdv.deplacer) return _deplacer(rdv);
+    if (action == ActionRdv.ordonnance) return _ordonnance(rdv);
     final id = identifiant(rdv['id']);
     if (action == ActionRdv.annuler) {
       // Rendez-vous pris par téléphone : le patient n'a pas de compte et l'API ne lui envoie
@@ -176,7 +187,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
         case ActionRdv.annuler:
           await c.annuler(widget.api, id, j);
         case ActionRdv.deplacer:
-          break; // traité plus haut par _deplacer
+        case ActionRdv.ordonnance:
+          break; // traités plus haut
       }
       return true;
     });
@@ -186,7 +198,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       ActionRdv.honorer => t('Rendez-vous du $date marqué honoré.', 'تم تسجيل حضور المريض للموعد في $date.'),
       ActionRdv.absent => t('Patient signalé absent au rendez-vous du $date.', 'تم تسجيل غياب المريض عن الموعد في $date.'),
       ActionRdv.annuler => t('Rendez-vous annulé', 'تم إلغاء الموعد'),
-      ActionRdv.deplacer => '',
+      ActionRdv.deplacer || ActionRdv.ordonnance => '',
     });
     await recharger();
   }
@@ -231,6 +243,12 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     );
   }
 
+  /// Réservé au médecin (la secrétaire n'écrit pas d'ordonnance), comme sur le site.
+  bool _ordonnancePossible(Map<String, dynamic> rdv) =>
+      !widget.cabinet.parSecretaire &&
+      peutRedigerOrdonnance(rdv['statut'], rdv['source']) &&
+      identifiant(rdv['patientId']).isNotEmpty;
+
   Widget _ligne(Map<String, dynamic> rdv) {
     final grise = estAnnule(rdv['statut']) ? Theme.of(context).disabledColor : null;
     return ListTile(
@@ -238,19 +256,25 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       title: Text(formaterDateIso('${rdv['debut']}'), style: TextStyle(color: grise)),
       subtitle: Text('${_patient(rdv)} · ${libelleStatut(statutAgenda(rdv['statut']))}',
           style: TextStyle(color: grise)),
-      trailing: actionsCabinetPossibles(rdv['statut'])
+      trailing: actionsCabinetPossibles(rdv['statut']) || _ordonnancePossible(rdv)
           ? PopupMenuButton<ActionRdv>(
               tooltip: t('Actions', 'إجراءات'),
               onSelected: (a) => _agir(rdv, a),
               itemBuilder: (_) => [
-                // Seulement une fois l'heure du rendez-vous atteinte (comme le site).
-                if (rdvCommence(rdv['debut'], (widget.maintenant ?? DateTime.now)())) ...[
-                  PopupMenuItem(value: ActionRdv.honorer, child: Text(t('Marquer honoré', 'تسجيل الحضور'))),
-                  PopupMenuItem(value: ActionRdv.absent, child: Text(t('Patient absent', 'المريض غائب'))),
+                if (actionsCabinetPossibles(rdv['statut'])) ...[
+                  // Seulement une fois l'heure du rendez-vous atteinte (comme le site).
+                  if (rdvCommence(rdv['debut'], (widget.maintenant ?? DateTime.now)())) ...[
+                    PopupMenuItem(value: ActionRdv.honorer, child: Text(t('Marquer honoré', 'تسجيل الحضور'))),
+                    PopupMenuItem(value: ActionRdv.absent, child: Text(t('Patient absent', 'المريض غائب'))),
+                  ],
+                  if (peutDeplacerCabinet(rdv['statut'], rdv['debut'], (widget.maintenant ?? DateTime.now)()))
+                    PopupMenuItem(value: ActionRdv.deplacer, child: Text(t('Déplacer', 'نقل'))),
+                  PopupMenuItem(value: ActionRdv.annuler, child: Text(t('Annuler', 'إلغاء'))),
                 ],
-                if (peutDeplacerCabinet(rdv['statut'], rdv['debut'], (widget.maintenant ?? DateTime.now)()))
-                  PopupMenuItem(value: ActionRdv.deplacer, child: Text(t('Déplacer', 'نقل'))),
-                PopupMenuItem(value: ActionRdv.annuler, child: Text(t('Annuler', 'إلغاء'))),
+                if (_ordonnancePossible(rdv))
+                  PopupMenuItem(
+                      value: ActionRdv.ordonnance,
+                      child: Text(t('Rédiger une ordonnance', 'كتابة وصفة'))),
               ],
             )
           : null,

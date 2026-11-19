@@ -45,6 +45,16 @@ void main() {
     expect(peutDeplacerCabinet('CONFIRME', null, maintenant), isFalse);
   });
 
+  test('peutRedigerOrdonnance : ni annule, ni absent, ni pris par telephone (comme le site)', () {
+    expect(peutRedigerOrdonnance('CONFIRME', 'EN_LIGNE'), isTrue);
+    expect(peutRedigerOrdonnance('RESERVE', null), isTrue);
+    expect(peutRedigerOrdonnance('HONORE', null), isTrue);
+    expect(peutRedigerOrdonnance('ANNULE', null), isFalse);
+    expect(peutRedigerOrdonnance('ANNULEE', null), isFalse);
+    expect(peutRedigerOrdonnance('ABSENT', null), isFalse);
+    expect(peutRedigerOrdonnance('CONFIRME', 'TELEPHONE'), isFalse);
+  });
+
   test('creneauxPourDeplacer : libres, a venir, autres que le creneau actuel, tries', () {
     final maintenant = DateTime.utc(2026, 12, 3, 9);
     final propositions = creneauxPourDeplacer([

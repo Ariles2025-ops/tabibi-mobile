@@ -397,9 +397,10 @@ void main() {
     await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
     expect(find.text('Karim Haddad · Confirmé'), findsOneWidget);
     expect(find.text('Karim Haddad · Honoré'), findsOneWidget);
-    expect(find.byTooltip('Actions'), findsOneWidget); // seulement sur le rendez-vous confirme
+    // Menu sur le rendez-vous confirme (actions) et sur l'honoré (« Rédiger une ordonnance »).
+    expect(find.byTooltip('Actions'), findsNWidgets(2));
 
-    await tester.tap(find.byTooltip('Actions'));
+    await tester.tap(find.byTooltip('Actions').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Marquer honoré'));
     await tester.pumpAndSettle();
@@ -408,11 +409,38 @@ void main() {
     expect(find.text('Rendez-vous honoré'), findsNothing);
   });
 
+  testWidgets("l'agenda du médecin propose « Rédiger une ordonnance » avec patient et rendez-vous préremplis",
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
+    await tester.tap(find.byTooltip('Actions').last); // rendez-vous honoré
+    await tester.pumpAndSettle();
+    expect(find.text('Patient absent'), findsNothing);
+    await tester.tap(find.text('Rédiger une ordonnance'));
+    await tester.pumpAndSettle();
+    expect(find.text('Prescription'), findsOneWidget);
+    expect(find.text('Karim Haddad · 0550123456'), findsOneWidget); // patient déjà choisi
+  });
+
+  testWidgets("l'agenda de la secrétaire ne propose pas d'ordonnance", (tester) async {
+    final api = FakeEspaceApi(roles: ['SECRETAIRE']);
+    await afficher(
+        tester,
+        AgendaPage(
+            cabinet: const Cabinet.pourSecretaire('m1'),
+            api: api,
+            auth: SessionTest(),
+            maintenant: () => DateTime.utc(2026, 12, 3, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rédiger une ordonnance'), findsNothing);
+  });
+
   testWidgets("l'agenda demande confirmation avant « Patient absent » (comme le site)",
       (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
     await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
-    await tester.tap(find.byTooltip('Actions'));
+    await tester.tap(find.byTooltip('Actions').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Patient absent'));
     await tester.pumpAndSettle();
