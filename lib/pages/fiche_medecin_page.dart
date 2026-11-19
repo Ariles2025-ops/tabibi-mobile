@@ -628,8 +628,11 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       for (final l in languesFiche)
         if (languesDe(medecin['langues']).contains(l.$1)) t(l.$2, l.$3),
     ];
+    // Comme sur le site : paiement, confirmation et annulation, pour une fiche reservable.
+    final reservable = !_reclamable;
     if ([adresse, telephone, horaires, presentation].every((v) => v == null) &&
-        langues.isEmpty) {
+        langues.isEmpty &&
+        !reservable) {
       return const [];
     }
     final texte = Theme.of(context).textTheme;
@@ -691,6 +694,24 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             if (langues.isNotEmpty)
               ligne(Icons.translate, t('Langues parlées', 'اللغات المتحدَّث بها'),
                   Text(langues.join(' · '))),
+            if (reservable) ...[
+              ligne(
+                  Icons.account_balance_wallet_outlined,
+                  t('Paiement au cabinet', 'الدفع في العيادة'),
+                  Text(t('Vous réglez la consultation directement sur place.',
+                      'تدفع ثمن الاستشارة مباشرة في العيادة.'))),
+              ligne(
+                  Icons.bolt_outlined,
+                  t('Confirmation immédiate', 'تأكيد فوري'),
+                  Text(t('Votre rendez-vous est enregistré dès la réservation.',
+                      'يُسجَّل موعدك فور الحجز.'))),
+              ligne(
+                  Icons.event_busy_outlined,
+                  t('Un empêchement ?', 'هل طرأ ما يمنعك؟'),
+                  Text(t(
+                      'Annulez depuis « Mes rendez-vous » pour libérer la place.',
+                      'ألغِ الموعد من «مواعيدي» لإتاحة المكان لغيرك.'))),
+            ],
           ],
         ),
       ),
