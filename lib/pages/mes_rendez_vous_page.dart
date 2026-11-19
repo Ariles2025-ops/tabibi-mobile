@@ -14,6 +14,7 @@ import '../utils/rendez_vous.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 import 'deposer_avis_page.dart';
+import 'fiche_medecin_page.dart';
 
 /// Rendez-vous du patient connecte, avec annulation ; « Donner mon avis » sur les
 /// rendez-vous honores (ou « Avis donné » si l'avis existe deja).
@@ -145,7 +146,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t('Non', 'لا')),
+            child: Text(t('Non, garder', 'لا، أبقِه')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -254,6 +255,13 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     } else {
       setState(() {});
     }
+  }
+
+  /// Ouvre la fiche du praticien (« Voir la fiche » / « Reprendre rendez-vous » du site).
+  void _ouvrirFiche(String medecinId) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
+    ));
   }
 
   void _message(String texte) {
@@ -369,6 +377,24 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
                     style: texte.bodyMedium?.copyWith(color: Charte.doux)),
                 const SizedBox(height: 6),
                 PastilleStatut(libelle: _libelleStatut(rdv), statut: rdv['statut']),
+                if (identifiant(rdv['medecinId']).isNotEmpty)
+                  Wrap(spacing: 4, children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          visualDensity: VisualDensity.compact),
+                      onPressed: () => _ouvrirFiche(identifiant(rdv['medecinId'])),
+                      child: Text(t('Voir la fiche', 'عرض الملف')),
+                    ),
+                    if (avecAnnee)
+                      TextButton(
+                        style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            visualDensity: VisualDensity.compact),
+                        onPressed: () => _ouvrirFiche(identifiant(rdv['medecinId'])),
+                        child: Text(t('Reprendre rendez-vous', 'احجز موعدًا جديدًا')),
+                      ),
+                  ]),
               ],
             ),
           ),
