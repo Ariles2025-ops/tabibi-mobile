@@ -401,10 +401,27 @@ void main() {
 
     await tester.tap(find.byTooltip('Actions'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Patient venu'));
+    await tester.tap(find.text('Marquer honoré'));
     await tester.pumpAndSettle();
     expect(api.appels, ['honorer r1']);
-    expect(find.text('Rendez-vous honoré'), findsOneWidget);
+    expect(find.textContaining('marqué honoré.'), findsOneWidget);
+    expect(find.text('Rendez-vous honoré'), findsNothing);
+  });
+
+  testWidgets("l'agenda demande confirmation avant « Patient absent » (comme le site)",
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
+    await tester.tap(find.byTooltip('Actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Patient absent'));
+    await tester.pumpAndSettle();
+    expect(find.text('Signaler le patient absent à ce rendez-vous ?'), findsOneWidget);
+    expect(api.appels, isEmpty);
+    await tester.tap(find.text('Oui'));
+    await tester.pumpAndSettle();
+    expect(api.appels, ['absent r1']);
+    expect(find.textContaining('Patient signalé absent au rendez-vous du'), findsOneWidget);
   });
 
   testWidgets("l'agenda met Aujourd'hui en tete, puis A venir, puis Passes (heure d'Alger)",
@@ -451,7 +468,7 @@ void main() {
         AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 1, 9)));
     await tester.tap(find.byTooltip('Actions'));
     await tester.pumpAndSettle();
-    expect(find.text('Patient venu'), findsNothing); // pas encore commence
+    expect(find.text('Marquer honoré'), findsNothing); // pas encore commence
     await tester.tap(find.text('Déplacer'));
     await tester.pumpAndSettle();
     expect(find.text('Choisir un nouveau créneau'), findsOneWidget);

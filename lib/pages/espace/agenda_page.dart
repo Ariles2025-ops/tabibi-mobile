@@ -17,7 +17,7 @@ enum ActionRdv { honorer, absent, annuler, deplacer }
 
 /// Agenda du cabinet (medecin connecte, ou medecin choisi par une secretaire) : rendez-vous en
 /// sections Aujourd'hui / À venir / Passés, nom du patient quand il est connu ; sur un rendez-vous confirme
-/// (RESERVE compris) : « Patient venu », « Absent », « Annuler » (avec confirmation) et, tant qu'il n'a pas
+/// (RESERVE compris) : « Marquer honoré », « Absent », « Annuler » (avec confirmation) et, tant qu'il n'a pas
 /// commence, « Déplacer » vers un autre créneau libre (comme sur le site).
 class AgendaPage extends StatefulWidget {
   const AgendaPage({
@@ -157,6 +157,15 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       );
       if (!ok) return;
     }
+    if (action == ActionRdv.absent) {
+      // Irréversible : confirmation, comme sur le site.
+      final ok = await confirmer(
+        t('Signaler le patient absent à ce rendez-vous ?', 'تسجيل غياب المريض عن هذا الموعد؟'),
+        '${_patient(rdv)}\n${formaterDateIso('${rdv['debut']}')}',
+        t('Oui', 'نعم'),
+      );
+      if (!ok) return;
+    }
     final c = widget.cabinet;
     final fait = await appeler<bool>((j) async {
       switch (action) {
@@ -172,9 +181,10 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       return true;
     });
     if (fait != true) return;
+    final date = formaterDateIso('${rdv['debut']}');
     message(switch (action) {
-      ActionRdv.honorer => t('Rendez-vous honoré', 'تم تأكيد حضور المريض'),
-      ActionRdv.absent => t('Patient marqué absent', 'تم تسجيل غياب المريض'),
+      ActionRdv.honorer => t('Rendez-vous du $date marqué honoré.', 'تم تسجيل حضور المريض للموعد في $date.'),
+      ActionRdv.absent => t('Patient signalé absent au rendez-vous du $date.', 'تم تسجيل غياب المريض عن الموعد في $date.'),
       ActionRdv.annuler => t('Rendez-vous annulé', 'تم إلغاء الموعد'),
       ActionRdv.deplacer => '',
     });
@@ -235,8 +245,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
               itemBuilder: (_) => [
                 // Seulement une fois l'heure du rendez-vous atteinte (comme le site).
                 if (rdvCommence(rdv['debut'], (widget.maintenant ?? DateTime.now)())) ...[
-                  PopupMenuItem(value: ActionRdv.honorer, child: Text(t('Patient venu', 'حضر المريض'))),
-                  PopupMenuItem(value: ActionRdv.absent, child: Text(t('Absent', 'غائب'))),
+                  PopupMenuItem(value: ActionRdv.honorer, child: Text(t('Marquer honoré', 'تسجيل الحضور'))),
+                  PopupMenuItem(value: ActionRdv.absent, child: Text(t('Patient absent', 'المريض غائب'))),
                 ],
                 if (peutDeplacerCabinet(rdv['statut'], rdv['debut'], (widget.maintenant ?? DateTime.now)()))
                   PopupMenuItem(value: ActionRdv.deplacer, child: Text(t('Déplacer', 'نقل'))),

@@ -191,8 +191,8 @@ DateTime instantAlger(DateTime murale) => DateTime.utc(
       murale.second,
     ).subtract(decalageAlger);
 
-/// Vrai si le rendez-vous commencant a [debut] (ISO 8601) a atteint son heure : « Patient venu »
-/// et « Absent » ne sont proposes qu'ensuite (comme sur le site). Debut illisible : vrai.
+/// Vrai si le rendez-vous commencant a [debut] (ISO 8601) a atteint son heure : « Marquer honoré »
+/// et « Patient absent » ne sont proposes qu'ensuite (comme sur le site). Debut illisible : vrai.
 bool rdvCommence(Object? debut, DateTime maintenant) {
   final d = DateTime.tryParse('$debut');
   if (d == null) return true;
