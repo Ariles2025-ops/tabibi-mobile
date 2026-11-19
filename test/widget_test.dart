@@ -885,6 +885,36 @@ void main() {
     expect(find.text('Passés'), findsOneWidget);
   });
 
+  testWidgets(
+      "mes rendez-vous : « Voir la fiche », « Reprendre rendez-vous » (passés) et « Non, garder » comme sur le site",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: const FakeApiServiceSeulementPasse(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Reprendre rendez-vous'), findsWidgets);
+    await tester.tap(find.text('Reprendre rendez-vous').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(FicheMedecinPage), findsOneWidget);
+
+    // Repart d'un arbre vide : sinon la fiche ouverte reste empilee dans le meme MaterialApp.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final api = FakeApiServiceDeplacer();
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(api: api, auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Voir la fiche'), findsWidgets);
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Non, garder'));
+    await tester.pumpAndSettle();
+    expect(find.text('Annuler ce rendez-vous ?'), findsNothing);
+    await tester.tap(find.text('Voir la fiche').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(FicheMedecinPage), findsOneWidget);
+  });
+
   testWidgets('mes ordonnances sans jeton propose de se connecter', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesOrdonnancesPage(api: const FakeApiService(), auth: AuthService()),
