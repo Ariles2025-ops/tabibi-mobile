@@ -32,6 +32,14 @@ String get texteListeAttente => t(
     "Vous verrez une notification dans l'appli dès qu'un créneau se libère.",
     'سيظهر لك إشعار داخل التطبيق فور توفر موعد.');
 
+/// Titre et texte de l'encart d'une fiche importee sans compte (memes textes que le site).
+String get titreFicheSansCompte =>
+    t("Ce praticien n'est pas encore sur Ndawik", 'هذا الممارس ليس بعد على نداويك');
+
+String get texteFicheSansCompte => t(
+    'Sa fiche provient de sources publiques : il ne reçoit pas encore de messages ni de demandes de rendez-vous en ligne.',
+    'ملفّه مأخوذ من مصادر عامة: لا يستقبل بعدُ رسائل ولا طلبات مواعيد عبر الإنترنت.');
+
 /// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
 String get messageDejaInscrit =>
     t('Vous êtes déjà inscrit sur cette liste.', 'أنت مسجّل بالفعل في هذه القائمة.');
@@ -107,6 +115,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// Vrai une fois le patient inscrit sur la liste d'attente (201, ou 409 deja inscrit).
   bool _inscrit = false;
 
+  /// Vrai pour une fiche importee sans compte : ni messagerie, ni creneaux, ni liste d'attente.
+  bool _reclamable = false;
+
   /// Vrai pendant l'inscription sur la liste d'attente (bouton desactive).
   bool _inscriptionEnCours = false;
 
@@ -125,9 +136,11 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final medecin = await widget.api.medecin(widget.medecinId);
       final creneaux = await widget.api.creneaux(widget.medecinId);
       final avis = await _chargerAvis();
+      final reclamable = await widget.api.reclamable(widget.medecinId);
       final dejaInscrit = await _dejaInscrit();
       if (!mounted) return;
       setState(() {
+        _reclamable = reclamable;
         if (dejaInscrit) _inscrit = true;
         _medecin = medecin;
         _creneaux = creneaux.where((c) => c['disponible'] != false).toList();
@@ -423,9 +436,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         ),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: _boutonConversation()),
+          if (!_reclamable) Expanded(child: _boutonConversation()),
           if (telephone != null) ...[
-            const SizedBox(width: 8),
+            if (!_reclamable) const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => launchUrl(Uri(
@@ -438,6 +451,24 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
           ],
         ]),
         const SizedBox(height: 24),
+        if (_reclamable)
+          CarteTabibi(
+            padding: const EdgeInsets.all(16),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.info_outline, color: Charte.meta),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(titreFicheSansCompte, style: texte.titleSmall),
+                      const SizedBox(height: 4),
+                      Text(texteFicheSansCompte),
+                    ]),
+              ),
+            ]),
+          )
+        else ...[
         Text(t('Créneaux disponibles', 'المواعيد المتاحة'),
             style: texte.titleMedium),
         const SizedBox(height: 12),
@@ -455,9 +486,12 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
           )
         else
           _selecteurCreneaux(context),
+        ],
         ..._informationsPratiques(context, medecin),
-        const SizedBox(height: 24),
-        _listeAttente(context),
+        if (!_reclamable) ...[
+          const SizedBox(height: 24),
+          _listeAttente(context),
+        ],
         const SizedBox(height: 24),
         Text(t('Avis des patients', 'آراء المرضى'), style: texte.titleMedium),
         const SizedBox(height: 8),

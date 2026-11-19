@@ -10,6 +10,13 @@ import 'package:tabibi_mobile/utils/espace_pro.dart';
 import 'espace_widget_test.dart' show FakeEspaceApi, SessionTest, afficher;
 import 'widget_test.dart' show FakeApiService;
 
+class _FicheSansCompte extends FakeApiService {
+  const _FicheSansCompte();
+
+  @override
+  Future<bool> reclamable(String id) async => true;
+}
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
   tearDown(() => Langue.courante.value = Langue.francais);
@@ -73,5 +80,29 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Réserver'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, '09:30'),
         findsNothing); // creneau deja pris
+  });
+
+  testWidgets(
+      'fiche sans compte : encart « pas encore sur Ndawik », sans conversation ni liste d attente',
+      (tester) async {
+    await afficher(
+        tester,
+        const FicheMedecinPage(
+            medecinId: FakeApiService.medecinDemo, api: _FicheSansCompte()));
+    expect(find.text(titreFicheSansCompte), findsOneWidget);
+    expect(find.text(texteFicheSansCompte), findsOneWidget);
+    expect(find.text('Ouvrir une conversation'), findsNothing);
+    expect(find.text("Liste d'attente"), findsNothing);
+    expect(find.text('Créneaux disponibles'), findsNothing);
+  });
+
+  testWidgets('fiche avec compte : conversation et liste d attente restent',
+      (tester) async {
+    await afficher(
+        tester,
+        const FicheMedecinPage(
+            medecinId: FakeApiService.medecinDemo, api: FakeApiService()));
+    expect(find.text(titreFicheSansCompte), findsNothing);
+    expect(find.text('Ouvrir une conversation'), findsOneWidget);
   });
 }
