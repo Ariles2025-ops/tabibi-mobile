@@ -92,8 +92,8 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(t('Clôturer cette demande ?', 'إغلاق هذا الطلب؟')),
-        content: Text(t('${_besoin.medicament}\nLes pharmacies ne pourront plus y répondre.',
-            '${_besoin.medicament}\nلن تتمكن الصيدليات من الرد عليه بعد الآن.')),
+        content: Text(t('${_besoin.medicament}\nLes pharmacies ne la verront plus.',
+            '${_besoin.medicament}\nلن تراه الصيدليات بعد الآن.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -114,7 +114,8 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
     try {
       await widget.api.cloturerBesoin(_besoin.id, token);
       cloturee = true;
-      _message(t('Demande clôturée.', 'تم إغلاق الطلب.'));
+      _message(t('Demande clôturée : les pharmacies ne la voient plus.',
+          'تم إغلاق الطلب: لم تعد الصيدليات تراه.'));
     } on ApiException catch (e) {
       if (e.conflit) {
         cloturee = true;

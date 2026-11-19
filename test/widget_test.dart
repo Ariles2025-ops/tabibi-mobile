@@ -1536,7 +1536,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Se connecter'), findsOneWidget);
-    expect(find.text('Publier la demande'), findsNothing);
+    expect(find.text('Publier ma demande'), findsNothing);
   });
 
   testWidgets(
@@ -1559,7 +1559,7 @@ void main() {
 
     // Formulaire vide : refus sans medicament, puis sans wilaya.
     final medicament = find.widgetWithText(TextField, 'Médicament recherché *');
-    await tester.tap(find.text('Publier la demande'));
+    await tester.tap(find.text('Publier ma demande'));
     await tester.pumpAndSettle();
     expect(find.text(messageMedicamentRequis), findsOneWidget);
     expect(api.publies, isEmpty);
@@ -1569,13 +1569,13 @@ void main() {
     await tester.enterText(medicament, 'Insuline');
     expect(find.text('16 - Alger'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextField, 'Commune'), 'Bab Ezzouar');
-    await tester.tap(find.text('Publier la demande'));
+    await tester.tap(find.text('Publier ma demande'));
     await tester.pumpAndSettle();
     expect(api.publies.single['medicament'], 'Insuline');
     expect(api.publies.single['wilayaCode'], '16');
     expect(api.publies.single['commune'], 'Bab Ezzouar');
     expect(api.publies.single['precision'], isNull);
-    expect(find.text('Demande publiée.'), findsOneWidget);
+    expect(find.text('Demande publiée : les pharmacies de votre wilaya peuvent y répondre.'), findsOneWidget);
     // La nouvelle demande apparait dans la liste, le formulaire est vide.
     expect(find.text('Insuline'), findsOneWidget);
     expect(find.text('16 - Alger · Bab Ezzouar · Ouverte'), findsOneWidget);
@@ -1625,7 +1625,7 @@ void main() {
     await tester.tap(find.text('Oui, clôturer'));
     await tester.pumpAndSettle();
     expect(api.clotures, [FakeApiService.besoinOuvert]);
-    expect(find.text('Demande clôturée.'), findsOneWidget);
+    expect(find.text('Demande clôturée : les pharmacies ne la voient plus.'), findsOneWidget);
     expect(find.text('Clôturer la demande'), findsNothing);
     expect(find.text('16 - Alger · Alger-Centre · Clôturée'), findsOneWidget);
   });
