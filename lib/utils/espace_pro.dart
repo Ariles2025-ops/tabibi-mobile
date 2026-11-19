@@ -14,6 +14,26 @@ Set<String> rolesDe(Map<String, dynamic> moi) {
   return roles.map((r) => r.toString().toUpperCase()).toSet();
 }
 
+/// Roles metier affiches sur « Mon compte », comme le site (moi.component) : « Rôle : Médecin »,
+/// « Rôles : Patient, Médecin ». Les roles techniques de Keycloak (default-roles-tabibi,
+/// offline_access...) sont masques ; chaine vide si aucun role metier.
+String libelleRoles(Set<String> roles) {
+  const libelles = <String, (String, String)>{
+    'PATIENT': ('Patient', 'مريض'),
+    'MEDECIN': ('Médecin', 'طبيب'),
+    'SECRETAIRE': ('Secrétaire', 'سكرتيرة'),
+    'PHARMACIE': ('Pharmacie', 'صيدلية'),
+    'ADMIN': ('Administrateur', 'مسؤول'),
+  };
+  final connus = [
+    for (final role in libelles.keys)
+      if (roles.contains(role)) t(libelles[role]!.$1, libelles[role]!.$2),
+  ];
+  if (connus.isEmpty) return '';
+  final titre = connus.length > 1 ? t('Rôles', 'الأدوار') : t('Rôle', 'الدور');
+  return '$titre : ${connus.join(t(', ', '، '))}';
+}
+
 /// Message de confirmation apres connexion : « Connecté : karim », ou « Connecté » seul si
 /// l'identite n'a pas de nom (jamais « Connecté : null »).
 String messageConnecte(Map<String, dynamic> moi) {
