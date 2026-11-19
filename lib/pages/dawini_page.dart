@@ -152,7 +152,8 @@ class _DawiniPageState extends State<DawiniPage> {
     _medicament.clear();
     _commune.clear();
     _precision.clear();
-    _message(t('Demande publiée.', 'تم نشر الطلب.'));
+    _message(t('Demande publiée : les pharmacies de votre wilaya peuvent y répondre.',
+        'تم نشر الطلب: يمكن لصيدليات ولايتك الرد عليه.'));
     await _charger(discret: true);
   }
 
@@ -228,8 +229,8 @@ class _DawiniPageState extends State<DawiniPage> {
             Text(t('Demander un médicament', 'طلب دواء'), style: texte.titleMedium),
             const SizedBox(height: 4),
             Text(
-              t('Les pharmacies de votre wilaya répondent avec leur disponibilité et leur prix.',
-                  'تردّ صيدليات ولايتك بتوفّر الدواء وسعره.'),
+              t('Les pharmacies de votre wilaya répondent avec leur disponibilité et leur prix, sans connaître votre identité.',
+                  'تردّ صيدليات ولايتك بتوفّر الدواء وسعره، دون معرفة هويتك.'),
               style: texte.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -262,8 +263,8 @@ class _DawiniPageState extends State<DawiniPage> {
               controller: _precision,
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
-                labelText: t('Précision (dosage, forme, urgence...)',
-                    'تفاصيل (الجرعة، الشكل، الاستعجال...)'),
+                labelText: t('Précision (dosage, forme, urgence)',
+                    'تفاصيل (الجرعة، الشكل، الاستعجال)'),
                 prefixIcon: const Icon(Icons.notes_outlined),
               ),
             ),
@@ -276,7 +277,7 @@ class _DawiniPageState extends State<DawiniPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(t('Publier la demande', 'نشر الطلب')),
+                  : Text(t('Publier ma demande', 'نشر طلبي')),
             ),
           ],
         ),

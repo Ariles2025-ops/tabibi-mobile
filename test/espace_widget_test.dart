@@ -880,7 +880,7 @@ void main() {
   testWidgets('dawini sans wilaya au profil exige le choix de la wilaya', (tester) async {
     await afficher(tester, DawiniPage(api: FakeEspaceApi(wilayaProfil: null), auth: SessionTest()));
     await tester.enterText(find.widgetWithText(TextField, 'Médicament recherché *'), 'Insuline');
-    await tester.tap(find.text('Publier la demande'));
+    await tester.tap(find.text('Publier ma demande'));
     await tester.pumpAndSettle();
     expect(find.text(messageWilayaRequise), findsOneWidget);
   });
