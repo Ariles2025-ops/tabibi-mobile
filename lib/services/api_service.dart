@@ -158,6 +158,18 @@ class ApiService {
     return _objet(res, chemin);
   }
 
+  /// Vrai si la fiche n'appartient a aucun compte (GET /api/medecins/{id}/reclamable) : le
+  /// praticien ne recoit alors ni message ni rendez-vous. Un echec vaut faux, comme le site.
+  Future<bool> reclamable(String id) async {
+    try {
+      final chemin = '/api/medecins/${Uri.encodeComponent(id)}/reclamable';
+      final res = await _Http.get(Uri.parse('$base$chemin'));
+      return _objet(res, chemin)['reclamable'] == true;
+    } on Exception {
+      return false;
+    }
+  }
+
   /// Creneaux d'un praticien : {id, medecinId, debut (ISO 8601), dureeMinutes, disponible}.
   Future<List<Map<String, dynamic>>> creneaux(String medecinId) async {
     final chemin = '/api/medecins/${Uri.encodeComponent(medecinId)}/creneaux';
