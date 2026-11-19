@@ -109,6 +109,7 @@ class _ComptePageState extends State<ComptePage> {
             _EnTeteCompte(
               connecte: connecte,
               nom: (_moi?['nom']?.toString() ?? '').trim(),
+              roles: libelleRoles(roles),
               onConnexion: _seConnecter,
             ),
             const SizedBox(height: 24),
@@ -178,10 +179,16 @@ class _ComptePageState extends State<ComptePage> {
 /// Carte d'en-tete : identite si connecte, sinon invitation a se connecter.
 class _EnTeteCompte extends StatelessWidget {
   const _EnTeteCompte(
-      {required this.connecte, required this.nom, required this.onConnexion});
+      {required this.connecte,
+      required this.nom,
+      required this.onConnexion,
+      this.roles = ''});
 
   final bool connecte;
   final String nom;
+
+  /// Roles metier deja formates (« Rôle : Médecin ») ; vide tant qu'ils sont inconnus.
+  final String roles;
   final VoidCallback onConnexion;
 
   @override
@@ -222,6 +229,11 @@ class _EnTeteCompte extends StatelessWidget {
                           style: TextStyle(
                               color: clair.withValues(alpha: 0.85),
                               fontSize: 14)),
+                      if (roles.isNotEmpty)
+                        Text(roles,
+                            style: TextStyle(
+                                color: clair.withValues(alpha: 0.85),
+                                fontSize: 14)),
                     ]),
               ),
             ])

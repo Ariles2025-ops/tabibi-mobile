@@ -1,7 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 void main() {
+  tearDown(() => Langue.courante.value = Langue.francais);
+
+  test('libelleRoles : roles metier comme le site, roles techniques masques', () {
+    expect(libelleRoles({'MEDECIN'}), 'Rôle : Médecin');
+    expect(libelleRoles({'PATIENT', 'MEDECIN', 'DEFAULT-ROLES-TABIBI', 'OFFLINE_ACCESS'}),
+        'Rôles : Patient, Médecin');
+    expect(libelleRoles({'OFFLINE_ACCESS'}), '');
+    expect(libelleRoles({}), '');
+    Langue.courante.value = Langue.arabe;
+    expect(libelleRoles({'PHARMACIE'}), 'الدور : صيدلية');
+    expect(libelleRoles({'ADMIN', 'SECRETAIRE'}), 'الأدوار : سكرتيرة، مسؤول');
+  });
+
   test('rolesDe lit les roles de GET /api/moi en majuscules', () {
     expect(
         rolesDe({

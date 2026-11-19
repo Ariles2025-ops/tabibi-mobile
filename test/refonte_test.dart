@@ -38,6 +38,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Mon compte'), findsOneWidget);
     expect(find.text('Compte connecté'), findsOneWidget);
+    expect(find.text('Rôle : Patient'), findsOneWidget);
     expect(find.text('Mes avis'), findsOneWidget);
     expect(find.text('Se déconnecter'), findsOneWidget);
   });
