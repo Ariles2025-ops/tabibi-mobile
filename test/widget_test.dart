@@ -1525,6 +1525,11 @@ void main() {
     expect(find.text('4 / 5 · Publié'), findsOneWidget);
     expect(find.text('Explications claires, merci.'), findsOneWidget);
     expect(find.text('Déposé le mar. 11 août 18:00'), findsOneWidget);
+
+    // Le nom du praticien ouvre sa fiche, comme le lien du site.
+    await tester.tap(find.text('Dr Amina Benali'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FicheMedecinPage), findsOneWidget);
   });
 
   testWidgets("l'accueil propose l'entree Dawini (pharmacies)", (tester) async {
@@ -1804,11 +1809,18 @@ void main() {
     expect(find.text('Inscription le ven. 20 nov. 09:00'), findsOneWidget);
     expect(find.text('Me retirer'), findsOneWidget);
 
+    // Le nom du praticien ouvre sa fiche, comme le lien du site.
+    await tester.tap(find.text('Dr Amina Benali'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FicheMedecinPage), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
     // Refus dans la boite de confirmation : rien n'est envoye.
     await tester.tap(find.text('Me retirer'));
     await tester.pumpAndSettle();
     expect(find.text("Vous retirer de cette liste d'attente ?"), findsOneWidget);
-    await tester.tap(find.text('Non'));
+    await tester.tap(find.text('Non, rester inscrit'));
     await tester.pumpAndSettle();
     expect(api.retraits, isEmpty);
     expect(find.text('Dr Amina Benali'), findsOneWidget);

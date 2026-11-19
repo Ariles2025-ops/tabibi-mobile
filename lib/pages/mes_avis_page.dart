@@ -9,6 +9,7 @@ import '../utils/avis.dart';
 import '../utils/identifiants.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import 'fiche_medecin_page.dart';
 
 /// Avis deposes par le patient connecte : praticien, note, statut, commentaire et date.
 class MesAvisPage extends StatefulWidget {
@@ -87,6 +88,13 @@ class _MesAvisPageState extends State<MesAvisPage> {
     }
   }
 
+  /// Ouvre la fiche du praticien, comme le lien du nom sur le site.
+  void _ouvrirFiche(String medecinId) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
+    ));
+  }
+
   String _nomMedecin(Avis a) => _nomsMedecins[a.medecinId] ?? libelleMedecin(a.medecinId);
 
   void _message(String texte) {
@@ -156,6 +164,7 @@ class _MesAvisPageState extends State<MesAvisPage> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star_outline),
               title: Text(_nomMedecin(a)),
+              onTap: a.medecinId.isEmpty ? null : () => _ouvrirFiche(a.medecinId),
               subtitle: Text('${formaterNote(a.note)} · ${libelleStatutAvisPatient(a.statut)}'),
             ),
             if (commentaire != null) ...[
