@@ -61,6 +61,15 @@ String statutAgenda(Object? statut) {
 /// Honorer, marquer absent ou annuler : seulement pour un rendez-vous confirme (ou reserve).
 bool actionsCabinetPossibles(Object? statut) => statutAgenda(statut) == 'CONFIRME';
 
+/// « Rédiger une ordonnance » depuis l'agenda du medecin (comme le site) : pas pour un rendez-vous
+/// annule ou « absent », ni pour un rendez-vous pris par telephone (le patient n'a pas de compte).
+bool peutRedigerOrdonnance(Object? statut, Object? source) {
+  final s = (statut?.toString() ?? '').trim().toUpperCase();
+  return !s.startsWith('ANNUL') &&
+      s != 'ABSENT' &&
+      (source?.toString() ?? '').trim().toUpperCase() != 'TELEPHONE';
+}
+
 /// « Déplacer » : seulement un rendez-vous confirme (ou reserve) qui n'a pas encore commence,
 /// comme sur le site.
 bool peutDeplacerCabinet(Object? statut, Object? debut, DateTime maintenant) =>
