@@ -56,15 +56,34 @@ class _ListeAttenteMedecinPageState extends State<ListeAttenteMedecinPage> with 
       body: corps(
           t("Connectez-vous pour voir votre liste d'attente.", 'سجّل الدخول لعرض قائمة الانتظار.'),
           () {
+        final intro = Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(t(
+              "Patients qui attendent un créneau chez vous, du plus ancien au plus récent. Ils sont prévenus dès que vous ouvrez un créneau ou qu'un rendez-vous est annulé.",
+              'المرضى الذين ينتظرون موعدًا عندك، من الأقدم إلى الأحدث. يتم إعلامهم فور فتحك موعدًا أو إلغاء موعد.')),
+        );
         if (_inscrits.isEmpty) {
-          return VueVide(t("Aucun patient en liste d'attente pour le moment.",
-              'لا يوجد مرضى في قائمة الانتظار حاليًا.'));
+          return ListView(children: [
+            intro,
+            VueVide(t("Aucun patient en liste d'attente pour le moment.",
+                'لا يوجد مرضى في قائمة الانتظار حاليًا.')),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => CreneauxPage(api: widget.api, auth: auth))),
+                child: Text(t('Ouvrir des créneaux', 'فتح مواعيد')),
+              ),
+            ),
+          ]);
         }
+        final tries = [..._inscrits]..sort((x, y) => _dateInscription(x).compareTo(_dateInscription(y)));
         return ListView.separated(
-          itemCount: _inscrits.length,
+          itemCount: tries.length + 1,
           separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (_, i) {
-            final ins = _inscrits[i];
+          itemBuilder: (_, k) {
+            if (k == 0) return intro;
+            final i = k - 1;
+            final ins = tries[i];
             final id = identifiant(ins['patientId']);
             final p = _patients[id];
             final nom =
@@ -85,6 +104,10 @@ class _ListeAttenteMedecinPageState extends State<ListeAttenteMedecinPage> with 
       }),
     );
   }
+
+  /// Date d'inscription ; une date absente ou illisible passe en fin de liste.
+  static DateTime _dateInscription(Map<String, dynamic> ins) =>
+      DateTime.tryParse('${ins['inscritLe']}') ?? DateTime.utc(9999);
 }
 
 /// Cabinets de la secretaire connectee : pour chacun, l'agenda et les creneaux du medecin.
