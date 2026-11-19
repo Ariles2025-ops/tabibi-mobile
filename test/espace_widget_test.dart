@@ -779,6 +779,7 @@ void main() {
     await afficher(tester, ListeAttenteMedecinPage(api: FakeEspaceApi(), auth: SessionTest()));
     expect(find.text('Karim Haddad'), findsOneWidget);
     expect(find.textContaining('0550123456'), findsOneWidget);
+    expect(find.textContaining('du plus ancien au plus récent'), findsOneWidget);
   });
 
   testWidgets('la secretaire voit ses cabinets avec le nom du medecin', (tester) async {
@@ -798,6 +799,7 @@ void main() {
     await afficher(tester, ListeAttenteMedecinPage(api: FakeEspaceVide(), auth: SessionTest()));
     expect(find.text("Liste d'attente"), findsOneWidget);
     expect(find.text("Aucun patient en liste d'attente pour le moment."), findsOneWidget);
+    expect(find.text('Ouvrir des créneaux'), findsOneWidget);
   });
 
   testWidgets('une invitation de cabinet peut etre acceptee', (tester) async {
