@@ -494,7 +494,7 @@ void main() {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
     await afficher(tester,
         AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 1, 9)));
-    await tester.tap(find.byTooltip('Actions'));
+    await tester.tap(find.byTooltip('Actions').first);
     await tester.pumpAndSettle();
     expect(find.text('Marquer honoré'), findsNothing); // pas encore commence
     await tester.tap(find.text('Déplacer'));
@@ -537,7 +537,7 @@ void main() {
     final api = FakeEspaceApi(roles: ['MEDECIN'])..creneauPris = true;
     await afficher(tester,
         AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 1, 9)));
-    await tester.tap(find.byTooltip('Actions'));
+    await tester.tap(find.byTooltip('Actions').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Déplacer'));
     await tester.pumpAndSettle();
