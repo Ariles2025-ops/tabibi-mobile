@@ -89,7 +89,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           FilledButton.icon(
             onPressed: _charge ? null : _verifier,
             icon: const Icon(Icons.verified_outlined),
-            label: Text(t('Vérifier', 'تحقّق')),
+            label: Text(t('Vérifier', 'تحقق')),
           ),
           const SizedBox(height: 24),
           _zoneResultat(context),
@@ -123,7 +123,7 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
           leading: Icon(Icons.error_outline, color: couleurs.onErrorContainer),
           title: Text(t('Code inconnu', 'رمز غير معروف')),
           subtitle: Text(
-              t('Aucune ordonnance ne correspond à ce code.', 'لا توجد وصفة مطابقة لهذا الرمز.')),
+              t('Aucune ordonnance ne correspond à ce code.', 'لا توجد أي وصفة تطابق هذا الرمز.')),
         ),
       );
     }
@@ -145,8 +145,8 @@ class _VerifierOrdonnancePageState extends State<VerifierOrdonnancePage> {
         leading: Icon(Icons.verified, color: couleurs.primary),
         title: Text(
           emiseLe is String && emiseLe.isNotEmpty
-              ? '${t('Ordonnance authentique, émise le', 'وصفة صحيحة، صدرت في')} ${formaterDateIso(emiseLe)}'
-              : t('Ordonnance authentique', 'وصفة صحيحة'),
+              ? '${t('Ordonnance authentique, émise le', 'وصفة أصلية، صدرت بتاريخ')} ${formaterDateIso(emiseLe)}'
+              : t('Ordonnance authentique', 'وصفة أصلية'),
         ),
         subtitle: statut.isEmpty ? null : Text('${t('Statut', 'الحالة')} : $statut'),
       ),
