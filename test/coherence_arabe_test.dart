@@ -49,4 +49,10 @@ void main() {
     expect(_lire('lib/utils/avis.dart'), contains("'مُبلَّغ عنه'"));
     expect(tous.contains('مُبلّغ'), isFalse);
   });
+
+  test('« à distance » s\'écrit « عن بُعد » partout (accueil, compte, téléconsultations), comme sur le site', () {
+    expect(tous.contains('عن بعد'), isFalse);
+    expect(_lire('lib/main.dart'), contains("'الاستشارات عن بُعد'"));
+    expect(_lire('lib/pages/compte_page.dart'), contains("'الاستشارة عن بُعد'"));
+  });
 }

@@ -125,8 +125,8 @@ class _ComptePageState extends State<ComptePage> {
               _Entree(
                 Icons.videocam_outlined,
                 visioActive
-                    ? t('Téléconsultations', 'الاستشارات عن بعد')
-                    : t('Téléconsultation', 'الاستشارة عن بعد'),
+                    ? t('Téléconsultations', 'الاستشارات عن بُعد')
+                    : t('Téléconsultation', 'الاستشارة عن بُعد'),
                 visioActive
                     ? () =>
                         _ouvrir(MesTeleconsultationsPage(api: api, auth: _auth))

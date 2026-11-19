@@ -716,8 +716,8 @@ class _RecherchePageState extends State<RecherchePage> {
           puce(
             Icons.videocam_outlined,
             visioActive
-                ? t('Téléconsultations', 'الاستشارات عن بعد')
-                : t('Téléconsultation · Bientôt', 'الاستشارة عن بعد · قريبًا'),
+                ? t('Téléconsultations', 'الاستشارات عن بُعد')
+                : t('Téléconsultation · Bientôt', 'الاستشارة عن بُعد · قريبًا'),
             visioActive ? _ouvrirTeleconsultations : null,
           ),
           puce(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'),
