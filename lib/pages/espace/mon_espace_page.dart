@@ -154,12 +154,12 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
               _section(t('Espace pharmacie', 'فضاء الصيدلية')),
               _entree(
                   Icons.local_pharmacy_outlined,
-                  t('Besoins Dawini', 'طلبات داويني'),
+                  t('Demandes de médicaments', 'طلبات الأدوية'),
                   t('Demandes de médicaments dans votre wilaya', 'طلبات الأدوية في ولايتك'),
                   BesoinsPharmaciePage(api: api, auth: auth)),
               _entree(
                   Icons.qr_code_2,
-                  t('Délivrer une ordonnance', 'صرف وصفة طبية'),
+                  t('Vérifier / délivrer une ordonnance', 'التحقق من وصفة وصرفها'),
                   t('Vérifier un code et marquer délivrée', 'التحقق من رمز وتسجيل الصرف'),
                   DelivrerOrdonnancePage(api: api, auth: auth)),
             ],

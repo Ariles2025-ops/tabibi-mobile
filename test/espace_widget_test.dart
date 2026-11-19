@@ -384,7 +384,9 @@ void main() {
     expect(find.text('Agenda'), findsOneWidget);
     expect(find.text('Disponibilités'), findsOneWidget);
     expect(find.text("Liste d'attente"), findsOneWidget);
-    expect(find.text('Besoins Dawini'), findsOneWidget);
+    expect(find.text('Demandes de médicaments'), findsOneWidget);
+    expect(find.text('Vérifier / délivrer une ordonnance'), findsOneWidget);
+    expect(find.text('Besoins Dawini'), findsNothing);
     expect(find.text('Cabinets'), findsNothing);
     expect(find.text('Invitations de cabinet'), findsOneWidget);
   });
@@ -795,6 +797,7 @@ void main() {
     final api = FakeEspaceApi(roles: ['PHARMACIE']);
     await afficher(tester, BesoinsPharmaciePage(api: api, auth: SessionTest()));
     expect(api.appels, ['besoins 16']);
+    expect(find.text('Demandes de médicaments'), findsOneWidget); // même titre que sur le site
     expect(find.text('16 - Alger'), findsOneWidget);
     expect(find.text('Ventoline'), findsOneWidget);
     await tester.tap(find.text('Répondre'));
@@ -826,6 +829,7 @@ void main() {
   testWidgets('la pharmacie verifie un code puis marque l\'ordonnance delivree', (tester) async {
     final api = FakeEspaceApi(roles: ['PHARMACIE']);
     await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
+    expect(find.text('Vérifier / délivrer une ordonnance'), findsOneWidget); // titre du site
     await tester.enterText(find.byType(TextField), 'abc123');
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();

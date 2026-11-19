@@ -76,7 +76,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
   Widget build(BuildContext context) {
     return Scaffold(
       appBar:
-          AppBar(title: Text(t('Besoins Dawini', 'طلبات داويني')), actions: actionsActualiser()),
+          AppBar(title: Text(t('Demandes de médicaments', 'طلبات الأدوية')), actions: actionsActualiser()),
       body: corps(
           t('Connectez-vous pour voir les besoins de votre wilaya.',
               'سجّل الدخول لعرض طلبات ولايتك.'), () {
@@ -294,7 +294,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
     final statut = '${r?['statut'] ?? ''}'.toUpperCase();
     final refus = r == null || _vientDeDelivrer ? null : avertissementVerification(r);
     return Scaffold(
-      appBar: AppBar(title: Text(t('Délivrer une ordonnance', 'صرف وصفة طبية'))),
+      appBar: AppBar(title: Text(t('Vérifier / délivrer une ordonnance', 'التحقق من وصفة وصرفها'))),
       body: corps(
           t('Connectez-vous avec le compte de la pharmacie.', 'سجّل الدخول بحساب الصيدلية.'), () {
         return ListView(
