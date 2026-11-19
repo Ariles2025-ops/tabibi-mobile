@@ -72,6 +72,17 @@ void main() {
     expect(avertissementVerification({'statut': ' expiree '}), isNotNull);
   });
 
+  test('avertissementVerification en arabe : mots du site (سُلّمت من قبل, لا يجب تسليمها)', () {
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(avertissementVerification({'statut': 'ANNULEE'}),
+        'ملغاة: ألغى الطبيب هذه الوصفة ولا يجب تسليمها.');
+    expect(avertissementVerification({'statut': 'EXPIREE'}),
+        'منتهية الصلاحية: لم تعد هذه الوصفة صالحة ولا يجب تسليمها.');
+    expect(avertissementVerification({'statut': 'DELIVREE'}),
+        'سُلّمت من قبل: لا يمكن تسليم هذه الوصفة مرة أخرى.');
+  });
+
   test('infoStatutOrdonnance precise l\'annulation et la delivrance (comme le site)', () {
     expect(infoStatutOrdonnance({'statut': 'EMISE'}), isNull);
     expect(infoStatutOrdonnance({}), isNull);

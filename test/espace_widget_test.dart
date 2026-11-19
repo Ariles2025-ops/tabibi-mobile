@@ -830,11 +830,11 @@ void main() {
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
     expect(find.text('Ordonnance valide · Émise'), findsOneWidget);
-    await tester.tap(find.text('Marquer délivrée'));
+    await tester.tap(find.text('Marquer comme délivrée'));
     await tester.pumpAndSettle();
     expect(api.appels, ['delivrer ABC123']);
     expect(find.text('Ordonnance valide · Délivrée'), findsOneWidget);
-    expect(find.text('Marquer délivrée'), findsNothing);
+    expect(find.text('Marquer comme délivrée'), findsNothing);
   });
 
   testWidgets('modifier le code apres verification retire le resultat et le bouton delivrer',
@@ -844,11 +844,11 @@ void main() {
     await tester.enterText(find.byType(TextField), 'abc123');
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
-    expect(find.text('Marquer délivrée'), findsOneWidget);
+    expect(find.text('Marquer comme délivrée'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'abc124');
     await tester.pumpAndSettle();
     expect(find.textContaining('Ordonnance valide'), findsNothing);
-    expect(find.text('Marquer délivrée'), findsNothing);
+    expect(find.text('Marquer comme délivrée'), findsNothing);
     expect(api.appels.where((a) => a.startsWith('delivrer')), isEmpty);
   });
 
@@ -869,7 +869,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(e.value), findsOneWidget, reason: e.key);
       expect(find.textContaining('Ordonnance valide'), findsNothing);
-      expect(find.text('Marquer délivrée'), findsNothing);
+      expect(find.text('Marquer comme délivrée'), findsNothing);
     }
   });
 

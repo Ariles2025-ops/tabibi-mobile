@@ -226,7 +226,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
   final _code = TextEditingController();
   Map<String, dynamic>? _resultat;
 
-  /// Vrai juste après « Marquer délivrée » : le statut DELIVREE est alors un succès, pas un refus.
+  /// Vrai juste après « Marquer comme délivrée » : le statut DELIVREE est alors un succès, pas un refus.
   bool _vientDeDelivrer = false;
 
   @override
@@ -238,7 +238,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
   @override
   Future<void> recharger() async => setState(() {});
 
-  /// Code qui a été vérifié : c'est le seul sur lequel « Marquer délivrée » peut agir.
+  /// Code qui a été vérifié : c'est le seul sur lequel « Marquer comme délivrée » peut agir.
   String? _codeVerifie;
 
   String get _codeSaisi => _code.text.trim().toUpperCase();
@@ -311,7 +311,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
               onSubmitted: (_) => _verifier(),
             ),
             const SizedBox(height: 12),
-            FilledButton(onPressed: _verifier, child: Text(t('Vérifier', 'تحقّق'))),
+            FilledButton(onPressed: _verifier, child: Text(t('Vérifier', 'تحقق'))),
             const SizedBox(height: 16),
             if (r != null && !valide && refus == null)
               Text(t('Aucune ordonnance ne correspond à ce code.', 'لا توجد وصفة بهذا الرمز.')),
@@ -337,7 +337,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
                 FilledButton.icon(
                   onPressed: _delivrer,
                   icon: const Icon(Icons.check),
-                  label: Text(t('Marquer délivrée', 'تسجيل الصرف')),
+                  label: Text(t('Marquer comme délivrée', 'تسجيل الصرف')),
                 ),
             ],
           ],
