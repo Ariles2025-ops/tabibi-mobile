@@ -9,6 +9,7 @@ import '../utils/identifiants.dart';
 import '../utils/liste_attente.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import 'fiche_medecin_page.dart';
 
 /// Message affiche apres le retrait d'une liste d'attente.
 String get messageRetrait =>
@@ -100,6 +101,13 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
   String _nomMedecin(InscriptionAttente i) =>
       _nomsMedecins[i.medecinId] ?? libelleMedecin(i.medecinId);
 
+  /// Ouvre la fiche du praticien, comme le lien du nom sur le site.
+  void _ouvrirFiche(String medecinId) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => FicheMedecinPage(medecinId: medecinId, api: widget.api, auth: _auth),
+    ));
+  }
+
   /// Retire l'inscription apres confirmation (POST /api/liste-attente/{id}/retirer) ; une
   /// inscription deja disparue cote serveur (404) est aussi retiree de la liste.
   Future<void> _retirer(InscriptionAttente i) async {
@@ -113,7 +121,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t('Non', 'لا')),
+            child: Text(t('Non, rester inscrit', 'لا، البقاء مسجّلًا')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -216,6 +224,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
         leading: const Icon(Icons.hourglass_top_outlined),
         title: Text(_nomMedecin(i)),
         subtitle: Text(dateInscription(i)),
+        onTap: () => _ouvrirFiche(i.medecinId),
         trailing: enCours
             ? const SizedBox(
                 width: 18,
