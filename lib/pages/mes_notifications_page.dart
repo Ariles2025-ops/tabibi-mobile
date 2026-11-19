@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../i18n/langue.dart';
+import '../models/besoin_medicament.dart';
 import '../models/conversation.dart';
 import '../models/notification.dart';
 import '../services/api_service.dart';
@@ -23,6 +24,7 @@ import 'mes_conversations_page.dart';
 import 'mes_listes_attente_page.dart';
 import 'mes_ordonnances_page.dart';
 import 'mes_rendez_vous_page.dart';
+import 'reponses_besoin_page.dart';
 import 'mes_teleconsultations_page.dart';
 
 /// Notifications de l'utilisateur connecte : sujet (en gras tant qu'elle n'est pas lue),
@@ -145,6 +147,11 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         return FicheMedecinPage(medecinId: id, api: widget.api, auth: _auth);
       case TypeCible.dawini:
         return DawiniPage(api: widget.api, auth: _auth);
+      case TypeCible.besoin:
+        final besoin = await _besoin(id);
+        return besoin == null
+            ? DawiniPage(api: widget.api, auth: _auth)
+            : ReponsesBesoinPage(besoin: besoin, api: widget.api, auth: _auth);
       case TypeCible.avis:
         return MesAvisPage(api: widget.api, auth: _auth);
       case TypeCible.listeAttente:
@@ -175,6 +182,22 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
                 auth: _auth,
               );
     }
+  }
+
+  /// Retrouve une demande de medicament du patient par identifiant ; null si introuvable
+  /// ou en cas d'echec (repli sur la liste des demandes).
+  Future<BesoinMedicament?> _besoin(String id) async {
+    final token = _auth.accessToken;
+    if (token == null) return null;
+    try {
+      for (final b in await widget.api.mesBesoins(token)) {
+        final besoin = BesoinMedicament.fromJson(b);
+        if (besoin.id == id) return besoin;
+      }
+    } on Exception {
+      // Repli sur la liste des demandes.
+    }
+    return null;
   }
 
   /// Retrouve une conversation par identifiant ; null si introuvable ou en cas d'echec.
