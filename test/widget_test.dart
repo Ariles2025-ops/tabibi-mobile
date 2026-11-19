@@ -897,6 +897,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(FicheMedecinPage), findsOneWidget);
 
+    // Repart d'un arbre vide : sinon la fiche ouverte reste empilee dans le meme MaterialApp.
+    await tester.pumpWidget(const SizedBox.shrink());
     final api = FakeApiServiceDeplacer();
     await tester.pumpWidget(MaterialApp(
       home: MesRendezVousPage(api: api, auth: sessionConnectee()),
