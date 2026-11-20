@@ -57,7 +57,7 @@ bool comptePro(Set<String> roles) => aUnEspacePro(roles) && !roles.contains('PAT
 /// Message affiche a la place de ces pages pour un compte professionnel.
 String messagePageReservee() => t(
     'Cette page est réservée aux patients. Utilisez « Mon espace ».',
-    'هذه الصفحة مخصصة للمرضى. استخدم «فضائي».');
+    'هذه الصفحة مخصّصة للمرضى. استخدم «فضائي».');
 
 /// Liste de recherche vide (sans erreur).
 String messageAucunMedecin() =>

@@ -245,7 +245,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.conflit
           ? t("Ce créneau vient d'être pris. Votre rendez-vous n'a pas changé : choisissez un autre créneau.",
-              'تم حجز هذا الموعد للتو. موعدك لم يتغيّر، اختر موعدًا آخر.')
+              'هذا الموعد حُجز للتوّ. لم يتغيّر موعدك: اختر موعدًا آخر.')
           : e.message);
     } on Exception catch (e) {
       _message(messageErreur(e));
