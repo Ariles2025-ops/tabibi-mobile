@@ -97,6 +97,20 @@ void main() {
     expect(find.text('Créneaux disponibles'), findsNothing);
   });
 
+  testWidgets('fiche sans compte : « C\'est votre fiche ? » ouvre la réclamation préremplie',
+      (tester) async {
+    await afficher(
+        tester,
+        FicheMedecinPage(
+            medecinId: FakeApiService.medecinDemo,
+            api: const _FicheSansCompte(),
+            auth: SessionTest()));
+    await tester.tap(find.text("C'est votre fiche ?"));
+    await tester.pumpAndSettle();
+    expect(find.text('Réclamer ma fiche'), findsWidgets);
+    expect(find.byWidgetPredicate((w) => w is TextField && w.controller?.text == 'Dr Amina Benali'), findsOneWidget);
+  });
+
   testWidgets('fiche avec compte : conversation et liste d attente restent',
       (tester) async {
     await afficher(
