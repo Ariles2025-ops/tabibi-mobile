@@ -18,6 +18,7 @@ import '../widgets/composants.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 import 'espace/candidature_page.dart';
+import 'mes_listes_attente_page.dart';
 
 /// Message affiche quand le patient n'a aucun rendez-vous avec le praticien (403).
 String get messageConversationRefusee => t(
@@ -44,6 +45,16 @@ String get texteFicheSansCompte => t(
 /// Message affiche quand le patient est deja inscrit sur la liste d'attente (409).
 String get messageDejaInscrit =>
     t('Vous êtes déjà inscrit sur cette liste.', 'أنت مسجّل بالفعل في هذه القائمة.');
+
+/// Titre de l'encart de liste d'attente, comme le site : la question change selon qu'aucun
+/// creneau n'est propose ou que ceux proposes ne conviennent pas.
+String titreListeAttente({required bool aucunCreneau}) => aucunCreneau
+    ? t('Aucun créneau ne vous est proposé ?', 'لا توجد مواعيد مقترحة لك؟')
+    : t('Aucun créneau ne vous convient ?', 'لا يناسبك أي موعد؟');
+
+/// Lien affiche une fois inscrit, vers « Mes listes d'attente » (comme le site).
+String get texteVoirMesListesAttente =>
+    t("Voir mes listes d'attente", 'عرض قوائم انتظاري');
 
 /// Etat affiche a la place du bouton une fois le patient inscrit.
 String get texteInscrit => t(
@@ -822,13 +833,23 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t("Liste d'attente", 'قائمة الانتظار'), style: texte.titleMedium),
+        Text(titreListeAttente(aucunCreneau: _creneaux.isEmpty),
+            style: texte.titleMedium),
         const SizedBox(height: 4),
         Text(texteListeAttente, style: texte.bodySmall),
         const SizedBox(height: 8),
-        if (_inscrit)
-          Text(texteInscrit)
-        else
+        if (_inscrit) ...[
+          Text(texteInscrit),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              key: const ValueKey('voir-mes-listes-attente'),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => MesListesAttentePage(api: widget.api, auth: _auth))),
+              child: Text(texteVoirMesListesAttente),
+            ),
+          ),
+        ] else
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton.icon(

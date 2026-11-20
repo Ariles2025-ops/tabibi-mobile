@@ -99,7 +99,8 @@ void main() {
     expect(find.text(titreFicheSansCompte), findsOneWidget);
     expect(find.text(texteFicheSansCompte), findsOneWidget);
     expect(find.text('Ouvrir une conversation'), findsNothing);
-    expect(find.text("Liste d'attente"), findsNothing);
+    expect(find.text(titreListeAttente(aucunCreneau: true)), findsNothing);
+    expect(find.text(titreListeAttente(aucunCreneau: false)), findsNothing);
     expect(find.text('Créneaux disponibles'), findsNothing);
   });
 
