@@ -17,6 +17,18 @@ void main() {
         'هذا الموعد قد مضى بالفعل.');
   });
 
+  test('409 en arabe : rendez-vous déjà à venir, chevauchement et créneau pris, comme le site', () {
+    const avenir = 'Vous avez déjà un rendez-vous à venir avec ce médecin : annulez-le pour en choisir un autre.';
+    expect(traduireErreurServeur(409, avenir), avenir); // français : texte du serveur
+    Langue.courante.value = Langue.arabe;
+    expect(traduireErreurServeur(409, avenir),
+        'لديك بالفعل موعد قادم مع هذا الطبيب: ألغِه لاختيار موعد آخر.');
+    expect(traduireErreurServeur(409, 'Ce rendez-vous chevauche un autre rendez-vous.'),
+        'هذا الموعد يتداخل مع موعد آخر لديك.');
+    expect(traduireErreurServeur(409, 'Ce créneau est déjà pris.'), 'هذا الموعد حُجز للتوّ.');
+    expect(traduireErreurServeur(409, 'Autre chose'), 'تعذّر الإجراء: تغيّر الوضع في الأثناء');
+  });
+
   test('liste vide : message FR/AR', () {
     expect(messageAucunMedecin(), 'Aucun médecin trouvé. Essayez un autre nom ou une autre wilaya.');
     Langue.courante.value = Langue.arabe;

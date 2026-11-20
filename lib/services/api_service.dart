@@ -106,8 +106,16 @@ String traduireErreurServeur(int statut, String texte) {
   if (!Langue.estArabe) return texte;
   final minuscule = texte.toLowerCase();
   if (statut == 409) {
+    // Mêmes refus et mêmes phrases que le site (erreur-api.interceptor.ts).
+    if (minuscule.contains('rendez-vous à venir') || minuscule.contains('rendez-vous a venir')) {
+      return 'لديك بالفعل موعد قادم مع هذا الطبيب: ألغِه لاختيار موعد آخر.';
+    }
+    if (minuscule.contains('chevauche')) return 'هذا الموعد يتداخل مع موعد آخر لديك.';
     if (minuscule.contains('déjà passé') || minuscule.contains('deja passe')) {
       return 'هذا الموعد قد مضى بالفعل.';
+    }
+    if (minuscule.contains('pris') || minuscule.contains('réservé')) {
+      return 'هذا الموعد حُجز للتوّ.';
     }
     if (minuscule.contains('créneau') || minuscule.contains('creneau')) {
       return 'هذا الموعد لم يعد متاحًا.';
