@@ -331,7 +331,8 @@ class FakeEspaceApi extends ApiService {
   @override
   Future<Map<String, dynamic>> delivrerOrdonnance(String code, String token) async {
     appels.add('delivrer $code');
-    return {'valide': true, 'statut': 'DELIVREE', 'delivreeLe': '2026-12-04T10:00:00Z'};
+    // Comme le vrai serveur : ResultatVerification.de renvoie valide=false une fois délivrée.
+    return {'valide': false, 'statut': 'DELIVREE', 'delivreeLe': '2026-12-04T10:00:00Z'};
   }
 
   @override
@@ -937,7 +938,8 @@ void main() {
     await tester.tap(find.text('Marquer comme délivrée'));
     await tester.pumpAndSettle();
     expect(api.appels, ['delivrer ABC123']);
-    expect(find.text('Ordonnance valide · Délivrée'), findsOneWidget);
+    expect(find.textContaining('Ordonnance délivrée le'), findsOneWidget);
+    expect(find.textContaining('Aucune ordonnance'), findsNothing);
     expect(find.text('Marquer comme délivrée'), findsNothing);
   });
 
