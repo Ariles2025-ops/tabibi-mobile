@@ -73,6 +73,8 @@ class _MonEspacePageState extends State<MonEspacePage> with AppelsEspace {
     setState(() {
       if (sortie is SortieEcran && sortie.indisponible) _ficheDispo = false;
     });
+    // Invitation acceptee : le jeton a ete renouvele, on recharge les espaces du compte.
+    if (sortie == true) await recharger();
   }
 
   Widget _entree(IconData icone, String titre, String sousTitre, Widget page) => Card(

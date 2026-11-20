@@ -203,7 +203,7 @@ class _CabinetsPageState extends State<CabinetsPage> with AppelsEspace {
 }
 
 /// Invitations a rejoindre le cabinet d'un medecin (tout compte connecte) : accepter donne
-/// l'espace secretaire (a la prochaine connexion), refuser fait disparaitre l'invitation.
+/// l'espace secretaire (jeton renouvele aussitot ; repli : a la prochaine connexion), refuser fait disparaitre l'invitation.
 class InvitationsCabinetPage extends StatefulWidget {
   const InvitationsCabinetPage({super.key, this.api = const ApiService(), this.auth});
 
@@ -248,6 +248,13 @@ class _InvitationsCabinetPageState extends State<InvitationsCabinetPage> with Ap
       return true;
     });
     if (fait != true) return;
+    if (accepter && await auth.rafraichir()) {
+      // Comme le site : le jeton renouvelé porte déjà le rôle SECRETAIRE, l'espace s'ouvre seul.
+      message(t('Invitation acceptée : votre espace secrétaire est ouvert.',
+          'تم قبول الدعوة: تم فتح فضاء السكرتارية.'));
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    }
     message(accepter
         ? t('Invitation acceptée : reconnectez-vous pour ouvrir l\'espace secrétaire.',
             'تم قبول الدعوة: أعد تسجيل الدخول لفتح فضاء السكرتارية.')
@@ -276,7 +283,7 @@ class _InvitationsCabinetPageState extends State<InvitationsCabinetPage> with Ap
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        t('${_nom(inv)} vous invite à gérer son cabinet.',
+                        t('${_nom(inv)} vous invite à gérer l\'agenda de son cabinet.',
                             '${_nom(inv)} يدعوك لإدارة عيادته.'),
                       ),
                       const SizedBox(height: 8),
