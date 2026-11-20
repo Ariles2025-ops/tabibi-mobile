@@ -1795,8 +1795,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text("Liste d'attente"), findsOneWidget);
+    // Des creneaux sont proposes : meme question que sur le site.
+    expect(find.text(titreListeAttente(aucunCreneau: false)), findsOneWidget);
+    expect(find.text('Aucun créneau ne vous convient ?'), findsOneWidget);
     expect(find.text(texteListeAttente), findsOneWidget);
+    expect(find.text(texteVoirMesListesAttente), findsNothing);
     expect(find.text("M'inscrire sur la liste d'attente"), findsOneWidget);
     expect(find.text(texteInscrit), findsNothing);
 
@@ -1806,6 +1809,8 @@ void main() {
     expect(find.text('Inscription enregistrée. $texteListeAttente'), findsOneWidget);
     expect(find.text("M'inscrire sur la liste d'attente"), findsNothing);
     expect(find.text(texteInscrit), findsOneWidget);
+    // Plus d'impasse : lien vers « Mes listes d'attente », comme sur le site.
+    expect(find.text(texteVoirMesListesAttente), findsOneWidget);
     // Les creneaux restent proposes.
     expect(find.text('Réserver'), findsOneWidget);
   });

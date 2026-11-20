@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/models/inscription_attente.dart';
+import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
 import 'package:tabibi_mobile/utils/liste_attente.dart';
 
 void main() {
@@ -48,5 +50,16 @@ void main() {
       InscriptionAttente.fromJson({'id': '3', 'inscritLe': '2026-01-10T09:00:00'}),
     ]);
     expect(triees.map((i) => i.id).toList(), ['3', '1', '2']);
+  });
+
+  test("la fiche pose la meme question que le site selon qu'il y a des creneaux ou non", () {
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(titreListeAttente(aucunCreneau: true), 'Aucun créneau ne vous est proposé ?');
+    expect(titreListeAttente(aucunCreneau: false), 'Aucun créneau ne vous convient ?');
+    expect(texteVoirMesListesAttente, "Voir mes listes d'attente");
+    Langue.courante.value = Langue.arabe;
+    expect(titreListeAttente(aucunCreneau: true), 'لا توجد مواعيد مقترحة لك؟');
+    expect(titreListeAttente(aucunCreneau: false), 'لا يناسبك أي موعد؟');
+    expect(texteVoirMesListesAttente, 'عرض قوائم انتظاري');
   });
 }
