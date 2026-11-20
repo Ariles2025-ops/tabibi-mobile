@@ -322,14 +322,22 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
             const SizedBox(height: 12),
             FilledButton(onPressed: _verifier, child: Text(t('Vérifier', 'تحقق'))),
             const SizedBox(height: 16),
-            if (r != null && !valide && refus == null)
-              Text(t('Aucune ordonnance ne correspond à ce code.', 'لا توجد وصفة بهذا الرمز.')),
+            // Après « Marquer comme délivrée » le serveur renvoie valide=false, statut=DELIVREE : c'est un succès.
+            // Un code inconnu passe par une erreur 404 affichée en message, pas par ici.
+            if (r != null && _vientDeDelivrer) ...[
+              Text(
+                  DateTime.tryParse('${r['delivreeLe']}') != null
+                      ? t('Ordonnance délivrée le ${formaterDateIso('${r['delivreeLe']}')}',
+                          'تم صرف الوصفة في ${formaterDateIso('${r['delivreeLe']}')}')
+                      : t('Ordonnance délivrée', 'تم صرف الوصفة'),
+                  style: Theme.of(context).textTheme.titleMedium),
+            ],
             // Comme le site : annulée, expirée ou déjà délivrée = refus net, jamais « valide ».
             if (r != null && refus != null)
               Text(refus,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
-            if (r != null && valide && refus == null) ...[
+            if (r != null && valide && refus == null && !_vientDeDelivrer) ...[
               Text(
                 t('Ordonnance valide · ${libelleStatut(statut)}',
                     'وصفة صالحة · ${libelleStatut(statut)}'),
