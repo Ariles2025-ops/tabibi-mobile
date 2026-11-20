@@ -129,4 +129,19 @@ void main() {
     expect(cibleDuLien('/medecins'), isNull);
     expect(cibleDuLien('/a/b/c'), isNull);
   });
+
+  test('cibleDuLien ne suit pas un lien externe ou sans « / » initial, comme le site', () {
+    expect(cibleDuLien('//mes-rendez-vous'), isNull);
+    expect(cibleDuLien('mes-avis'), isNull);
+    expect(cibleDuLien('https://exemple.org'), isNull);
+    expect(cibleDuLien('  /mes-avis '), const CibleNotification(TypeCible.avis));
+  });
+
+  test('ouvreUnEcran : « Voir → » seulement si un ecran existe ; visio fermee = rien a ouvrir', () {
+    expect(ouvreUnEcran('/mes-rendez-vous', visioActive: false), isTrue);
+    expect(ouvreUnEcran('', visioActive: false), isFalse);
+    expect(ouvreUnEcran('/inconnu', visioActive: true), isFalse);
+    expect(ouvreUnEcran('/teleconsultations', visioActive: false), isFalse);
+    expect(ouvreUnEcran('/teleconsultations', visioActive: true), isTrue);
+  });
 }
