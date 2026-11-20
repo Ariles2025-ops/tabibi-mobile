@@ -956,7 +956,8 @@ void main() {
 
     await tester.tap(find.text('Supprimer mon compte'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Supprimer définitivement'));
+    expect(find.textContaining("profil, rendez-vous, messages, listes d'attente"), findsOneWidget);
+    await tester.tap(find.text('Oui, supprimer définitivement'));
     await tester.pumpAndSettle();
     expect(api.appels, ['supprimer']);
     expect(auth.estConnecte, isFalse);

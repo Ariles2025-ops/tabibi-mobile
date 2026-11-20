@@ -199,11 +199,12 @@ class _MonProfilPageState extends State<MonProfilPage> {
       builder: (ctx) => AlertDialog(
         title: Text(t('Supprimer mon compte ?', 'حذف حسابي؟')),
         content: Text(t(
-            'Votre compte et vos données personnelles seront supprimés définitivement. '
-                'Seules les ordonnances et le journal de sécurité sont conservés le temps '
-                'exigé par la loi. Cette action est irréversible.',
-            'سيتم حذف حسابك وبياناتك الشخصية نهائيًا. لا يُحتفظ إلا بالوصفات الطبية وسجل '
-                'الأمان للمدة التي يفرضها القانون. لا يمكن التراجع عن هذا الإجراء.')),
+            'Votre compte et vos données personnelles (profil, rendez-vous, messages, listes '
+                "d'attente) sont effacés définitivement. Seules les ordonnances et le journal "
+                'de sécurité sont conservés le temps exigé par la loi. Cette action est définitive.',
+            'يُحذف حسابك وبياناتك الشخصية (الملف الشخصي والمواعيد والرسائل وقوائم الانتظار) '
+                'نهائيًا. لا يُحتفظ إلا بالوصفات الطبية وسجل الأمان للمدة التي يفرضها القانون. '
+                'هذا الإجراء نهائي.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -212,7 +213,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(t('Supprimer définitivement', 'حذف نهائي')),
+            child: Text(t('Oui, supprimer définitivement', 'نعم، احذف نهائيًا')),
           ),
         ],
       ),
