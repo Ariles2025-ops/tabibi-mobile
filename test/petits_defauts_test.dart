@@ -18,9 +18,9 @@ void main() {
   });
 
   test('liste vide : message FR/AR', () {
-    expect(messageAucunMedecin(), 'Aucun médecin trouvé pour ces critères');
+    expect(messageAucunMedecin(), 'Aucun médecin trouvé. Essayez un autre nom ou une autre wilaya.');
     Langue.courante.value = Langue.arabe;
-    expect(messageAucunMedecin(), isNot(contains('Aucun')));
+    expect(messageAucunMedecin(), 'لم نعثر على أي طبيب. جرّب اسمًا آخر أو ولاية أخرى.');
   });
 
   test('fiche sans nomComplet ni debut : pas de plantage', () {

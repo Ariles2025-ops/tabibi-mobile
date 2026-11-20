@@ -10,6 +10,7 @@ import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
 import '../../utils/rendez_vous.dart' show estAnnule;
 import 'cabinet.dart';
+import 'creneaux_page.dart';
 import 'nouvelle_ordonnance_page.dart';
 import 'outils_espace.dart';
 
@@ -217,7 +218,20 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
   }
 
   Widget _liste() {
-    if (_rdvs.isEmpty) return VueVide(t('Aucun rendez-vous.', 'لا توجد مواعيد.'));
+    if (_rdvs.isEmpty) {
+      // Comme le site : phrase vide + lien « Ouvrir des créneaux ».
+      return ListView(children: [
+        VueVide(t('Aucun rendez-vous pour le moment.', 'لا توجد مواعيد حاليًا.')),
+        Center(
+          child: TextButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) =>
+                    CreneauxPage(cabinet: widget.cabinet, api: widget.api, auth: auth))),
+            child: Text(t('Ouvrir des créneaux', 'فتح مواعيد')),
+          ),
+        ),
+      ]);
+    }
     final c = classerAgenda(_rdvs, (widget.maintenant ?? DateTime.now)());
     // Entrees : un titre de section (String) ou un rendez-vous.
     final entrees = <Object>[
