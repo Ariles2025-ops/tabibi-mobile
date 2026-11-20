@@ -225,7 +225,9 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
         _nomMedecin(c),
         style: nonLus ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
-      subtitle: Text(libelleActivite(c)),
+      subtitle: Text(c.fermee
+          ? '${libelleActivite(c)} · ${t('Fermée', 'مغلقة')}'
+          : libelleActivite(c)),
       trailing:
           nonLus ? _pastille(context, libelleNonLus(c.nonLus)) : const Icon(Icons.chevron_right),
       onTap: () => _ouvrir(c),

@@ -348,6 +348,14 @@ class ApiService {
     return _objet(res, chemin);
   }
 
+  /// Ferme une conversation (POST /api/conversations/{id}/fermer), reserve au medecin :
+  /// le patient ne peut plus y ecrire (comme « Fermer la conversation » sur le site).
+  Future<void> fermerConversation(String conversationId, String token) async {
+    final chemin = '/api/conversations/${Uri.encodeComponent(conversationId)}/fermer';
+    final res = await _Http.post(Uri.parse('$base$chemin'), headers: _bearer(token));
+    _verifier(res, chemin);
+  }
+
   /// Depose un avis sur un rendez-vous honore (201) : {id, rendezVousId, medecinId, note,
   /// commentaire, statut (PUBLIE, SIGNALE, MASQUE), deposeLe (ISO 8601)} ; 400 si la note sort
   /// de 1..5, 409 si le rendez-vous n'est pas honore ou si un avis existe deja.

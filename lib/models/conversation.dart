@@ -12,6 +12,7 @@ class Conversation {
     this.creeLe,
     this.dernierMessageLe,
     this.nonLus = 0,
+    this.fermee = false,
   });
 
   /// Lecture tolerante d'une carte JSON : un champ absent ou nul devient une chaine vide,
@@ -24,6 +25,7 @@ class Conversation {
       creeLe: _date(json['creeLe']),
       dernierMessageLe: _date(json['dernierMessageLe']),
       nonLus: _entier(json['nonLus']),
+      fermee: json['fermee'] == true,
     );
   }
 
@@ -39,6 +41,20 @@ class Conversation {
 
   /// Nombre de messages recus non encore lus.
   final int nonLus;
+
+  /// Vrai quand le medecin a ferme la conversation : plus aucun message ne peut y etre ecrit.
+  final bool fermee;
+
+  /// Copie marquee comme fermee.
+  Conversation enFermee() => Conversation(
+        id: id,
+        patientId: patientId,
+        medecinId: medecinId,
+        creeLe: creeLe,
+        dernierMessageLe: dernierMessageLe,
+        nonLus: nonLus,
+        fermee: true,
+      );
 
   /// Date de la derniere activite : dernier message, sinon ouverture.
   DateTime? get derniereActivite => dernierMessageLe ?? creeLe;
