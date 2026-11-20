@@ -5,6 +5,7 @@ import '../models/inscription_attente.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/espace_pro.dart';
 import '../utils/identifiants.dart';
 import '../utils/liste_attente.dart';
 import '../widgets/vue_connexion.dart';
@@ -75,7 +76,7 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageChargement(e, PublicPage.patients));
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {

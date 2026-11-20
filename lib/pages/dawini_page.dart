@@ -5,6 +5,7 @@ import '../models/besoin_medicament.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/espace_pro.dart';
 import '../utils/dawini.dart';
 import '../widgets/champ_wilaya.dart';
 import '../widgets/vue_connexion.dart';
@@ -102,7 +103,7 @@ class _DawiniPageState extends State<DawiniPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageChargement(e, PublicPage.patients));
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {

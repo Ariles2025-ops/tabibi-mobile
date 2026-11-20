@@ -2,6 +2,7 @@
 // l'agenda du cabinet et generation des creneaux en serie.
 
 import '../i18n/langue.dart';
+import '../services/api_service.dart';
 
 /// Espaces professionnels proposes dans « Mon espace ».
 enum Espace { medecin, secretaire, pharmacie }
@@ -263,4 +264,19 @@ List<Map<String, dynamic>> trierRattachements(List<Map<String, dynamic>> liste) 
     return da.compareTo(db);
   });
   return copie;
+}
+
+/// Public d'une page reservee a un role, pour le message « Cette page est reservee aux ... ».
+enum PublicPage { patients, patientsEtMedecins }
+
+/// Message d'une page de chargement en echec : un refus 403 (role insuffisant) dit a qui
+/// la page est reservee, comme le site (« Cette page est réservée aux patients. ») au lieu du
+/// libelle generique « Accès refusé » ; les autres erreurs gardent leur message.
+String messageChargement(ApiException e, PublicPage public) {
+  if (!e.interdit) return e.message;
+  return switch (public) {
+    PublicPage.patients => t('Cette page est réservée aux patients.', 'هذه الصفحة مخصّصة للمرضى.'),
+    PublicPage.patientsEtMedecins => t('Cette page est réservée aux patients et aux médecins.',
+        'هذه الصفحة مخصّصة للمرضى والأطباء.'),
+  };
 }
