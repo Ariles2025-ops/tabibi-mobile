@@ -60,3 +60,9 @@ List<Conversation> trierParActivite(List<Conversation> conversations) {
   });
   return copie;
 }
+
+/// Texte de la liste vide, comme le site : la messagerie s'ouvre depuis la fiche d'un médecin
+/// seulement une fois un rendez-vous pris (sinon l'API répond 403).
+String texteAucuneConversation() => t(
+    'Aucune conversation pour le moment. Vous pouvez écrire à un médecin depuis sa fiche, une fois un rendez-vous pris.',
+    'لا توجد محادثات حاليًا. يمكنك مراسلة طبيب من صفحته بعد حجز موعد.');
