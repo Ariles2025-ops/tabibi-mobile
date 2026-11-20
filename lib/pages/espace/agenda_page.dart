@@ -94,7 +94,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     final choisi = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: Text(t('Choisir un nouveau créneau', 'اختر موعدًا جديدًا')),
+        title: Text(t('Choisissez un nouveau créneau', 'اختر موعدًا جديدًا')),
         children: libres.isEmpty
             ? [
                 Padding(

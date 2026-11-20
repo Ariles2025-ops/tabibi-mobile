@@ -139,7 +139,7 @@ class _SecretairesPageState extends State<SecretairesPage> with AppelsEspace {
                 labelText: t('Adresse e-mail du compte Ndawik de votre secrétaire',
                     'البريد الإلكتروني لحساب سكرتيرتك على نداويك'),
                 helperText: t(
-                    'La secrétaire doit avoir créé son compte Ndawik. Elle reçoit une invitation à accepter.',
+                    'La secrétaire doit avoir créé son compte Ndawik. Elle reçoit une invitation à accepter depuis ses notifications.',
                     'يجب أن تكون السكرتيرة قد أنشأت حسابها على نداويك. ستتلقى دعوة لقبولها.'),
                 helperMaxLines: 3,
                 errorText: _erreurFormulaire,

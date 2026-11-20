@@ -519,7 +519,7 @@ void main() {
     expect(find.text('Marquer honoré'), findsNothing); // pas encore commence
     await tester.tap(find.text('Déplacer'));
     await tester.pumpAndSettle();
-    expect(find.text('Choisir un nouveau créneau'), findsOneWidget);
+    expect(find.text('Choisissez un nouveau créneau'), findsOneWidget);
     // Seul c1 est libre (c2 est reserve).
     await tester.tap(find.byType(SimpleDialogOption));
     await tester.pumpAndSettle();
@@ -803,6 +803,14 @@ void main() {
     await tester.tap(find.text('Inviter cette secrétaire'));
     await tester.pumpAndSettle();
     expect(find.text('Cette secrétaire est déjà rattachée à votre cabinet.'), findsOneWidget);
+  });
+
+  testWidgets('mes secretaires : l\'aide dit ou la secretaire accepte l\'invitation, comme le site', (tester) async {
+    await afficher(tester, SecretairesPage(api: FakeEspaceApi(), auth: SessionTest()));
+    expect(
+        find.text(
+            'La secrétaire doit avoir créé son compte Ndawik. Elle reçoit une invitation à accepter depuis ses notifications.'),
+        findsOneWidget);
   });
 
   testWidgets('mon espace medecin propose « Mes secrétaires », comme le site', (tester) async {

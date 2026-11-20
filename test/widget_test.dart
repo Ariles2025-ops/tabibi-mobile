@@ -1502,7 +1502,7 @@ void main() {
 
     await tester.tap(find.text('Déplacer'));
     await tester.pumpAndSettle();
-    expect(find.text('Choisir un nouveau créneau'), findsOneWidget);
+    expect(find.text('Choisissez un nouveau créneau'), findsOneWidget);
     await tester.tap(find.byType(SimpleDialogOption));
     await tester.pumpAndSettle();
     expect(find.text('Déplacer ce rendez-vous ?'), findsOneWidget);
