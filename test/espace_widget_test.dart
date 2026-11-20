@@ -897,7 +897,7 @@ void main() {
       await tester.enterText(find.widgetWithText(TextField, 'Prix (DA)'), saisie);
       await tester.tap(find.text('Envoyer'));
       await tester.pumpAndSettle();
-      expect(find.text('Indiquez un prix en dinars valide (nombre entier)'), findsOneWidget);
+      expect(find.text('Indiquez un prix en dinars valide (nombre entier positif ou nul).'), findsOneWidget);
     }
     expect(api.appels.where((a) => a.startsWith('repondre')), isEmpty);
     await tester.enterText(find.widgetWithText(TextField, 'Prix (DA)'), '');

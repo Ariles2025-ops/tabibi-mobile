@@ -137,8 +137,8 @@ class _MesAvisPageState extends State<MesAvisPage> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            t('Aucun avis pour le moment. Vous pourrez en donner un après un rendez-vous honoré.',
-                'لا توجد آراء حاليًا. يمكنك إبداء رأيك بعد موعد تم حضوره.'),
+            t('Aucun avis pour le moment. Vous pouvez noter un rendez-vous honoré depuis « Mes rendez-vous ».',
+                'لا توجد آراء حاليًا. يمكنك تقييم موعد تم حضوره من «مواعيدي».'),
             textAlign: TextAlign.center,
           ),
         ),

@@ -129,7 +129,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       } on ApiException catch (e) {
         if (!e.conflit) rethrow;
         message(t("Ce créneau vient d'être pris. Le rendez-vous n'a pas changé : choisissez un autre créneau.",
-            'تم حجز هذا الموعد للتو. لم يتغيّر الموعد: اختر موعدًا آخر.'));
+            'هذا الموعد حُجز للتوّ. لم يتغيّر الموعد: اختر موعدًا آخر.'));
         return false;
       }
     });

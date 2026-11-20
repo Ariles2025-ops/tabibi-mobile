@@ -68,7 +68,8 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
       return true;
     });
     if (fait != true) return;
-    message(t('Réponse envoyée au patient', 'تم إرسال الرد إلى المريض'));
+    message(t('Réponse envoyée pour « ${besoin['medicament']} » : le patient est prévenu.',
+        'تم إرسال الرد بخصوص «${besoin['medicament']}»: المريض مُبلَّغ.'));
     await recharger();
   }
 
@@ -192,8 +193,8 @@ class _DialogueReponseState extends State<_DialogueReponse> {
             // Un prix vide est ignore ; un prix non vide mais invalide bloque l'envoi.
             final prix = texte.isEmpty ? null : int.tryParse(texte);
             if (texte.isNotEmpty && (prix == null || prix < 0)) {
-              setState(() => _erreurPrix = t('Indiquez un prix en dinars valide (nombre entier)',
-                  'أدخل سعراً صحيحاً بالدينار (عدد صحيح)'));
+              setState(() => _erreurPrix = t('Indiquez un prix en dinars valide (nombre entier positif ou nul).',
+                  'أدخل سعرًا صحيحًا بالدينار (عدد صحيح موجب أو صفر).'));
               return;
             }
             Navigator.pop(

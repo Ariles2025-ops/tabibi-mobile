@@ -55,4 +55,22 @@ void main() {
     expect(_lire('lib/main.dart'), contains("'الاستشارات عن بُعد'"));
     expect(_lire('lib/pages/compte_page.dart'), contains("'الاستشارة عن بُعد'"));
   });
+
+  test('créneau pris, réponse Dawini, prix et avis vides : mêmes phrases que le site (FR et AR)', () {
+    for (final fichier in ['lib/pages/mes_rendez_vous_page.dart', 'lib/pages/espace/agenda_page.dart']) {
+      final src = _lire(fichier);
+      expect(src, contains('هذا الموعد حُجز للتوّ.'));
+      expect(src.contains('تم حجز هذا الموعد للتو'), isFalse);
+    }
+    final pharmacie = _lire('lib/pages/espace/pharmacie_pages.dart');
+    expect(pharmacie, contains('le patient est prévenu.'));
+    expect(pharmacie, contains('المريض مُبلَّغ.'));
+    expect(pharmacie, contains('(nombre entier positif ou nul).'));
+    expect(pharmacie, contains('عدد صحيح موجب أو صفر'));
+    expect(pharmacie.contains('سعراً'), isFalse);
+    expect(_lire('lib/utils/espace_pro.dart'), contains('هذه الصفحة مخصّصة للمرضى.'));
+    final avis = _lire('lib/pages/mes_avis_page.dart');
+    expect(avis, contains('Vous pouvez noter un rendez-vous honoré depuis'));
+    expect(avis, contains('يمكنك تقييم موعد تم حضوره من'));
+  });
 }
