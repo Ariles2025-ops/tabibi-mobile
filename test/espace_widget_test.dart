@@ -420,6 +420,15 @@ void main() {
     expect(find.text('Rendez-vous honoré'), findsNothing);
   });
 
+  testWidgets("agenda vide : même phrase que le site et lien « Ouvrir des créneaux »", (tester) async {
+    await afficher(tester, AgendaPage(api: _AgendaVideApi(), auth: SessionTest()));
+    expect(find.text('Aucun rendez-vous pour le moment.'), findsOneWidget);
+    expect(find.text('Ouvrir des créneaux'), findsOneWidget);
+    await tester.tap(find.text('Ouvrir des créneaux'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CreneauxPage), findsOneWidget);
+  });
+
   testWidgets("l'agenda du médecin propose « Rédiger une ordonnance » avec patient et rendez-vous préremplis",
       (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
@@ -1102,6 +1111,13 @@ void main() {
 }
 
 /// Agenda : un passe annule, un du jour (heure d'Alger), un de demain (minuit passe a Alger).
+class _AgendaVideApi extends FakeEspaceApi {
+  _AgendaVideApi() : super(roles: ['MEDECIN']);
+
+  @override
+  Future<List<Map<String, dynamic>>> agendaMedecin(String token) async => [];
+}
+
 class _AgendaDatesApi extends FakeEspaceApi {
   _AgendaDatesApi() : super(roles: ['MEDECIN']);
 

@@ -61,7 +61,8 @@ String messagePageReservee() => t(
 
 /// Liste de recherche vide (sans erreur).
 String messageAucunMedecin() =>
-    t('Aucun médecin trouvé pour ces critères', 'لم يُعثر على أي طبيب لهذه المعايير');
+    t('Aucun médecin trouvé. Essayez un autre nom ou une autre wilaya.',
+        'لم نعثر على أي طبيب. جرّب اسمًا آخر أو ولاية أخرى.');
 
 /// Compteur de la recherche : « 50 sur 312 médecins » (le total vient de X-Total-Count).
 String messageNombreMedecins(int affiches, int total) => t(
