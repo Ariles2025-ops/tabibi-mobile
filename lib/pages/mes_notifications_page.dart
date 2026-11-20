@@ -312,9 +312,21 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         ],
       ),
       isThreeLine: true,
-      trailing: _actionLecture(n),
+      trailing: _suffixe(n),
       onTap: () => _ouvrir(n),
     );
+  }
+
+  /// « Voir → » quand la notification ouvre un ecran (comme sur le site), puis le bouton de lecture.
+  Widget? _suffixe(NotificationUtilisateur n) {
+    final action = _actionLecture(n);
+    if (!ouvreUnEcran(n.lien, visioActive: visioActive)) return action;
+    final voir = Text(
+      t('Voir →', 'عرض ←'),
+      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+    );
+    if (action == null) return voir;
+    return Row(mainAxisSize: MainAxisSize.min, children: [voir, action]);
   }
 
   /// Bouton « Marquer comme lue » d'une notification non lue (indicateur pendant l'envoi).

@@ -58,7 +58,10 @@ class CibleNotification {
 /// `/messagerie/{id}`, `/dawini`...) a un ecran de l'appli ; null si le lien est vide
 /// ou n'a pas d'ecran correspondant.
 CibleNotification? cibleDuLien(String lien) {
-  final chemin = lien.split(RegExp('[?#]')).first;
+  final brut = lien.trim();
+  // Comme le site : seul un chemin interne (« /... ») est suivi, jamais un lien externe (« //hote »).
+  if (!brut.startsWith('/') || brut.startsWith('//')) return null;
+  final chemin = brut.split(RegExp('[?#]')).first;
   final segments = chemin.split('/').where((s) => s.isNotEmpty).toList();
   if (segments.isEmpty || segments.length > 2) return null;
   final id = segments.length == 2 ? Uri.decodeComponent(segments[1]) : null;
@@ -106,4 +109,12 @@ CibleNotification? cibleDuLien(String lien) {
     default:
       return null;
   }
+}
+
+/// Vrai si la notification ouvre un ecran (donc « Voir → », comme sur le site) : un lien sans
+/// ecran n'est pas propose, et `/teleconsultations` n'ouvre rien tant que la visio est « Bientôt ».
+bool ouvreUnEcran(String lien, {required bool visioActive}) {
+  final cible = cibleDuLien(lien);
+  if (cible == null) return false;
+  return cible.type != TypeCible.teleconsultations || visioActive;
 }
