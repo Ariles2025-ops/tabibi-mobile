@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/i18n/langue.dart';
+import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 void main() {
@@ -149,5 +150,16 @@ void main() {
       {'id': 'a', 'creeLe': '2026-11-01T00:00:00Z'},
     ]);
     expect(tri.map((r) => r['id']), ['a', 'b', 'c']);
+  });
+
+  test('messageChargement : 403 = « Cette page est réservée... » comme le site, autres erreurs inchangées', () {
+    final interdit = ApiException(403, 'Accès refusé');
+    expect(messageChargement(interdit, PublicPage.patients), 'Cette page est réservée aux patients.');
+    expect(messageChargement(interdit, PublicPage.patientsEtMedecins),
+        'Cette page est réservée aux patients et aux médecins.');
+    expect(messageChargement(ApiException(500, 'Panne'), PublicPage.patients), 'Panne');
+    Langue.courante.value = Langue.arabe;
+    expect(messageChargement(interdit, PublicPage.patients), 'هذه الصفحة مخصّصة للمرضى.');
+    expect(messageChargement(interdit, PublicPage.patientsEtMedecins), 'هذه الصفحة مخصّصة للمرضى والأطباء.');
   });
 }
