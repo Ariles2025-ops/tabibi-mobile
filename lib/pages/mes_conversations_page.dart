@@ -198,8 +198,7 @@ class _MesConversationsPageState extends State<MesConversationsPage> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            t('Aucune conversation pour le moment. Ouvrez-en une depuis la fiche de votre médecin.',
-                'لا توجد محادثات حاليًا. افتح محادثة من صفحة طبيبك.'),
+            texteAucuneConversation(),
             textAlign: TextAlign.center,
           ),
         ),

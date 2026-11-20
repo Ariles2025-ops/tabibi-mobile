@@ -151,4 +151,10 @@ void main() {
     final sansSujet = base64Url.encode(utf8.encode('{"exp":1}'));
     expect(sujetDuJeton('entete.$sansSujet.signature'), isNull);
   });
+
+  test("liste vide : même texte que le site, avec la condition d'un rendez-vous pris", () {
+    final fr = texteAucuneConversation();
+    expect(fr, contains('une fois un rendez-vous pris'));
+    expect(fr, isNot(contains('Ouvrez-en une')));
+  });
 }
