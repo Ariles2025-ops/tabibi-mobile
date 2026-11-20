@@ -703,15 +703,18 @@ class ApiService {
     return _liste(res, '/api/dawini/besoins');
   }
 
-  /// Reponse de la pharmacie connectee a un besoin (201) ; le nom affiche est celui de son profil.
+  /// Reponse de la pharmacie connectee a un besoin (201), comme le site : le corps porte
+  /// `nomPharmacie` (nom du profil de la pharmacie), affiche au patient ; 400 si incomplete.
   Future<Map<String, dynamic>> repondreBesoin(
     String besoinId,
     bool disponible,
     String token, {
     int? prixDa,
     String? commentaire,
+    String? nomPharmacie,
   }) =>
       _postJson('/api/dawini/besoins/${Uri.encodeComponent(besoinId)}/reponses', token, {
+        if (nomPharmacie != null && nomPharmacie.trim().isNotEmpty) 'nomPharmacie': nomPharmacie.trim(),
         'disponible': disponible,
         'prixDa': prixDa,
         'commentaire': commentaire,

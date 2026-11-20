@@ -27,6 +27,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
   @override
   late final AuthService auth = widget.auth ?? session;
   String? _wilaya;
+  String _nomPharmacie = '';
   List<Map<String, dynamic>> _besoins = [];
 
   @override
@@ -40,6 +41,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     try {
       final profil = await widget.api.monProfil(auth.accessToken ?? '');
       _wilaya = wilayaParCode(profil['wilayaCode'] as String?)?.code;
+      _nomPharmacie = '${profil['nomComplet'] ?? ''}'.trim();
     } on Exception {
       // Profil absent : la pharmacie choisit sa wilaya.
     }
@@ -57,6 +59,12 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
   }
 
   Future<void> _repondre(Map<String, dynamic> besoin) async {
+    // Comme le site : la reponse porte le nom de la pharmacie, pris dans son profil.
+    if (_nomPharmacie.isEmpty) {
+      message(t("Renseignez d'abord le nom de votre pharmacie dans « Mon profil ».",
+          'أدخل أولًا اسم صيدليتك في «ملفي الشخصي».'));
+      return;
+    }
     final reponse = await showDialog<_Reponse>(
       context: context,
       builder: (_) => _DialogueReponse(medicament: '${besoin['medicament']}'),
@@ -64,7 +72,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     if (reponse == null) return;
     final fait = await appeler((j) async {
       await widget.api.repondreBesoin(identifiant(besoin['id']), reponse.disponible, j,
-          prixDa: reponse.prixDa, commentaire: reponse.commentaire);
+          prixDa: reponse.prixDa, commentaire: reponse.commentaire, nomPharmacie: _nomPharmacie);
       return true;
     });
     if (fait != true) return;
