@@ -348,6 +348,17 @@ class SessionTest extends AuthService {
   Future<void> finDeSession(String jeton) async => finsDeSession.add(jeton);
 }
 
+/// Session dont le renouvellement du jeton reussit (compte devenu secretaire).
+class SessionRenouvelable extends SessionTest {
+  int renouvelements = 0;
+
+  @override
+  Future<bool> rafraichir() async {
+    renouvelements++;
+    return true;
+  }
+}
+
 Future<void> afficher(WidgetTester tester, Widget page) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -833,11 +844,33 @@ void main() {
   testWidgets('une invitation de cabinet peut etre acceptee', (tester) async {
     final api = FakeEspaceApi();
     await afficher(tester, InvitationsCabinetPage(api: api, auth: SessionTest()));
-    expect(find.text('Dr Amina Benali vous invite à gérer son cabinet.'), findsOneWidget);
+    expect(find.text('Dr Amina Benali vous invite à gérer l\'agenda de son cabinet.'), findsOneWidget);
     await tester.tap(find.text('Accepter'));
     await tester.pumpAndSettle();
     expect(api.appels, ['accepter i1']);
+    // Renouvellement impossible : repli sur le message « reconnectez-vous ».
+    expect(find.textContaining('reconnectez-vous'), findsOneWidget);
     expect(find.text('Aucune invitation en attente.'), findsOneWidget);
+  });
+
+  testWidgets('invitation acceptee : jeton renouvele, page fermee sans reconnexion', (tester) async {
+    final api = FakeEspaceApi();
+    final auth = SessionRenouvelable();
+    await afficher(
+        tester,
+        Builder(
+            builder: (c) => TextButton(
+                onPressed: () => Navigator.of(c).push(MaterialPageRoute<bool>(
+                    builder: (_) => InvitationsCabinetPage(api: api, auth: auth))),
+                child: const Text('ouvrir'))));
+    await tester.tap(find.text('ouvrir'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Accepter'));
+    await tester.pumpAndSettle();
+    expect(api.appels, ['accepter i1']);
+    expect(auth.renouvelements, 1);
+    expect(find.textContaining('reconnectez-vous'), findsNothing);
+    expect(find.text('Invitations de cabinet'), findsNothing); // page fermee
   });
 
   testWidgets('la pharmacie voit les besoins de sa wilaya et y repond', (tester) async {
