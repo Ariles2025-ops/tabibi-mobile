@@ -44,10 +44,23 @@ class _ConversationPageState extends State<ConversationPage> {
   List<Message> _messages = [];
   bool _charge = false;
   bool _envoi = false;
+  bool _fermeture = false;
   String? _erreur;
+
+  /// Conversation courante : elle passe a « fermee » quand le medecin la ferme ou que l'envoi est refuse (409).
+  late Conversation _conversation = widget.conversation;
+
+  /// Vrai quand l'envoi a ete refuse (403) faute de rendez-vous recent : le champ de saisie est
+  /// remplace par une invitation a reprendre rendez-vous (comme sur le site).
+  bool _interdit = false;
 
   /// Mon identifiant : sujet du jeton, sinon le patient de la conversation (c'est moi).
   String get _moi => _auth.sujet ?? widget.conversation.patientId;
+
+  bool get _moiPatient => _moi == _conversation.patientId;
+
+  /// Le bouton « Fermer la conversation » n'est propose qu'au medecin, tant qu'elle est ouverte.
+  bool get _peutFermer => !_conversation.fermee && _moi == _conversation.medecinId;
 
   @override
   void initState() {
@@ -110,12 +123,61 @@ class _ConversationPageState extends State<ConversationPage> {
       _saisie.clear();
       await _charger(discret: true);
     } on ApiException catch (e) {
-      if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      if (e.nonAutorise) {
+        _auth.seDeconnecter();
+        _message(e.message);
+      } else if (e.statusCode == 409 && mounted) {
+        // Le medecin a ferme la conversation entre-temps.
+        setState(() => _conversation = _conversation.enFermee());
+      } else if (e.interdit && _moiPatient && mounted) {
+        setState(() => _interdit = true);
+      } else if (e.interdit) {
+        _message(t("Vous n'avez pas le droit d'écrire dans cette conversation.",
+            'ليس لديك صلاحية الكتابة في هذه المحادثة.'));
+      } else {
+        _message(e.message);
+      }
     } on Exception catch (e) {
       _message(messageErreur(e));
     } finally {
       if (mounted) setState(() => _envoi = false); // rebatit aussi si la session a expire
+    }
+  }
+
+  /// Ferme la conversation apres confirmation (POST .../fermer) ; le champ de saisie disparait ensuite.
+  Future<void> _fermer() async {
+    final token = _auth.accessToken;
+    if (token == null || _fermeture) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(t('Fermer cette conversation ? Le patient ne pourra plus vous écrire.',
+            'إغلاق هذه المحادثة؟ لن يتمكن المريض من مراسلتك بعد الآن.')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false), child: Text(t('Annuler', 'إلغاء'))),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(t('Fermer la conversation', 'إغلاق المحادثة'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _fermeture = true);
+    try {
+      await widget.api.fermerConversation(_conversation.id, token);
+      if (mounted) setState(() => _conversation = _conversation.enFermee());
+    } on ApiException catch (e) {
+      if (e.nonAutorise) _auth.seDeconnecter();
+      _message(e.nonAutorise
+          ? e.message
+          : t('La fermeture de la conversation a échoué, veuillez réessayer.',
+              'فشل إغلاق المحادثة، يُرجى المحاولة مرة أخرى.'));
+    } on Exception {
+      _message(t('La fermeture de la conversation a échoué, veuillez réessayer.',
+          'فشل إغلاق المحادثة، يُرجى المحاولة مرة أخرى.'));
+    } finally {
+      if (mounted) setState(() => _fermeture = false);
     }
   }
 
@@ -155,7 +217,7 @@ class _ConversationPageState extends State<ConversationPage> {
       children: [
         Expanded(child: _fil(context)),
         const Divider(height: 1),
-        _zoneSaisie(context),
+        _pied(context),
       ],
     );
   }
@@ -211,6 +273,55 @@ class _ConversationPageState extends State<ConversationPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Bas de l'ecran : conversation fermee, envoi refuse (403) ou champ de saisie ; le medecin
+  /// peut fermer une conversation ouverte.
+  Widget _pied(BuildContext context) {
+    final gris = Theme.of(context).colorScheme.onSurfaceVariant;
+    if (_conversation.fermee) {
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            _moiPatient
+                ? t('Le médecin a fermé cette conversation.', 'أغلق الطبيب هذه المحادثة.')
+                : t('Cette conversation est fermée.', 'هذه المحادثة مغلقة.'),
+            key: const Key('conversation-fermee'),
+            style: TextStyle(color: gris),
+          ),
+        ),
+      );
+    }
+    if (_interdit) {
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            t('Vous ne pouvez plus écrire à ce médecin : prenez un nouveau rendez-vous.',
+                'لا يمكنك الكتابة إلى هذا الطبيب بعد الآن: احجز موعدًا جديدًا.'),
+            key: const Key('envoi-interdit'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_peutFermer)
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton(
+              onPressed: _fermeture ? null : _fermer,
+              child: Text(t('Fermer la conversation', 'إغلاق المحادثة')),
+            ),
+          ),
+        _zoneSaisie(context),
+      ],
     );
   }
 

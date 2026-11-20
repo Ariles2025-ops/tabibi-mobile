@@ -510,6 +510,22 @@ class FakeApiServiceMessagerie extends FakeApiService {
   }
 }
 
+/// Variante dont l'envoi echoue avec le statut [statut] (403 : rendez-vous trop ancien, 409 : fermee)
+/// et qui compte les fermetures demandees par le medecin.
+class FakeApiServiceEnvoiRefuse extends FakeApiService {
+  FakeApiServiceEnvoiRefuse(this.statut);
+
+  final int statut;
+  int fermetures = 0;
+
+  @override
+  Future<Map<String, dynamic>> envoyerMessage(String c, String contenu, String token) async =>
+      throw ApiException(statut, 'refuse');
+
+  @override
+  Future<void> fermerConversation(String conversationId, String token) async => fermetures++;
+}
+
 /// Variante d'un patient sans rendez-vous avec le praticien : la messagerie est refusee (403).
 class FakeApiServiceSansRendezVous extends FakeApiService {
   const FakeApiServiceSansRendezVous();
@@ -1301,6 +1317,69 @@ void main() {
     expect(alignementDe('Merci docteur, a bientot.'), AlignmentDirectional.centerEnd);
     expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, isEmpty);
     expect(envoyer().onPressed, isNull);
+  });
+
+  Future<void> ouvrirFil(WidgetTester tester, ApiService api,
+      {bool fermee = false, String? sujet}) async {
+    await tester.pumpWidget(MaterialApp(
+      home: ConversationPage(
+        conversation: Conversation.fromJson({
+          'id': FakeApiService.conversationDemo,
+          'patientId': FakeApiService.sujetPatient,
+          'medecinId': FakeApiService.medecinDemo,
+          'fermee': fermee,
+        }),
+        api: api,
+        auth: AuthService()..accessToken = jetonAvecSujet(sujet ?? FakeApiService.sujetPatient),
+      ),
+    ));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('conversation fermee : message pour le patient, plus de champ de saisie',
+      (tester) async {
+    await ouvrirFil(tester, const FakeApiService(), fermee: true);
+    expect(find.text('Le médecin a fermé cette conversation.'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Fermer la conversation'), findsNothing);
+  });
+
+  testWidgets('envoi refuse (409) : la conversation passe a fermee', (tester) async {
+    await ouvrirFil(tester, FakeApiServiceEnvoiRefuse(409));
+    await tester.enterText(find.byType(TextField), 'Bonjour');
+    await tester.pump();
+    await tester.tap(find.text('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('conversation-fermee')), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('envoi refuse (403) : invitation a prendre un nouveau rendez-vous', (tester) async {
+    await ouvrirFil(tester, FakeApiServiceEnvoiRefuse(403));
+    await tester.enterText(find.byType(TextField), 'Bonjour');
+    await tester.pump();
+    await tester.tap(find.text('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('prenez un nouveau rendez-vous'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('le medecin ferme la conversation apres confirmation', (tester) async {
+    final api = FakeApiServiceEnvoiRefuse(409);
+    await ouvrirFil(tester, api, sujet: FakeApiService.medecinDemo);
+    await tester.tap(find.text('Fermer la conversation'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Le patient ne pourra plus vous écrire'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Fermer la conversation'));
+    await tester.pumpAndSettle();
+    expect(api.fermetures, 1);
+    expect(find.text('Cette conversation est fermée.'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  test('Conversation.fromJson lit « fermee »', () {
+    expect(Conversation.fromJson({'fermee': true}).fermee, isTrue);
+    expect(Conversation.fromJson({}).fermee, isFalse);
   });
 
   testWidgets('la fiche medecin ouvre une conversation avec le praticien', (tester) async {
