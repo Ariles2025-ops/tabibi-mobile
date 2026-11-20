@@ -40,6 +40,7 @@ class FakeEspaceApi extends ApiService {
   final List<String> roles;
   final String? wilayaProfil;
   final appels = <String>[];
+  final nomsPharmacie = <String?>[];
 
   /// Quand vrai, les routes semaine type / fiche / RDV telephone repondent 404.
   bool routesAbsentes = false;
@@ -317,8 +318,9 @@ class FakeEspaceApi extends ApiService {
 
   @override
   Future<Map<String, dynamic>> repondreBesoin(String besoinId, bool disponible, String token,
-      {int? prixDa, String? commentaire}) async {
+      {int? prixDa, String? commentaire, String? nomPharmacie}) async {
     appels.add('repondre $besoinId $disponible $prixDa');
+    nomsPharmacie.add(nomPharmacie);
     return {};
   }
 
@@ -903,6 +905,7 @@ void main() {
     await tester.tap(find.text('Envoyer'));
     await tester.pumpAndSettle();
     expect(api.appels, contains('repondre b1 true 850'));
+    expect(api.nomsPharmacie, ['Karim Haddad']); // nom du profil, comme le site
   });
 
   testWidgets('un prix mal saisi bloque la reponse de la pharmacie', (tester) async {

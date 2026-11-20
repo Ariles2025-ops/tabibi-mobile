@@ -161,6 +161,15 @@ void main() {
     expect(
         jsonDecode(reponse.body), {'disponible': true, 'prixDa': 850, 'commentaire': 'En stock'});
 
+    final nommee = (await requetes((a) => a.repondreBesoin('b1', false, 'j', nomPharmacie: ' Pharmacie El Amel ')))
+        .single;
+    expect(jsonDecode(nommee.body), {
+      'nomPharmacie': 'Pharmacie El Amel',
+      'disponible': false,
+      'prixDa': null,
+      'commentaire': null,
+    });
+
     final delivre = (await requetes((a) => a.delivrerOrdonnance('ABC123', 'j'),
             corps: {'valide': true, 'statut': 'DELIVREE'}))
         .single;
