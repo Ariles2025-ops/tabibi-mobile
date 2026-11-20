@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/main.dart';
 import 'package:tabibi_mobile/pages/fiche_medecin_page.dart';
+import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 import 'espace_widget_test.dart' show FakeEspaceApi, SessionTest, afficher;
@@ -15,6 +16,11 @@ class _FicheSansCompte extends FakeApiService {
 
   @override
   Future<bool> reclamable(String id) async => true;
+
+  /// Aucune candidature deposee (404) : la page de reclamation affiche son formulaire.
+  @override
+  Future<Map<String, dynamic>> maCandidature(String token) async =>
+      throw const ApiException(404, 'Aucune candidature');
 }
 
 void main() {
@@ -95,6 +101,20 @@ void main() {
     expect(find.text('Ouvrir une conversation'), findsNothing);
     expect(find.text("Liste d'attente"), findsNothing);
     expect(find.text('Créneaux disponibles'), findsNothing);
+  });
+
+  testWidgets('fiche sans compte : « C\'est votre fiche ? » ouvre la réclamation préremplie',
+      (tester) async {
+    await afficher(
+        tester,
+        FicheMedecinPage(
+            medecinId: FakeApiService.medecinDemo,
+            api: const _FicheSansCompte(),
+            auth: SessionTest()));
+    await tester.tap(find.text("C'est votre fiche ?"));
+    await tester.pumpAndSettle();
+    expect(find.text('Réclamer ma fiche'), findsWidgets);
+    expect(find.byWidgetPredicate((w) => w is TextField && w.controller?.text == 'Dr Amina Benali'), findsOneWidget);
   });
 
   testWidgets('fiche avec compte : conversation et liste d attente restent',

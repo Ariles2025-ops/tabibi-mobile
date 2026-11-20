@@ -20,6 +20,7 @@ Map<String, dynamic>? corpsCandidature({
   required String ville,
   required String numeroOrdre,
   required String telephone,
+  String? ficheReclamee,
 }) {
   final nom = nomComplet.trim();
   final ordre = numeroOrdre.trim();
@@ -35,6 +36,7 @@ Map<String, dynamic>? corpsCandidature({
     'ville': ville.trim(),
     'numeroOrdre': ordre,
     'telephone': telephone.trim(),
+    if (ficheReclamee != null && ficheReclamee.isNotEmpty) 'ficheReclamee': ficheReclamee,
   };
 }
 
@@ -42,10 +44,14 @@ Map<String, dynamic>? corpsCandidature({
 /// 404 = aucune) et formulaire de depot s'il n'en a jamais depose ou si la derniere a ete
 /// refusee (POST). Une candidature est examinee par un administrateur.
 class CandidaturePage extends StatefulWidget {
-  const CandidaturePage({super.key, this.api = const ApiService(), this.auth});
+  const CandidaturePage({super.key, this.api = const ApiService(), this.auth, this.ficheReclamee});
 
   final ApiService api;
   final AuthService? auth;
+
+  /// Identifiant d'une fiche importee que le praticien reclame (« C'est votre fiche ? »), comme
+  /// `?fiche=` sur le site : nom, specialite et lieu sont preremplis. Null : candidature simple.
+  final String? ficheReclamee;
 
   @override
   State<CandidaturePage> createState() => _CandidaturePageState();
@@ -64,11 +70,37 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
   String? _wilaya;
   String? _erreurFormulaire;
   bool _envoiEnCours = false;
+  String? _ficheReclamee;
 
   @override
   void initState() {
     super.initState();
+    _ficheReclamee = widget.ficheReclamee;
+    if (_ficheReclamee != null) _preremplirDepuisFiche(_ficheReclamee!);
     if (auth.estConnecte) recharger();
+  }
+
+  /// Reprend nom, specialite et lieu de la fiche reclamee ; le medecin n'ajoute que son numero d'ordre.
+  Future<void> _preremplirDepuisFiche(String id) async {
+    try {
+      final m = await widget.api.medecin(id);
+      if (!mounted) return;
+      final sp = m['specialiteSlug']?.toString();
+      setState(() {
+        _nom.text = m['nomComplet']?.toString() ?? '';
+        _ville.text = m['ville']?.toString() ?? '';
+        _specialite = specialites.any((s) => s.slug == sp) ? sp : null;
+        _wilaya = wilayaParCode(m['wilayaCode']?.toString())?.code;
+      });
+    } on Exception {
+      if (!mounted) return;
+      setState(() {
+        _ficheReclamee = null;
+        _erreurFormulaire = t(
+            'La fiche à réclamer est introuvable : vous pouvez déposer une candidature.',
+            'الملف المطلوب غير موجود: يمكنك إيداع ترشح.');
+      });
+    }
   }
 
   @override
@@ -117,7 +149,7 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
     setState(() {
       _candidature = c;
       _formulaire = refusee;
-      if (refusee) {
+      if (refusee && _ficheReclamee == null) {
         _nom.text = c['nomComplet']?.toString() ?? '';
         _ordre.text = c['numeroOrdre']?.toString() ?? '';
         _ville.text = c['ville']?.toString() ?? '';
@@ -137,6 +169,7 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
       ville: _ville.text,
       numeroOrdre: _ordre.text,
       telephone: _telephone.text,
+      ficheReclamee: _ficheReclamee,
     );
     if (corps == null) {
       setState(() => _erreurFormulaire = t(
@@ -233,15 +266,22 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t('Ma candidature', 'ترشحي')), actions: actionsActualiser()),
+      appBar: AppBar(
+          title: Text(_ficheReclamee != null
+              ? t('Réclamer ma fiche', 'المطالبة بملفي')
+              : t('Ma candidature', 'ترشحي')),
+          actions: actionsActualiser()),
       body: corps(t('Connectez-vous pour déposer votre candidature.', 'سجّل الدخول لإيداع ترشحك.'),
           () {
         final c = _candidature;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(t('Pour figurer sur Ndawik, déposez votre candidature : elle est examinée par un administrateur.',
-                'لتظهر على نداويك، أودع ترشحك: سيفحصه مسؤول.')),
+            Text(_ficheReclamee != null
+                ? t("Vérifiez les informations de votre fiche et ajoutez votre numéro d'inscription à l'ordre : un administrateur confirme que c'est bien vous avant de vous la confier.",
+                    'تحقّق من معلومات ملفك وأضف رقم تسجيلك في الهيئة: يتأكد مسؤول أنك أنت صاحبه قبل أن يسلّمه لك.')
+                : t('Pour figurer sur Ndawik, déposez votre candidature : elle est examinée par un administrateur.',
+                    'لتظهر على نداويك، أودع ترشحك: سيفحصه مسؤول.')),
             const SizedBox(height: 16),
             if (c != null) _carte(c),
             if (_formulaire) ...[
@@ -288,7 +328,9 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
                 onPressed: _envoiEnCours ? null : _deposer,
                 child: Text(_envoiEnCours
                     ? t('Envoi…', 'جارٍ الإرسال…')
-                    : t('Déposer ma candidature', 'إيداع ترشحي')),
+                    : _ficheReclamee != null
+                        ? t('Réclamer ma fiche', 'المطالبة بملفي')
+                        : t('Déposer ma candidature', 'إيداع ترشحي')),
               ),
             ] else if (_erreurFormulaire != null)
               Text(_erreurFormulaire!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

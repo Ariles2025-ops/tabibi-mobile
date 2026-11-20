@@ -1072,6 +1072,22 @@ void main() {
     expect(find.text('Déposer ma candidature'), findsOneWidget);
   });
 
+  testWidgets('réclamer une fiche : champs préremplis, titre et bouton dédiés, fiche envoyée avec la demande',
+      (tester) async {
+    final api = FakeEspaceApi();
+    await afficher(tester, CandidaturePage(api: api, auth: SessionTest(), ficheReclamee: 'f-42'));
+    expect(find.text('Réclamer ma fiche'), findsNWidgets(2)); // titre + bouton
+    expect(find.textContaining('un administrateur confirme que c\'est bien vous'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is TextField && w.controller?.text == 'Dr Amina Benali'), findsOneWidget);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, "Numéro d'inscription à l'ordre *"), '777');
+    await tester.tap(find.widgetWithText(FilledButton, 'Réclamer ma fiche'));
+    await tester.pumpAndSettle();
+    expect(api.appels, ['candidature Dr Amina Benali cardiologue 16 777']);
+    expect(api.candidature?['ficheReclamee'], 'f-42');
+  });
+
   testWidgets('mon profil propose « Ma candidature de médecin », comme le site', (tester) async {
     await afficher(tester, MonProfilPage(api: FakeEspaceApi(), auth: SessionTest()));
     await tester.ensureVisible(find.text('Ma candidature de médecin'));
@@ -1107,6 +1123,16 @@ void main() {
             numeroOrdre: '42',
             telephone: ''),
         isNull);
+    expect(
+        corpsCandidature(
+            nomComplet: 'Dr A',
+            specialiteSlug: 'cardiologue',
+            wilayaCode: '16',
+            ville: '',
+            numeroOrdre: '42',
+            telephone: '',
+            ficheReclamee: 'f-1')?['ficheReclamee'],
+        'f-1');
   });
 }
 

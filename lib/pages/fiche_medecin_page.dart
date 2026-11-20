@@ -17,6 +17,7 @@ import '../utils/identifiants.dart';
 import '../widgets/composants.dart';
 import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
+import 'espace/candidature_page.dart';
 
 /// Message affiche quand le patient n'a aucun rendez-vous avec le praticien (403).
 String get messageConversationRefusee => t(
@@ -215,6 +216,22 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       ),
     );
     return ok == true;
+  }
+
+  /// « C'est votre fiche ? » : candidature preremplie avec cette fiche (connexion d'abord si besoin).
+  Future<void> _reclamer() async {
+    if (!_auth.estConnecte) {
+      final ok = await _auth.seConnecter();
+      if (!mounted) return;
+      if (!ok) {
+        _message(t('Connexion nécessaire pour réclamer une fiche',
+            'يجب تسجيل الدخول للمطالبة بملف'));
+        return;
+      }
+    }
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(
+        builder: (_) => CandidaturePage(
+            api: widget.api, auth: _auth, ficheReclamee: widget.medecinId)));
   }
 
   Future<void> _reserver(Map<String, dynamic> creneau) async {
@@ -464,6 +481,13 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
                       Text(titreFicheSansCompte, style: texte.titleSmall),
                       const SizedBox(height: 4),
                       Text(texteFicheSansCompte),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton(
+                          onPressed: _reclamer,
+                          child: Text(t("C'est votre fiche ?", 'هل هذا ملفّك؟')),
+                        ),
+                      ),
                     ]),
               ),
             ]),
