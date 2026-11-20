@@ -1,6 +1,8 @@
 // Semaine type, fiche du medecin et rendez-vous pris au telephone : corps JSON des routes
 // (contrats des tickets tabibi-backend) et validations, sans dependance a Flutter.
 
+import '../i18n/langue.dart';
+
 /// Jours de la semaine type : (valeur API, libelle FR, libelle AR), du lundi au dimanche.
 const List<(String, String, String)> joursSemaineType = [
   ('LUNDI', 'Lun', 'الإثنين'),
@@ -132,3 +134,19 @@ Map<String, dynamic> corpsRdvTelephone({
       'telephonePatient': telephonePatient.trim(),
       if (motif.trim().isNotEmpty) 'motif': motif.trim(),
     };
+
+/// Resume d'une serie de creneaux, accorde comme sur le site :
+/// « 1 créneau créé, 0 ignoré » / « 3 créneaux créés, 1 ignoré ».
+String resumeCreneauxCrees(int crees, int ignores) => t(
+    '$crees ${crees > 1 ? 'créneaux créés' : 'créneau créé'}, '
+        '$ignores ${ignores > 1 ? 'ignorés' : 'ignoré'}',
+    'تم إنشاء $crees موعدًا، وتم تجاهل $ignores');
+
+/// Confirmation apres l'ajout de [n] creneaux : « 1 créneau ajouté » / « 2 créneaux ajoutés ».
+String creneauxAjoutes(int n) => t('$n ${n > 1 ? 'créneaux ajoutés' : 'créneau ajouté'}',
+    'تمت إضافة $n ${n > 1 ? 'مواعيد' : 'موعدًا'}');
+
+/// Message d'une serie interrompue : « 2 créneaux créés sur 5 : erreur ».
+String creneauxCreesSurTotal(int crees, int total, String erreur) => t(
+    '$crees ${crees > 1 ? 'créneaux créés' : 'créneau créé'} sur $total : $erreur',
+    'تم إنشاء $crees من $total: $erreur');

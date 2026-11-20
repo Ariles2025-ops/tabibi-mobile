@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/dates.dart';
 import '../../utils/espace_pro.dart';
+import '../../utils/fiche_semaine.dart';
 import '../../utils/identifiants.dart';
 import 'cabinet.dart';
 import 'fiche_semaine_pages.dart';
@@ -80,7 +81,7 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
     );
     if (!mounted) return;
     if (crees != null && crees > 0) {
-      message(t('$crees créneau(x) ajouté(s)', 'تمت إضافة $crees موعد(مواعيد)'));
+      message(creneauxAjoutes(crees));
       await recharger();
     } else {
       setState(() {});
@@ -95,8 +96,7 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
       await recharger();
       return;
     }
-    message(t('${sortie.crees} créneaux créés, ${sortie.ignores} ignorés',
-        'تم إنشاء ${sortie.crees} موعد، وتم تجاهل ${sortie.ignores}'));
+    message(resumeCreneauxCrees(sortie.crees, sortie.ignores));
     await recharger();
   }
 
@@ -321,8 +321,7 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
       return;
     }
     if (erreur != null) {
-      _message(t('$crees créneau(x) créé(s) sur ${debuts.length} : $erreur',
-          'تم إنشاء $crees من ${debuts.length}: $erreur'));
+      _message(creneauxCreesSurTotal(crees, debuts.length, erreur));
     }
     Navigator.of(context).pop(crees);
   }
