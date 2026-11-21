@@ -506,6 +506,10 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         else ...[
         Text(t('Créneaux disponibles', 'المواعيد المتاحة'),
             style: texte.titleMedium),
+        if (texteProchaineDisponibilite(_creneaux) case final prochaine?) ...[
+          const SizedBox(height: 4),
+          Text(prochaine, style: texte.bodyMedium?.copyWith(color: Charte.meta)),
+        ],
         const SizedBox(height: 12),
         if (_creneaux.isEmpty)
           CarteTabibi(

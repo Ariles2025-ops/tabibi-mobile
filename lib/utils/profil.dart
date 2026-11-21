@@ -17,7 +17,7 @@ const Map<String, String> libellesLangues = {
 
 /// Message affiche quand le telephone saisi n'est pas un numero algerien valide.
 String get messageTelephoneInvalide => t(
-    'Le téléphone doit compter 9 à 10 chiffres et commencer par 0 (ex. 0550123456).',
+    'Le téléphone doit être un numéro algérien de 9 à 10 chiffres commençant par 0 (ex. 0550123456).',
     'يجب أن يتكوّن رقم الهاتف من 9 إلى 10 أرقام وأن يبدأ بـ 0 (مثال: 0550123456).');
 
 /// Numero algerien, mobile (« 0550123456 ») ou fixe (« 021123456 ») : chiffres seulement,

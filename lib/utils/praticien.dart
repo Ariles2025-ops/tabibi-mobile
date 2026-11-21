@@ -1,4 +1,5 @@
 import '../i18n/langue.dart';
+import 'dates.dart';
 
 /// Vrai si l'API marque le praticien comme réservable en ligne (`reservable == true`).
 bool estReservable(Map<String, dynamic> m) => m['reservable'] == true;
@@ -29,4 +30,13 @@ String sousTitrePraticien(Map<String, dynamic> m) {
       ville != null && ville.isNotEmpty && ville != (m['wilayaFr'] as String?);
   final lieu = villeUtile ? '$ville ($wilaya)' : wilaya;
   return [specialite, lieu].where((x) => x.isNotEmpty).join(' · ');
+}
+
+/// « Prochaine disponibilité : jeu. 4 déc. 09:00 », comme sur la fiche du site : le premier
+/// créneau de la liste (déjà triée par l'API) ; null si aucun créneau n'a de date lisible.
+String? texteProchaineDisponibilite(List<Map<String, dynamic>> creneaux) {
+  if (creneaux.isEmpty) return null;
+  final debut = creneaux.first['debut']?.toString();
+  if (debut == null || DateTime.tryParse(debut) == null) return null;
+  return '${t('Prochaine disponibilité :', 'أقرب موعد متاح:')} ${formaterDateIso(debut)}';
 }
