@@ -130,7 +130,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
         title: Text('${b['medicament']}'),
         subtitle: Text(details),
         trailing: repondu
-            ? Text(t('Répondu', 'تم الرد'))
+            ? Text(t('Déjà répondu', 'تم الرد مسبقًا'))
             : TextButton(onPressed: () => _repondre(b), child: Text(t('Répondre', 'رد'))),
       ),
     );
@@ -305,7 +305,7 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
       _resultat = r;
       _vientDeDelivrer = true;
     });
-    message(t('Ordonnance marquée délivrée', 'تم تسجيل صرف الوصفة'));
+    message(t('Ordonnance marquée comme délivrée.', 'تم تسجيل صرف الوصفة.'));
   }
 
   @override
@@ -324,8 +324,13 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
             TextField(
               controller: _code,
               textCapitalization: TextCapitalization.characters,
+              maxLength: 8,
               decoration: InputDecoration(
                 labelText: t('Code de vérification', 'رمز التحقق'),
+                helperText: t("Saisissez le code de 8 caractères imprimé sur l'ordonnance.",
+                    'أدخل الرمز المكوَّن من 8 أحرف المطبوع على الوصفة.'),
+                helperMaxLines: 2,
+                counterText: '',
                 prefixIcon: const Icon(Icons.qr_code_2),
               ),
               onChanged: _codeModifie,
