@@ -226,11 +226,11 @@ class _MonProfilPageState extends State<MonProfilPage> {
       await widget.api.supprimerMonCompte(token);
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      _message(messageEchecSuppressionCompte(e));
       if (mounted) setState(() => _envoi = false);
       return;
     } on Exception catch (e) {
-      _message(messageErreur(e));
+      _message(messageEchecSuppressionCompte(e));
       if (mounted) setState(() => _envoi = false);
       return;
     }
