@@ -104,7 +104,15 @@ String messageErreur(Object erreur) {
 /// l'appli est en arabe ; tout autre texte est affiché tel quel.
 String traduireErreurServeur(int statut, String texte) {
   if (!Langue.estArabe) return texte;
+  // Un texte déjà arabe reste tel quel ; jamais de français en arabe (comme messageRefusArabe du site).
+  if (RegExp(r'[\u0600-\u06FF]').hasMatch(texte)) return texte;
   final minuscule = texte.toLowerCase();
+  if (statut == 404) return 'العنصر المطلوب غير موجود.';
+  if (statut == 403) return 'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة';
+  if (statut == 400) {
+    if (minuscule.contains('chevauch')) return 'هذا الموعد يتداخل مع موعد آخر لديك.';
+    return 'تعذّر تنفيذ الطلب: تحقق من المعلومات المدخلة ثم أعد المحاولة.';
+  }
   if (statut == 409) {
     // Mêmes refus et mêmes phrases que le site (erreur-api.interceptor.ts).
     if (minuscule.contains('rendez-vous à venir') || minuscule.contains('rendez-vous a venir')) {

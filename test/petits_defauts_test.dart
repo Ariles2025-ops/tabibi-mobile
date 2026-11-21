@@ -29,6 +29,20 @@ void main() {
     expect(traduireErreurServeur(409, 'Autre chose'), 'تعذّر الإجراء: تغيّر الوضع في الأثناء');
   });
 
+  test('400, 403 et 404 en arabe : jamais de français, comme le site (messageRefusArabe)', () {
+    const refus = "Seul le patient du rendez-vous peut donner son avis.";
+    expect(traduireErreurServeur(403, refus), refus); // français : texte du serveur
+    expect(traduireErreurServeur(404, 'Rendez-vous introuvable.'), 'Rendez-vous introuvable.');
+    Langue.courante.value = Langue.arabe;
+    expect(traduireErreurServeur(404, 'Rendez-vous introuvable.'), 'العنصر المطلوب غير موجود.');
+    expect(traduireErreurServeur(403, refus), 'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة');
+    expect(traduireErreurServeur(400, 'La note doit être comprise entre 1 et 5.'),
+        'تعذّر تنفيذ الطلب: تحقق من المعلومات المدخلة ثم أعد المحاولة.');
+    expect(traduireErreurServeur(400, 'Ce créneau chevauche un créneau existant.'),
+        'هذا الموعد يتداخل مع موعد آخر لديك.');
+    expect(traduireErreurServeur(404, 'الموعد غير موجود.'), 'الموعد غير موجود.'); // déjà arabe
+  });
+
   test('liste vide : message FR/AR', () {
     expect(messageAucunMedecin(), 'Aucun médecin trouvé. Essayez un autre nom ou une autre wilaya.');
     Langue.courante.value = Langue.arabe;
