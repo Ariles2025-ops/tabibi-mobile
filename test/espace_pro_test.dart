@@ -162,4 +162,24 @@ void main() {
     expect(messageChargement(interdit, PublicPage.patients), 'هذه الصفحة مخصّصة للمرضى.');
     expect(messageChargement(interdit, PublicPage.patientsEtMedecins), 'هذه الصفحة مخصّصة للمرضى والأطباء.');
   });
+
+  test('pharmacie : 403 « réservée aux pharmacies » et refus de réponse comme le site', () {
+    Langue.courante.value = Langue.francais;
+    expect(messageChargement(ApiException(403, 'Accès refusé'), PublicPage.pharmacies),
+        'Cette page est réservée aux pharmacies.');
+    expect(messageReponseBesoin(ApiException(403, 'Accès refusé : ce compte n\'a pas les droits nécessaires')),
+        'Seul un compte pharmacie peut répondre à une demande.');
+    expect(messageReponseBesoin(ApiException(409, 'Action impossible : la situation a changé entre-temps')),
+        "Cette demande n'accepte plus de réponse.");
+    expect(messageReponseBesoin(ApiException(400, 'Une erreur est survenue (code 400). Réessayez dans un instant.')),
+        'La réponse est incomplète.');
+    // Texte précis du serveur conservé.
+    expect(messageReponseBesoin(ApiException(409, 'Besoin clôturé')), 'Besoin clôturé');
+    Langue.courante.value = Langue.arabe;
+    expect(messageChargement(ApiException(403, 'x'), PublicPage.pharmacies), 'هذه الصفحة مخصّصة للصيدليات.');
+    expect(messageReponseBesoin(ApiException(409, 'تعذّر الإجراء: تغيّر الوضع في الأثناء')),
+        'لم يعد هذا الطلب يقبل ردودًا.');
+    expect(messageReponseBesoin(ApiException(403, 'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة')),
+        'وحده حساب الصيدلية يمكنه الرد على طلب.');
+  });
 }

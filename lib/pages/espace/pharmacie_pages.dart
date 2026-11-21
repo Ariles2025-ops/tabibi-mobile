@@ -5,6 +5,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/dates.dart';
+import '../../utils/espace_pro.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
 import '../../utils/ordonnances.dart';
@@ -50,6 +51,12 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     await recharger();
   }
 
+  /// 403 au chargement : page reservee aux pharmacies ; refus d'une reponse : messages du site.
+  @override
+  String libelleErreur(ApiException e) =>
+      _repondant ? messageReponseBesoin(e) : messageChargement(e, PublicPage.pharmacies);
+  bool _repondant = false;
+
   @override
   Future<void> recharger() async {
     final w = _wilaya;
@@ -70,11 +77,13 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
       builder: (_) => _DialogueReponse(medicament: '${besoin['medicament']}'),
     );
     if (reponse == null) return;
+    _repondant = true;
     final fait = await appeler((j) async {
       await widget.api.repondreBesoin(identifiant(besoin['id']), reponse.disponible, j,
           prixDa: reponse.prixDa, commentaire: reponse.commentaire, nomPharmacie: _nomPharmacie);
       return true;
     });
+    _repondant = false;
     if (fait != true) return;
     message(t('Réponse envoyée pour « ${besoin['medicament']} » : le patient est prévenu.',
         'تم إرسال الرد بخصوص «${besoin['medicament']}»: المريض مُبلَّغ.'));

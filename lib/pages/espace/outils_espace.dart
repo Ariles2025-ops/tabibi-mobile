@@ -22,6 +22,9 @@ mixin AppelsEspace<W extends StatefulWidget> on State<W> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
+  /// Texte affiche pour une erreur de l'API ; un ecran peut le preciser (ex. 403 -> « page reservee »).
+  String libelleErreur(ApiException e) => e.message;
+
   /// Action avec le jeton : resultat, ou null en cas d'echec (message affiche).
   Future<R?> appeler<R>(Future<R> Function(String jeton) appel) async {
     final jeton = auth.accessToken;
@@ -30,7 +33,7 @@ mixin AppelsEspace<W extends StatefulWidget> on State<W> {
       return await appel(jeton);
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
-      message(e.message);
+      message(libelleErreur(e));
     } on Exception catch (e) {
       message(messageErreur(e));
     }
@@ -50,7 +53,7 @@ mixin AppelsEspace<W extends StatefulWidget> on State<W> {
       return await appel(jeton);
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
-      if (mounted) setState(() => erreur = e.message);
+      if (mounted) setState(() => erreur = libelleErreur(e));
     } on Exception catch (e) {
       if (mounted) setState(() => erreur = messageErreur(e));
     } finally {
