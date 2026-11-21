@@ -48,6 +48,7 @@ class FakeEspaceApi extends ApiService {
   /// Réponse imposée à la vérification d'un code d'ordonnance (sinon : valide, émise).
   Map<String, dynamic>? resultatVerification;
   bool codeInconnu404 = false;
+  bool besoinDejaRepondu = false;
 
   @override
   Future<Map<String, dynamic>> ficheMedecin(String token) async {
@@ -313,7 +314,12 @@ class FakeEspaceApi extends ApiService {
   Future<List<Map<String, dynamic>>> besoinsWilaya(String wilayaCode, String token) async {
     appels.add('besoins $wilayaCode');
     return [
-      {'id': 'b1', 'medicament': 'Ventoline', 'wilayaCode': wilayaCode, 'dejaRepondu': false},
+      {
+        'id': 'b1',
+        'medicament': 'Ventoline',
+        'wilayaCode': wilayaCode,
+        'dejaRepondu': besoinDejaRepondu,
+      },
     ];
   }
 
@@ -912,6 +918,13 @@ void main() {
     expect(api.nomsPharmacie, ['Karim Haddad']); // nom du profil, comme le site
   });
 
+  testWidgets('un besoin deja repondu affiche « Déjà répondu » comme le site', (tester) async {
+    final api = FakeEspaceApi(roles: ['PHARMACIE'])..besoinDejaRepondu = true;
+    await afficher(tester, BesoinsPharmaciePage(api: api, auth: SessionTest()));
+    expect(find.text('Déjà répondu'), findsOneWidget);
+    expect(find.text('Répondre'), findsNothing);
+  });
+
   testWidgets('un prix mal saisi bloque la reponse de la pharmacie', (tester) async {
     final api = FakeEspaceApi(roles: ['PHARMACIE']);
     await afficher(tester, BesoinsPharmaciePage(api: api, auth: SessionTest()));
@@ -934,6 +947,7 @@ void main() {
     final api = FakeEspaceApi(roles: ['PHARMACIE']);
     await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
     expect(find.text('Vérifier / délivrer une ordonnance'), findsOneWidget); // titre du site
+    expect(find.text("Saisissez le code de 8 caractères imprimé sur l'ordonnance."), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'abc123');
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
@@ -942,6 +956,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.appels, ['delivrer ABC123']);
     expect(find.textContaining('Ordonnance délivrée le'), findsOneWidget);
+    expect(find.text('Ordonnance marquée comme délivrée.'), findsOneWidget); // message du site
     expect(find.textContaining('Aucune ordonnance'), findsNothing);
     expect(find.text('Marquer comme délivrée'), findsNothing);
   });
