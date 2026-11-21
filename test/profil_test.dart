@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/models/profil.dart';
+import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/profil.dart';
 
 void main() {
@@ -135,5 +136,20 @@ void main() {
     Langue.courante.value = Langue.arabe;
     addTearDown(() => Langue.courante.value = Langue.francais);
     expect(libelleDateNaissance(null), 'غير محدّدة');
+  });
+
+  test("messageEchecSuppressionCompte : libellé de l'API pour un refus, contact sinon", () {
+    expect(messageEchecSuppressionCompte(const ApiException(409, 'Compte verrouillé.')),
+        'Compte verrouillé.');
+    for (final e in [
+      const ApiException(500, 'Le serveur rencontre un problème. Réessayez plus tard.'),
+      const ApiException(429, 'Trop de demandes'),
+      Exception('réseau'),
+    ]) {
+      expect(messageEchecSuppressionCompte(e), contains('contact@ndawik.com'));
+    }
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(messageEchecSuppressionCompte(Exception('x')), contains('contact@ndawik.com'));
   });
 }

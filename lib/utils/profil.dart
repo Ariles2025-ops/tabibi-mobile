@@ -3,6 +3,7 @@
 
 import '../i18n/langue.dart';
 import '../models/profil.dart';
+import '../services/api_service.dart';
 import 'dates.dart';
 
 /// Libelles des langues de l'interface, par code accepte par l'API et dans l'ordre du menu :
@@ -52,4 +53,15 @@ String libelleMiseAJour(Profil profil) {
   if (misAJourLe == null) return t('Profil non enregistré', 'الملف غير محفوظ');
   return t('Mis à jour le ${formaterDateHeure(misAJourLe)}',
       'آخر تحديث في ${formaterDateHeure(misAJourLe)}');
+}
+
+/// Message d'échec de « Supprimer mon compte », comme le site : le libellé de l'API pour un
+/// refus (4xx) ; sinon (serveur indisponible, trop de demandes, réseau) l'invitation à réessayer
+/// ou à écrire à contact@ndawik.com, pour ne jamais laisser l'utilisateur sans issue.
+String messageEchecSuppressionCompte(Object erreur) {
+  if (erreur is ApiException && erreur.statusCode < 500 && erreur.statusCode != 429) {
+    return erreur.message;
+  }
+  return t('La suppression a échoué. Réessayez ou écrivez à contact@ndawik.com.',
+      'فشل الحذف. أعد المحاولة أو راسلنا على contact@ndawik.com.');
 }
