@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/dawini.dart';
+import '../utils/libelles.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
 
@@ -76,7 +77,9 @@ class _ReponsesBesoinPageState extends State<ReponsesBesoinPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageChargementRefuse(e.statusCode, e.message,
+          refus: t('Cette demande ne vous appartient pas.', 'هذا الطلب لا يخصّك.'),
+          introuvable: t('Demande introuvable.', 'الطلب غير موجود.')));
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {

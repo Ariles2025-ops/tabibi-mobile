@@ -37,3 +37,13 @@ const Map<String, (String, String)> _statuts = {
   'SIGNALE': ('Signalé', 'مُبلَّغ عنه'),
   'EMISE': ('Émise', 'صادرة'),
 };
+
+/// Message d'une page qui n'a pas pu charger sa ressource, comme le site : un 403 dit que la
+/// ressource n'appartient pas a l'utilisateur ([refus]), un 404 qu'elle n'existe pas
+/// ([introuvable]) ; tout autre statut garde le [message] de l'API (deja traduit).
+String messageChargementRefuse(int statut, String message,
+    {required String refus, required String introuvable}) {
+  if (statut == 403) return refus;
+  if (statut == 404) return introuvable;
+  return message;
+}
