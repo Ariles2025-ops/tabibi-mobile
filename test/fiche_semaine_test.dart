@@ -78,4 +78,13 @@ void main() {
     expect(requetes((api) => api.ficheMedecin('j'), statut: 404),
         throwsA(isA<ApiException>().having((x) => x.introuvable, 'introuvable', isTrue)));
   });
+
+  test('messages de creneaux accordes au singulier et au pluriel, sans « (x) »', () {
+    expect(resumeCreneauxCrees(1, 0), '1 créneau créé, 0 ignoré');
+    expect(resumeCreneauxCrees(3, 2), '3 créneaux créés, 2 ignorés');
+    expect(creneauxAjoutes(1), '1 créneau ajouté');
+    expect(creneauxAjoutes(4), '4 créneaux ajoutés');
+    expect(creneauxCreesSurTotal(1, 5, 'Erreur'), '1 créneau créé sur 5 : Erreur');
+    expect(creneauxCreesSurTotal(2, 5, 'Erreur'), '2 créneaux créés sur 5 : Erreur');
+  });
 }
