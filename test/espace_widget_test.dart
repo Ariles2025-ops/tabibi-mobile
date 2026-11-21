@@ -47,6 +47,7 @@ class FakeEspaceApi extends ApiService {
 
   /// Réponse imposée à la vérification d'un code d'ordonnance (sinon : valide, émise).
   Map<String, dynamic>? resultatVerification;
+  bool codeInconnu404 = false;
 
   @override
   Future<Map<String, dynamic>> ficheMedecin(String token) async {
@@ -325,8 +326,10 @@ class FakeEspaceApi extends ApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> verifierOrdonnance(String code) async =>
-      resultatVerification ?? {'valide': true, 'emiseLe': '2026-12-03T10:15:00Z', 'statut': 'EMISE'};
+  Future<Map<String, dynamic>> verifierOrdonnance(String code) async {
+    if (codeInconnu404) throw const ApiException(404, 'Ressource introuvable');
+    return resultatVerification ?? {'valide': true, 'emiseLe': '2026-12-03T10:15:00Z', 'statut': 'EMISE'};
+  }
 
   @override
   Future<Map<String, dynamic>> delivrerOrdonnance(String code, String token) async {
@@ -977,6 +980,18 @@ void main() {
       expect(find.textContaining('Ordonnance valide'), findsNothing);
       expect(find.text('Marquer comme délivrée'), findsNothing);
     }
+  });
+
+  testWidgets('la pharmacie voit « Code inconnu » (et non une erreur generique) sur un code 404',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['PHARMACIE'])..codeInconnu404 = true;
+    await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
+    await tester.enterText(find.byType(TextField), 'zzzz9999');
+    await tester.tap(find.text('Vérifier'));
+    await tester.pumpAndSettle();
+    expect(find.text('Code inconnu : aucune ordonnance ne correspond à ce code.'), findsOneWidget);
+    expect(find.text('Ressource introuvable'), findsNothing);
+    expect(find.text('Marquer comme délivrée'), findsNothing);
   });
 
   testWidgets('dawini sans wilaya au profil exige le choix de la wilaya', (tester) async {

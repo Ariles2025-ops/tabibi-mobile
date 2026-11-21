@@ -279,6 +279,18 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
           _vientDeDelivrer = false;
         });
       }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.introuvable && code == _codeSaisi) {
+        // Comme le site : un code inconnu (404) affiche « Code inconnu. », pas une erreur generique.
+        setState(() {
+          _resultat = const <String, dynamic>{'valide': false};
+          _codeVerifie = code;
+          _vientDeDelivrer = false;
+        });
+      } else {
+        message(messageErreur(e));
+      }
     } on Exception catch (e) {
       message(messageErreur(e));
     }
@@ -335,6 +347,12 @@ class _DelivrerOrdonnancePageState extends State<DelivrerOrdonnancePage> with Ap
             // Comme le site : annulée, expirée ou déjà délivrée = refus net, jamais « valide ».
             if (r != null && refus != null)
               Text(refus,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
+            if (r != null && !valide && refus == null && !_vientDeDelivrer)
+              Text(t('Code inconnu : aucune ordonnance ne correspond à ce code.',
+                  'رمز غير معروف: لا توجد أي وصفة تطابق هذا الرمز.'),
+                  key: const ValueKey('code-inconnu'),
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
             if (r != null && valide && refus == null && !_vientDeDelivrer) ...[
