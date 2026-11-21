@@ -50,14 +50,13 @@ String? avertissementVerification(Map<String, dynamic> resultat) {
       final Object? iso = resultat['delivreeLe'];
       final date = iso is String && DateTime.tryParse(iso) != null ? formaterDateIso(iso) : null;
       return t(
-          'Déjà délivrée${date == null ? '' : ' le $date'} : cette ordonnance ne peut pas être délivrée une nouvelle fois.',
-          'سُلّمت من قبل${date == null ? '' : ' بتاريخ $date'}: لا يمكن تسليم هذه الوصفة مرة أخرى.');
+          'Déjà délivrée${date == null ? '' : ' le $date'} : ne pas délivrer une nouvelle fois.',
+          'سبق صرفها${date == null ? '' : ' في $date'} : لا تصرفها مرة أخرى.');
     case 'ANNULEE':
-      return t('Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.',
-          'ملغاة: ألغى الطبيب هذه الوصفة ولا يجب تسليمها.');
+      return t('Annulée par le médecin : ne pas délivrer.', 'ألغاها الطبيب: لا تصرفها.');
     case 'EXPIREE':
-      return t('Expirée : cette ordonnance n\'est plus valable et ne doit pas être délivrée.',
-          'منتهية الصلاحية: لم تعد هذه الوصفة صالحة ولا يجب تسليمها.');
+      return t('Expirée : ordonnance plus valable, ne pas délivrer.',
+          'منتهية الصلاحية: الوصفة لم تعد صالحة، لا تصرفها.');
   }
   return null;
 }

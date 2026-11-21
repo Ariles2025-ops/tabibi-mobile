@@ -208,7 +208,9 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     if (_teleconsultations.isEmpty) {
       return Center(
           child: Text(
-              t('Aucune téléconsultation pour le moment.', 'لا توجد استشارات عن بُعد حاليًا.')));
+              t(
+                  'Aucune téléconsultation pour le moment. Votre praticien peut vous en proposer une sur un rendez-vous confirmé.',
+                  'لا توجد استشارات عن بُعد حاليًا. يمكن لممارسك أن يقترح عليك واحدة على موعد مؤكَّد.')));
     }
     return ListView(
       padding: const EdgeInsets.all(16),

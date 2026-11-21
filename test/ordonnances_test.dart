@@ -58,29 +58,29 @@ void main() {
     expect(avertissementVerification({'valide': true, 'statut': 'EMISE'}), isNull);
     expect(avertissementVerification({'valide': true}), isNull);
     expect(avertissementVerification({'statut': 'ANNULEE'}),
-        'Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.');
+        'Annulée par le médecin : ne pas délivrer.');
     expect(
         avertissementVerification({'statut': 'DELIVREE', 'delivreeLe': '2026-12-03T10:15:00'}),
-        'Déjà délivrée le jeu. 3 déc. 10:15 : cette ordonnance ne peut pas être délivrée une nouvelle fois.');
+        'Déjà délivrée le jeu. 3 déc. 10:15 : ne pas délivrer une nouvelle fois.');
     expect(avertissementVerification({'statut': 'DELIVREE'}),
-        'Déjà délivrée : cette ordonnance ne peut pas être délivrée une nouvelle fois.');
+        'Déjà délivrée : ne pas délivrer une nouvelle fois.');
   });
 
   test('avertissementVerification refuse aussi une ordonnance expiree (comme le site)', () {
     expect(avertissementVerification({'valide': true, 'statut': 'EXPIREE'}),
-        'Expirée : cette ordonnance n\'est plus valable et ne doit pas être délivrée.');
+        'Expirée : ordonnance plus valable, ne pas délivrer.');
     expect(avertissementVerification({'statut': ' expiree '}), isNotNull);
   });
 
-  test('avertissementVerification en arabe : mots du site (سُلّمت من قبل, لا يجب تسليمها)', () {
+  test('avertissementVerification en arabe : mots du site (سبق صرفها, لا تصرفها)', () {
     Langue.courante.value = Langue.arabe;
     addTearDown(() => Langue.courante.value = Langue.francais);
     expect(avertissementVerification({'statut': 'ANNULEE'}),
-        'ملغاة: ألغى الطبيب هذه الوصفة ولا يجب تسليمها.');
+        'ألغاها الطبيب: لا تصرفها.');
     expect(avertissementVerification({'statut': 'EXPIREE'}),
-        'منتهية الصلاحية: لم تعد هذه الوصفة صالحة ولا يجب تسليمها.');
+        'منتهية الصلاحية: الوصفة لم تعد صالحة، لا تصرفها.');
     expect(avertissementVerification({'statut': 'DELIVREE'}),
-        'سُلّمت من قبل: لا يمكن تسليم هذه الوصفة مرة أخرى.');
+        'سبق صرفها : لا تصرفها مرة أخرى.');
   });
 
   test('infoStatutOrdonnance precise l\'annulation et la delivrance (comme le site)', () {

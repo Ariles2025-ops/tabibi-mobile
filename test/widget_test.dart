@@ -1054,7 +1054,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'ABC123');
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Annulée : cette ordonnance a été annulée'), findsOneWidget);
+    expect(find.textContaining('Annulée par le médecin : ne pas délivrer'), findsOneWidget);
     expect(find.textContaining('Ordonnance authentique'), findsNothing);
   });
 
