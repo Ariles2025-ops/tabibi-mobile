@@ -115,3 +115,9 @@ List<Map<String, dynamic>> rendezVousLiables(List<Map<String, dynamic>> rendezVo
           .compareTo(DateTime.tryParse('${a['debut']}')?.millisecondsSinceEpoch ?? 0));
   return liste;
 }
+
+/// Nom complet d'une fiche praticien (`nomComplet`) ; null s'il est absent ou vide.
+String? nomPraticien(Map<String, dynamic> fiche) {
+  final Object? nom = fiche['nomComplet'];
+  return nom is String && nom.trim().isNotEmpty ? nom.trim() : null;
+}

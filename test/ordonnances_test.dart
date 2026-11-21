@@ -118,4 +118,11 @@ void main() {
     ], 'p1');
     expect(liste.map((r) => r['id']), ['b', 'a']);
   });
+
+  test('nomPraticien : nom complet de la fiche, null si absent ou vide', () {
+    expect(nomPraticien({'nomComplet': ' Dr Amina Benali '}), 'Dr Amina Benali');
+    expect(nomPraticien({'nomComplet': '  '}), isNull);
+    expect(nomPraticien({'nomComplet': null}), isNull);
+    expect(nomPraticien({}), isNull);
+  });
 }

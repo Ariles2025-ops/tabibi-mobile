@@ -957,6 +957,26 @@ void main() {
     expect(find.text('Paracetamol 1 g'), findsOneWidget);
   });
 
+  testWidgets('mes ordonnances : le nom du praticien est affiche sur chaque ligne, comme sur le site',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesOrdonnancesPage(api: const FakeApiService(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Dr Amina Benali'), findsOneWidget);
+    expect(find.text('Code ABC123 · Émise'), findsOneWidget);
+  });
+
+  testWidgets('mes ordonnances : fiche praticien indisponible, la ligne reste lisible sans nom',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesOrdonnancesPage(api: const FakeApiServiceSansFiche(), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Code ABC123 · Émise'), findsOneWidget);
+    expect(find.textContaining('Médecin'), findsNothing);
+  });
+
   testWidgets("le detail d'une ordonnance affiche le praticien, le code et les medicaments",
       (tester) async {
     await tester.pumpWidget(MaterialApp(
