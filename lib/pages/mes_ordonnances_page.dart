@@ -31,6 +31,10 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
   bool _charge = false;
   String? _erreur;
 
+  /// Nom complet des praticiens par identifiant (comme la liste du site) ; absent tant que la fiche
+  /// n'est pas lue, et un echec n'affiche rien de plus (pas d'identifiant brut).
+  final Map<String, String> _noms = {};
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +62,7 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
       final ordonnances = await widget.api.mesOrdonnances(token);
       if (!mounted) return;
       setState(() => _ordonnances = trierParEmission(ordonnances));
+      _chargerNoms(_ordonnances);
     } on ApiException catch (e) {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
@@ -67,6 +72,21 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  /// Lit les fiches publiques des praticiens de la liste, une fois par identifiant.
+  Future<void> _chargerNoms(List<Map<String, dynamic>> ordonnances) async {
+    final ids = {for (final o in ordonnances) identifiant(o['medecinId'])}
+      ..removeWhere((id) => id.isEmpty || _noms.containsKey(id));
+    for (final id in ids) {
+      try {
+        final nom = nomPraticien(await widget.api.medecin(id));
+        if (!mounted) return;
+        if (nom != null) setState(() => _noms[id] = nom);
+      } on Exception {
+        // Fiche indisponible : la ligne reste sans nom, comme sur le site.
+      }
     }
   }
 
@@ -128,9 +148,15 @@ class _MesOrdonnancesPageState extends State<MesOrdonnancesPage> {
         return ListTile(
           leading: const Icon(Icons.description_outlined),
           title: Text('${t('Émise le', 'صدرت في')} ${dateEmission(o)}'),
-          subtitle: Text(
-              '${t('Code', 'الرمز')} ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'
-              '${infoStatutOrdonnance(o) == null ? '' : '\n${infoStatutOrdonnance(o)}'}'),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_noms[identifiant(o['medecinId'])] != null)
+                Text(_noms[identifiant(o['medecinId'])]!),
+              Text('${t('Code', 'الرمز')} ${o['codeVerification'] ?? '-'} · ${libelleStatut(o['statut'])}'
+                  '${infoStatutOrdonnance(o) == null ? '' : '\n${infoStatutOrdonnance(o)}'}'),
+            ],
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _ouvrirDetail(o),
         );
