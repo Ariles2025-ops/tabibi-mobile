@@ -74,3 +74,23 @@ List<BesoinMedicament> trierParPublication(List<BesoinMedicament> besoins) {
   });
   return copie;
 }
+
+/// Ligne de détail d'une demande vue par la pharmacie, comme le site : « 16 - Alger · Bab Ezzouar ·
+/// Publiée le jeu. 4 dec. 09:00 · 2 réponses » (« Date inconnue » si la date est absente).
+String detailBesoinPharmacie(BesoinMedicament besoin) =>
+    [lieuBesoin(besoin), dateBesoin(besoin), libelleReponses(besoin.nombreReponses)].join(' · ');
+
+/// Demandes brutes de l'API triées de la plus récente à la plus ancienne (`publieLe`), comme le
+/// site ; celles sans date lisible vont en fin de liste.
+List<Map<String, dynamic>> trierBesoinsBrutsParPublication(List<Map<String, dynamic>> besoins) {
+  final copie = List<Map<String, dynamic>>.of(besoins);
+  final dates = {for (final b in copie) b: BesoinMedicament.fromJson(b).publieLe};
+  copie.sort((a, b) {
+    final da = dates[a];
+    final db = dates[b];
+    if (da == null) return db == null ? 0 : 1;
+    if (db == null) return -1;
+    return db.compareTo(da);
+  });
+  return copie;
+}
