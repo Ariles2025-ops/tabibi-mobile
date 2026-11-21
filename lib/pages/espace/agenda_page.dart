@@ -180,20 +180,29 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     }
     final c = widget.cabinet;
     final fait = await appeler<bool>((j) async {
-      switch (action) {
-        case ActionRdv.honorer:
-          await c.honorer(widget.api, id, j);
-        case ActionRdv.absent:
-          await c.absent(widget.api, id, j);
-        case ActionRdv.annuler:
-          await c.annuler(widget.api, id, j);
-        case ActionRdv.deplacer:
-        case ActionRdv.ordonnance:
-          break; // traités plus haut
+      try {
+        switch (action) {
+          case ActionRdv.honorer:
+            await c.honorer(widget.api, id, j);
+          case ActionRdv.absent:
+            await c.absent(widget.api, id, j);
+          case ActionRdv.annuler:
+            await c.annuler(widget.api, id, j);
+          case ActionRdv.deplacer:
+          case ActionRdv.ordonnance:
+            break; // traités plus haut
+        }
+        return true;
+      } on ApiException catch (e) {
+        // Comme le site : 409 (le rendez-vous n'est plus confirmé, ou pas encore honorable) =
+        // motif affiché et agenda rechargé, pour ne plus proposer une action devenue impossible.
+        if (!e.conflit) rethrow;
+        message(e.message);
+        return false;
       }
-      return true;
     });
-    if (fait != true) return;
+    if (fait == null) return;
+    if (!fait) return recharger();
     final date = formaterDateIso('${rdv['debut']}');
     message(switch (action) {
       ActionRdv.honorer => t('Rendez-vous du $date marqué honoré.', 'تم تسجيل حضور المريض للموعد في $date.'),
