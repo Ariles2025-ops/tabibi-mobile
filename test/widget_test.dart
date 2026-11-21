@@ -890,6 +890,18 @@ void main() {
     expect(find.text('Aucune ordonnance pour le moment.'), findsOneWidget);
   });
 
+  testWidgets('mes rendez-vous vides : « Trouver un praticien » ramene a la recherche, comme le site',
+      (tester) async {
+    var clics = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: MesRendezVousPage(
+          api: const FakeApiServiceVide(), auth: sessionConnectee(), onTrouverPraticien: () => clics++),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trouver un praticien'));
+    expect(clics, 1);
+  });
+
   testWidgets("mes rendez-vous : « Aucun rendez-vous à venir. » s'il ne reste que du passe",
       (tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -899,6 +911,7 @@ void main() {
     expect(find.text('À venir'), findsOneWidget);
     expect(find.text('Aucun rendez-vous à venir.'), findsOneWidget);
     expect(find.text('Passés'), findsOneWidget);
+    expect(find.text('Trouver un praticien'), findsNothing); // sans accueil vers lequel revenir
   });
 
   testWidgets(
