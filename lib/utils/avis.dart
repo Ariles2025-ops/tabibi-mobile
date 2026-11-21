@@ -59,3 +59,12 @@ String dateAvis(Avis avis) {
 /// Vrai si le statut brut d'un rendez-vous est HONORE : seul un rendez-vous honore
 /// peut recevoir un avis.
 bool estHonore(Object? statut) => (statut?.toString() ?? '').trim().toUpperCase() == 'HONORE';
+
+/// Refus du dépôt d'un avis, mêmes phrases que le site : 403 (rendez-vous d'un autre patient)
+/// et 404 (rendez-vous inconnu) ; null pour les autres statuts.
+String? messageRefusDepotAvis(int statut) => switch (statut) {
+      403 => t('Seul le patient du rendez-vous peut donner son avis.',
+          'يمكن لمريض هذا الموعد فقط إبداء رأيه.'),
+      404 => t('Rendez-vous introuvable.', 'الموعد غير موجود.'),
+      _ => null,
+    };

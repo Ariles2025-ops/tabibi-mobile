@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
+import 'package:tabibi_mobile/utils/avis.dart';
 import 'package:tabibi_mobile/utils/espace_pro.dart';
 import 'package:tabibi_mobile/utils/identifiants.dart';
 import 'package:tabibi_mobile/utils/praticien.dart';
+import 'package:tabibi_mobile/utils/profil.dart';
 
 void main() {
   tearDown(() => Langue.courante.value = Langue.francais);
@@ -73,5 +75,32 @@ void main() {
     expect(libelleReservable(), 'Réservable en ligne');
     Langue.courante.value = Langue.arabe;
     expect(libelleReservable(), 'الحجز متاح عبر الإنترنت');
+  });
+
+  test('Fiche médecin : « Prochaine disponibilité » = premier créneau, comme le site', () {
+    expect(texteProchaineDisponibilite([]), isNull);
+    expect(texteProchaineDisponibilite([{'debut': 'illisible'}]), isNull);
+    final creneaux = [
+      {'debut': '2026-12-04T09:00:00'},
+      {'debut': '2026-12-05T10:00:00'},
+    ];
+    expect(texteProchaineDisponibilite(creneaux),
+        'Prochaine disponibilité : ven. 4 déc. 09:00');
+    Langue.courante.value = Langue.arabe;
+    expect(texteProchaineDisponibilite(creneaux), startsWith('أقرب موعد متاح:'));
+  });
+
+  test('Dépôt d\'un avis : refus 403 et 404 comme le site, FR et AR', () {
+    expect(messageRefusDepotAvis(403), 'Seul le patient du rendez-vous peut donner son avis.');
+    expect(messageRefusDepotAvis(404), 'Rendez-vous introuvable.');
+    expect(messageRefusDepotAvis(500), isNull);
+    Langue.courante.value = Langue.arabe;
+    expect(messageRefusDepotAvis(403), 'يمكن لمريض هذا الموعد فقط إبداء رأيه.');
+    expect(messageRefusDepotAvis(404), 'الموعد غير موجود.');
+  });
+
+  test('Téléphone invalide : même phrase que le site', () {
+    expect(messageTelephoneInvalide,
+        'Le téléphone doit être un numéro algérien de 9 à 10 chiffres commençant par 0 (ex. 0550123456).');
   });
 }

@@ -90,7 +90,7 @@ class _DeposerAvisPageState extends State<DeposerAvisPage> {
         _message(t('Session expirée : reconnectez-vous puis réessayez',
             'انتهت الجلسة: سجّل الدخول من جديد ثم أعد المحاولة'));
       } else {
-        _message(e.message);
+        _message(messageRefusDepotAvis(e.statusCode) ?? e.message);
       }
     } on Exception catch (e) {
       _message(messageErreur(e));
