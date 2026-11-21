@@ -76,7 +76,9 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageChargementRefuse(e.statusCode, e.message,
+          refus: t('Vous n\'avez pas accès à cette ordonnance.', 'ليس لديك صلاحية الاطلاع على هذه الوصفة.'),
+          introuvable: t('Ordonnance introuvable.', 'الوصفة غير موجودة.')));
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {

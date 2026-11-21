@@ -6,6 +6,7 @@ import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/libelles.dart';
 import '../utils/messagerie.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -101,7 +102,9 @@ class _ConversationPageState extends State<ConversationPage> {
       if (!mounted) return;
       // Jeton expire : retour au bouton « Se connecter ».
       if (e.nonAutorise) _auth.seDeconnecter();
-      setState(() => _erreur = e.message);
+      setState(() => _erreur = messageChargementRefuse(e.statusCode, e.message,
+          refus: t('Cette conversation ne vous concerne pas.', 'هذه المحادثة لا تخصّك.'),
+          introuvable: t('Conversation introuvable.', 'المحادثة غير موجودة.')));
     } on Exception catch (e) {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
