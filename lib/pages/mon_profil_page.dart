@@ -292,12 +292,14 @@ class _MonProfilPageState extends State<MonProfilPage> {
         const ChampLangue(),
         const SizedBox(height: 16),
         Text(
-          profil == null
-              ? t('Renseignez votre profil : il complète vos rendez-vous et vos demandes.',
-                  'املأ ملفك الشخصي: يكمّل مواعيدك وطلباتك.')
-              : libelleMiseAJour(profil),
+          t('Ces informations servent aux praticiens et aux rappels de rendez-vous. Seul le nom complet est obligatoire.',
+              'تُستعمل هذه المعلومات من طرف الأطباء ولتذكيرات المواعيد. الاسم الكامل وحده إجباري.'),
           style: texte.bodySmall,
         ),
+        if (profil != null) ...[
+          const SizedBox(height: 4),
+          Text(libelleMiseAJour(profil), style: texte.bodySmall),
+        ],
         const SizedBox(height: 16),
         TextField(
           controller: _nomComplet,
