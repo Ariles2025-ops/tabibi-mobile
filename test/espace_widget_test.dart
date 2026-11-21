@@ -616,7 +616,7 @@ void main() {
     await tester.tap(find.text('Créer'));
     await tester.pumpAndSettle();
     expect(api.appels.last, 'ouvrir 9:0 30'); // demain 9 h, 30 min par defaut
-    expect(find.text('1 créneau(x) ajouté(s)'), findsOneWidget);
+    expect(find.text('1 créneau ajouté'), findsOneWidget);
   });
 
   testWidgets('une serie sur une semaine cree un creneau par pas de duree', (tester) async {
