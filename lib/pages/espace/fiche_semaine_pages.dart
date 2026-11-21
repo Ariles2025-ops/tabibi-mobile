@@ -123,14 +123,15 @@ class _SemaineTypePageState extends State<SemaineTypePage> {
       if (!mounted) return;
       // Ces routes existent : un 404 est une vraie reponse du serveur (creneau disparu...).
       // On affiche son message et on revient recharger la liste.
-      if (e.introuvable) {
+      // Un 409 (créneau déjà pris) fait de même, comme le site.
+      if (e.introuvable || e.conflit) {
         _afficher(context, e.message);
         Navigator.of(context).pop(const SortieEcran(recharger: true));
         return;
       }
       if (e.nonAutorise) _auth.seDeconnecter();
       setState(() => _envoi = false);
-      _afficher(context, e.message);
+      _afficher(context, e.interdit ? messageCabinetNonRattache : e.message);
     } on Exception catch (e) {
       if (!mounted) return;
       setState(() => _envoi = false);
@@ -420,14 +421,13 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
   Future<void> _enregistrer() async {
     final nom = _nom.text.trim();
     final tel = _telephone.text.trim();
-    if (nom.isEmpty || tel.isEmpty) {
-      _afficher(context, t('Le nom et le téléphone du patient sont obligatoires.',
-          'اسم المريض وهاتفه إلزاميان.'));
+    // Mêmes phrases que le site (rdv-telephone.component.ts).
+    if (nom.isEmpty) {
+      _afficher(context, messageNomPatientRequis);
       return;
     }
-    if (!telephoneAlgerienValide(tel)) {
-      _afficher(context, t('Numéro algérien attendu (0XX XX XX XX ou +213…).',
-          'رقم جزائري مطلوب (0XX XX XX XX أو ‎+213…).'));
+    if (tel.isEmpty || !telephoneAlgerienValide(tel)) {
+      _afficher(context, messageTelephonePatientInvalide);
       return;
     }
     final jeton = _auth.accessToken;
@@ -450,14 +450,15 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
       if (!mounted) return;
       // Ces routes existent : un 404 est une vraie reponse du serveur (creneau disparu...).
       // On affiche son message et on revient recharger la liste.
-      if (e.introuvable) {
+      // Un 409 (créneau déjà pris) fait de même, comme le site.
+      if (e.introuvable || e.conflit) {
         _afficher(context, e.message);
         Navigator.of(context).pop(const SortieEcran(recharger: true));
         return;
       }
       if (e.nonAutorise) _auth.seDeconnecter();
       setState(() => _envoi = false);
-      _afficher(context, e.message);
+      _afficher(context, e.interdit ? messageCabinetNonRattache : e.message);
     } on Exception catch (e) {
       if (!mounted) return;
       setState(() => _envoi = false);
@@ -490,7 +491,7 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
             controller: _telephone,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-                labelText: t('Téléphone du patient', 'هاتف المريض'),
+                labelText: t('Téléphone', 'الهاتف'),
                 prefixIcon: const Icon(Icons.phone_outlined)),
           ),
           const SizedBox(height: 12),
@@ -502,12 +503,15 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
                 prefixIcon: const Icon(Icons.notes)),
           ),
           const SizedBox(height: 8),
+          Text(t("Aucun message n'est envoyé au patient.", 'لا تُرسل أي رسالة إلى المريض.'),
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 12),
           FilledButton(
             onPressed: _envoi ? null : _enregistrer,
             child: _envoi
                 ? const SizedBox(
                     width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(t('Réserver', 'حجز')),
+                : Text(t('Enregistrer le rendez-vous', 'تسجيل الموعد')),
           ),
         ],
       ),

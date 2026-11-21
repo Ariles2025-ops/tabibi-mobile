@@ -2076,6 +2076,14 @@ void main() {
     expect(api.enregistres, isEmpty);
     await laisserPasserLeMessage(tester);
 
+    // Nom d'une seule lettre : même refus que le site (2 à 120 caractères), sans appel API.
+    await tester.enterText(nom, 'A');
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Le nom complet doit compter de 2 à 120 caractères.'), findsOneWidget);
+    expect(api.enregistres, isEmpty);
+    await laisserPasserLeMessage(tester);
+
     // Telephone verifie localement (numero algerien).
     await tester.enterText(nom, 'Amina Ait Ahmed');
     await tester.enterText(find.widgetWithText(TextField, 'Téléphone'), '12345');
