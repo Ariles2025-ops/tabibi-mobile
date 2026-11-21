@@ -2066,7 +2066,8 @@ void main() {
     expect(find.text('Non renseignée'), findsOneWidget);
     expect(find.text('Français'), findsNWidgets(2));
     expect(find.text('Réessayer'), findsNothing);
-    expect(find.textContaining('Renseignez votre profil'), findsOneWidget);
+    expect(find.textContaining('Seul le nom complet est obligatoire'), findsOneWidget);
+    expect(find.textContaining('Mis à jour le'), findsNothing);
 
     // Nom obligatoire.
     await tester.tap(find.text('Enregistrer'));
