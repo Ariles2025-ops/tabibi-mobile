@@ -2124,7 +2124,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.widgetWithText(TextField, 'Nom complet *'), 'A');
+    await tester.enterText(find.widgetWithText(TextField, 'Nom complet *'), 'Amina Ait Ahmed');
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
     expect(find.text('Le nom complet doit compter de 2 a 120 caracteres.'), findsOneWidget);
