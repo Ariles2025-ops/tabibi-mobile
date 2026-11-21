@@ -136,7 +136,7 @@ class _OrdonnancesRedigeesPageState extends State<OrdonnancesRedigeesPage> with 
           ? FloatingActionButton.extended(
               onPressed: _nouvelle,
               icon: const Icon(Icons.add),
-              label: Text(t('Nouvelle ordonnance', 'وصفة جديدة')))
+              label: Text(t('Rédiger une ordonnance', 'تحرير وصفة')))
           : null,
       body: corps(t('Connectez-vous pour voir vos ordonnances.', 'سجّل الدخول لعرض وصفاتك.'), () {
         if (_ordonnances.isEmpty) {

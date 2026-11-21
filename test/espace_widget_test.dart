@@ -763,10 +763,10 @@ void main() {
     expect(find.text('Aucun rendez-vous.'), findsOneWidget);
   });
 
-  testWidgets('ordonnances rédigées : « Nouvelle ordonnance » ouvre le formulaire', (tester) async {
+  testWidgets('ordonnances rédigées : « Rédiger une ordonnance » ouvre le formulaire', (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
     await afficher(tester, OrdonnancesRedigeesPage(api: api, auth: SessionTest()));
-    await tester.tap(find.text('Nouvelle ordonnance'));
+    await tester.tap(find.text('Rédiger une ordonnance'));
     await tester.pumpAndSettle();
     expect(find.text('Prescription'), findsOneWidget);
   });
