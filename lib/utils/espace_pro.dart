@@ -268,7 +268,7 @@ List<Map<String, dynamic>> trierRattachements(List<Map<String, dynamic>> liste) 
 }
 
 /// Public d'une page reservee a un role, pour le message « Cette page est reservee aux ... ».
-enum PublicPage { patients, patientsEtMedecins }
+enum PublicPage { patients, patientsEtMedecins, pharmacies }
 
 /// Message d'une page de chargement en echec : un refus 403 (role insuffisant) dit a qui
 /// la page est reservee, comme le site (« Cette page est réservée aux patients. ») au lieu du
@@ -279,5 +279,28 @@ String messageChargement(ApiException e, PublicPage public) {
     PublicPage.patients => t('Cette page est réservée aux patients.', 'هذه الصفحة مخصّصة للمرضى.'),
     PublicPage.patientsEtMedecins => t('Cette page est réservée aux patients et aux médecins.',
         'هذه الصفحة مخصّصة للمرضى والأطباء.'),
+    PublicPage.pharmacies =>
+      t('Cette page est réservée aux pharmacies.', 'هذه الصفحة مخصّصة للصيدليات.'),
+  };
+}
+
+/// Message d'un refus a la reponse d'une pharmacie a une demande de medicament, comme le site :
+/// 403 « Seul un compte pharmacie peut répondre à une demande. », 409 « Cette demande n'accepte
+/// plus de réponse. », 400 « La réponse est incomplète. ». Un texte precis envoye par le
+/// serveur est conserve ; seuls les libelles generiques de l'appli sont remplaces.
+String messageReponseBesoin(ApiException e) {
+  final generique = e.message.startsWith('Une erreur est survenue') ||
+      e.message.startsWith('حدث خطأ') ||
+      e.message.startsWith('Action impossible') ||
+      e.message.startsWith('تعذّر الإجراء') ||
+      e.message.startsWith('Accès refusé') ||
+      e.message.startsWith('تم رفض الوصول');
+  if (!generique) return e.message;
+  return switch (e.statusCode) {
+    403 => t('Seul un compte pharmacie peut répondre à une demande.',
+        'وحده حساب الصيدلية يمكنه الرد على طلب.'),
+    409 => t("Cette demande n'accepte plus de réponse.", 'لم يعد هذا الطلب يقبل ردودًا.'),
+    400 => t('La réponse est incomplète.', 'الرد غير مكتمل.'),
+    _ => e.message,
   };
 }
