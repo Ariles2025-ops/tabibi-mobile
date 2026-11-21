@@ -166,8 +166,13 @@ class FakeEspaceApi extends ApiService {
       };
 
   @override
-  Future<List<Map<String, dynamic>>> agendaMedecin(String token) async =>
-      [_rdv('r1', 'RESERVE'), _rdv('r2', 'HONORE')];
+  Future<List<Map<String, dynamic>>> agendaMedecin(String token) async {
+    appelsAgenda++;
+    return [_rdv('r1', 'RESERVE'), _rdv('r2', 'HONORE')];
+  }
+
+  /// Nombre de chargements de l'agenda du médecin.
+  int appelsAgenda = 0;
 
   @override
   Future<List<Map<String, dynamic>>> agendaSecretaire(String medecinId, String token) async =>
@@ -182,8 +187,14 @@ class FakeEspaceApi extends ApiService {
   Future<List<Map<String, dynamic>>> patientsCabinet(String medecinId, String token) async =>
       patientsMedecin(token);
 
+  /// Quand renseigné, honorer / absent / annuler répondent 409 avec ce motif.
+  String? motifConflit;
+
   @override
-  Future<void> honorerRendezVous(String rdvId, String token) async => appels.add('honorer $rdvId');
+  Future<void> honorerRendezVous(String rdvId, String token) async {
+    if (motifConflit != null) throw ApiException(409, motifConflit!);
+    appels.add('honorer $rdvId');
+  }
 
   @override
   Future<void> marquerAbsentMedecin(String rdvId, String token) async =>
@@ -466,6 +477,20 @@ void main() {
     await tester.tap(find.byTooltip('Actions'));
     await tester.pumpAndSettle();
     expect(find.text('Rédiger une ordonnance'), findsNothing);
+  });
+
+  testWidgets("agenda : un 409 sur « Marquer honoré » affiche le motif et recharge l'agenda (comme le site)",
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN'])..motifConflit = "Ce rendez-vous n'est plus confirmé.";
+    await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
+    await tester.tap(find.byTooltip('Actions').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Marquer honoré'));
+    await tester.pumpAndSettle();
+    expect(api.appels, isEmpty);
+    expect(find.text("Ce rendez-vous n'est plus confirmé."), findsOneWidget);
+    expect(find.textContaining('marqué honoré.'), findsNothing);
+    expect(api.appelsAgenda, 2); // chargement initial + rechargement après le refus
   });
 
   testWidgets("l'agenda demande confirmation avant « Patient absent » (comme le site)",
