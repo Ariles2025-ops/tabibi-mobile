@@ -20,9 +20,12 @@ import 'fiche_medecin_page.dart';
 /// Rendez-vous du patient connecte, avec annulation ; « Donner mon avis » sur les
 /// rendez-vous honores (ou « Avis donné » si l'avis existe deja).
 class MesRendezVousPage extends StatefulWidget {
-  const MesRendezVousPage({super.key, this.api = const ApiService(), this.auth});
+  const MesRendezVousPage({super.key, this.api = const ApiService(), this.auth, this.onTrouverPraticien});
 
   final ApiService api;
+
+  /// « Trouver un praticien » (comme sur le site) : ramene a la recherche. Sans lui, pas de bouton.
+  final VoidCallback? onTrouverPraticien;
 
   /// Session a utiliser ; par defaut la session partagee [session].
   final AuthService? auth;
@@ -328,11 +331,20 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            t("Aucun rendez-vous pour le moment. Trouvez un praticien depuis l'accueil et réservez en quelques secondes.",
-                'لا توجد مواعيد حاليًا. ابحث عن ممارس من الصفحة الرئيسية واحجز في ثوانٍ.'),
-            textAlign: TextAlign.center,
-          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(
+              t("Aucun rendez-vous pour le moment. Trouvez un praticien depuis l'accueil et réservez en quelques secondes.",
+                  'لا توجد مواعيد حاليًا. ابحث عن ممارس من الصفحة الرئيسية واحجز في ثوانٍ.'),
+              textAlign: TextAlign.center,
+            ),
+            if (widget.onTrouverPraticien != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: widget.onTrouverPraticien,
+                child: Text(t('Trouver un praticien', 'ابحث عن ممارس')),
+              ),
+            ],
+          ]),
         ),
       );
     }
@@ -342,7 +354,15 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       if (classes.aVenir.isEmpty)
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: Text(t('Aucun rendez-vous à venir.', 'لا توجد مواعيد قادمة.')),
+          child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Text(t('Aucun rendez-vous à venir.', 'لا توجد مواعيد قادمة.')),
+            const SizedBox(width: 8),
+            if (widget.onTrouverPraticien != null)
+              TextButton(
+                onPressed: widget.onTrouverPraticien,
+                child: Text(t('Trouver un praticien', 'ابحث عن ممارس')),
+              ),
+          ]),
         ),
       for (final rdv in classes.aVenir) _ligne(rdv, avecAnnee: false),
       if (classes.passes.isNotEmpty) ...[

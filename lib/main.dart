@@ -1026,7 +1026,10 @@ class _CoqueAppState extends State<CoqueApp> {
       pro
           ? _reservePatient(t('Mes rendez-vous', 'مواعيدي'))
           : MesRendezVousPage(
-              key: ValueKey('rdv-$_visite'), api: widget.api, auth: auth),
+              key: ValueKey('rdv-$_visite'),
+              api: widget.api,
+              auth: auth,
+              onTrouverPraticien: () => setState(() => _onglet = 0)),
       pro
           ? _reservePatient(t('Mes ordonnances', 'وصفاتي الطبية'))
           : MesOrdonnancesPage(
