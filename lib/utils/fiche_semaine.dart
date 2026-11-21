@@ -119,7 +119,16 @@ Set<String> languesDe(Object? brut) {
 
 // --- RDV pris au telephone ---
 
-const int maxMotif = 300;
+const int maxMotif = 200;
+
+/// Mêmes phrases que le formulaire « RDV pris au téléphone » du site.
+String get messageNomPatientRequis => t('Indiquez le nom du patient.', 'أدخل اسم المريض.');
+String get messageTelephonePatientInvalide => t('Indiquez un numéro algérien valide (ex. 0550 12 34 56).',
+    'أدخل رقمًا جزائريًا صحيحًا (مثال: 0550 12 34 56).');
+
+/// 403 : le cabinet n'est pas rattaché à la secrétaire connectée (comme le site).
+String get messageCabinetNonRattache =>
+    t('Ce cabinet ne vous est pas rattaché.', 'هذه العيادة غير مرتبطة بحسابك.');
 
 /// Corps de POST /api/secretaire/medecins/{id}/rendezvous ; le motif est omis s'il est vide.
 Map<String, dynamic> corpsRdvTelephone({

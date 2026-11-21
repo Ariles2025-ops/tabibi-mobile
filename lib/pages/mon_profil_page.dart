@@ -17,8 +17,14 @@ import '../widgets/vue_erreur.dart';
 /// Message affiche quand le nom complet est vide (seul champ obligatoire).
 String get messageNomRequis => t('Indiquez votre nom complet.', 'أدخل اسمك الكامل.');
 
-/// Longueur maximale du nom complet acceptee par l'API.
+/// Longueurs minimale et maximale du nom complet acceptees par l'API.
+const int longueurMinNom = 2;
 const int longueurMaxNom = 120;
+
+/// Message affiche quand le nom complet est trop court (mêmes mots que le site).
+String get messageNomTropCourt => t(
+    'Le nom complet doit compter de $longueurMinNom à $longueurMaxNom caractères.',
+    'يجب أن يتكوّن الاسم الكامل من $longueurMinNom إلى $longueurMaxNom حرفًا.');
 
 /// Annee de naissance la plus ancienne proposee (l'API exige une annee posterieure a 1900).
 const int anneeNaissanceMin = 1901;
@@ -144,6 +150,10 @@ class _MonProfilPageState extends State<MonProfilPage> {
     final nomComplet = _nomComplet.text.trim();
     if (nomComplet.isEmpty) {
       _message(messageNomRequis);
+      return;
+    }
+    if (nomComplet.length < longueurMinNom) {
+      _message(messageNomTropCourt);
       return;
     }
     if (!telephoneValide(_telephone.text)) {

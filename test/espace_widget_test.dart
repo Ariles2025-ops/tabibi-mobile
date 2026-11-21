@@ -710,10 +710,34 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Karim');
     await tester.enterText(find.byType(TextField).at(1), '0555 12 34 56');
-    await tester.tap(find.text('Réserver'));
+    expect(find.text("Aucun message n'est envoyé au patient."), findsOneWidget);
+    await tester.tap(find.text('Enregistrer le rendez-vous'));
     await tester.pumpAndSettle();
     expect(api.appels.last, 'tel c1 Karim');
     expect(find.text('Rendez-vous enregistré'), findsOneWidget);
+  });
+
+  testWidgets('RDV pris au telephone : mêmes refus que le site (nom, numéro, créneau pris)',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['SECRETAIRE']);
+    await afficher(
+        tester,
+        CreneauxPage(
+            cabinet: const Cabinet.pourSecretaire(medecinId, nomMedecin: 'Dr Amina Benali'),
+            api: api,
+            auth: SessionTest()));
+    await tester.tap(find.byTooltip('RDV pris au téléphone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enregistrer le rendez-vous'));
+    await tester.pumpAndSettle();
+    expect(find.text('Indiquez le nom du patient.'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.enterText(find.byType(TextField).at(0), 'Karim');
+    await tester.enterText(find.byType(TextField).at(1), '123');
+    await tester.tap(find.text('Enregistrer le rendez-vous'));
+    await tester.pumpAndSettle();
+    expect(find.text('Indiquez un numéro algérien valide (ex. 0550 12 34 56).'), findsOneWidget);
+    expect(api.appels.where((a) => a.startsWith('tel')), isEmpty);
   });
 
   testWidgets('RDV pris au telephone : absent pour le medecin et cache sur 404', (tester) async {
