@@ -979,10 +979,10 @@ void main() {
   testWidgets('la pharmacie voit un refus net pour une ordonnance expiree, annulee ou delivree',
       (tester) async {
     final cas = {
-      'EXPIREE': 'Expirée : cette ordonnance n\'est plus valable et ne doit pas être délivrée.',
+      'EXPIREE': 'Expirée : ordonnance plus valable, ne pas délivrer.',
       'ANNULEE':
-          'Annulée : cette ordonnance a été annulée par le médecin et ne doit pas être délivrée.',
-      'DELIVREE': 'Déjà délivrée : cette ordonnance ne peut pas être délivrée une nouvelle fois.',
+          'Annulée par le médecin : ne pas délivrer.',
+      'DELIVREE': 'Déjà délivrée : ne pas délivrer une nouvelle fois.',
     };
     for (final e in cas.entries) {
       final api = FakeEspaceApi(roles: ['PHARMACIE'])
