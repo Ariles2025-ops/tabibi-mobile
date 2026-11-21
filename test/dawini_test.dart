@@ -182,4 +182,26 @@ void main() {
     ]);
     expect(triees.map((b) => b.id).toList(), ['3', '1', '2']);
   });
+
+  test('espace pharmacie : demandes triees recentes d\'abord et detail comme le site', () {
+    final triees = trierBesoinsBrutsParPublication([
+      {'id': '1', 'publieLe': '2026-01-10T09:00:00'},
+      {'id': '2'},
+      {'id': '3', 'publieLe': '2026-03-05T09:00:00'},
+    ]);
+    expect(triees.map((b) => b['id']).toList(), ['3', '1', '2']);
+    expect(
+      detailBesoinPharmacie(BesoinMedicament.fromJson({
+        'wilayaCode': '16',
+        'commune': 'Bab Ezzouar',
+        'publieLe': '2026-11-20T09:00:00',
+        'nombreReponses': 2,
+      })),
+      '16 - Alger · Bab Ezzouar · Publiée le ven. 20 nov. 09:00 · 2 réponses',
+    );
+    expect(
+      detailBesoinPharmacie(BesoinMedicament.fromJson({'wilayaCode': '16'})),
+      '16 - Alger · Date inconnue · 0 réponse',
+    );
+  });
 }

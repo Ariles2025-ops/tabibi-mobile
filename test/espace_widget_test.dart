@@ -329,6 +329,9 @@ class FakeEspaceApi extends ApiService {
         'id': 'b1',
         'medicament': 'Ventoline',
         'wilayaCode': wilayaCode,
+        'commune': 'Bab Ezzouar',
+        'publieLe': '2026-11-20T09:00:00',
+        'nombreReponses': 2,
         'dejaRepondu': besoinDejaRepondu,
       },
     ];
@@ -934,6 +937,9 @@ void main() {
     expect(find.text('Demandes de médicaments'), findsOneWidget); // même titre que sur le site
     expect(find.text('16 - Alger'), findsOneWidget);
     expect(find.text('Ventoline'), findsOneWidget);
+    // Lieu, date et nombre de réponses, comme sur le site.
+    expect(find.text('16 - Alger · Bab Ezzouar · Publiée le ven. 20 nov. 09:00 · 2 réponses'),
+        findsOneWidget);
     await tester.tap(find.text('Répondre'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Prix (DA)'), '850');

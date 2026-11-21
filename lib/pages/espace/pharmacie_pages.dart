@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../i18n/langue.dart';
+import '../../models/besoin_medicament.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/dates.dart';
+import '../../utils/dawini.dart';
 import '../../utils/espace_pro.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
@@ -62,7 +64,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     final w = _wilaya;
     if (w == null) return;
     final b = await chargerAvec((j) => widget.api.besoinsWilaya(w, j));
-    if (b != null && mounted) setState(() => _besoins = b);
+    if (b != null && mounted) setState(() => _besoins = trierBesoinsBrutsParPublication(b));
   }
 
   Future<void> _repondre(Map<String, dynamic> besoin) async {
@@ -126,12 +128,12 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
 
   Widget _tuile(Map<String, dynamic> b) {
     final repondu = b['dejaRepondu'] == true;
-    final date = DateTime.tryParse('${b['publieLe']}');
+    final besoin = BesoinMedicament.fromJson(b);
+    final precision = besoin.precision;
     final details = [
-      if ((b['commune'] as String?)?.isNotEmpty ?? false) b['commune'] as String,
-      if ((b['precision'] as String?)?.isNotEmpty ?? false) b['precision'] as String,
-      if (date != null) formaterDateHeure(date),
-    ].join(' · ');
+      detailBesoinPharmacie(besoin),
+      if (precision != null && precision.isNotEmpty) precision,
+    ].join('\n');
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
