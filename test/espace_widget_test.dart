@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/main.dart';
+import 'package:tabibi_mobile/pages/compte_page.dart';
 import 'package:tabibi_mobile/pages/dawini_page.dart';
 import 'package:tabibi_mobile/pages/espace/agenda_page.dart';
 import 'package:tabibi_mobile/pages/espace/avis_medecin_page.dart';
@@ -883,6 +884,25 @@ void main() {
     await tester.tap(find.text('Mes secrétaires'));
     await tester.pumpAndSettle();
     expect(find.text('Secrétaires rattachées'), findsOneWidget);
+  });
+
+  testWidgets(
+      'mon compte : un patient trouve « Invitations de cabinet » ; un compte professionnel '
+      "n'a plus les pages réservées aux patients, comme le site", (tester) async {
+    await afficher(tester, ComptePage(api: FakeEspaceApi(roles: ['PATIENT']), auth: SessionTest()));
+    expect(find.text('Invitations de cabinet'), findsOneWidget);
+    expect(find.text('Mes avis'), findsOneWidget);
+    expect(find.text("Mes listes d'attente"), findsOneWidget);
+    expect(find.text('Dawini (pharmacies)'), findsOneWidget);
+    expect(find.text('Mon espace'), findsNothing);
+
+    await afficher(tester, ComptePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    expect(find.text('Mon espace'), findsOneWidget);
+    expect(find.text('Invitations de cabinet'), findsNothing);
+    expect(find.text('Mes avis'), findsNothing);
+    expect(find.text("Mes listes d'attente"), findsNothing);
+    expect(find.text('Dawini (pharmacies)'), findsNothing);
+    expect(find.text('Vérifier une ordonnance'), findsOneWidget);
   });
 
   testWidgets('mon espace medecin propose les ordonnances rédigées', (tester) async {
