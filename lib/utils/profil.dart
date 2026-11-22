@@ -65,3 +65,18 @@ String messageEchecSuppressionCompte(Object erreur) {
   return t('La suppression a échoué. Réessayez ou écrivez à contact@ndawik.com.',
       'فشل الحذف. أعد المحاولة أو راسلنا على contact@ndawik.com.');
 }
+
+/// Texte de confirmation de « Supprimer mon compte », identique à celui du site (page Mon compte) :
+/// ce qui est effacé, ce qui est annulé et ce qui est conservé (ordonnances, journal de sécurité,
+/// rendez-vous passés sans lien avec le patient, note des avis), et ce qui change pour un médecin.
+String texteConfirmationSuppressionCompte() => t(
+    'Votre compte et vos données personnelles (profil, messages, listes d\'attente) sont effacés '
+        'définitivement, et vos rendez-vous à venir sont annulés. Les ordonnances et le journal de '
+        'sécurité sont conservés le temps exigé par la loi. Vos rendez-vous passés restent, sans '
+        'aucun lien avec vous, dans l\'agenda du médecin, et la note (sans commentaire) de vos avis '
+        'est conservée. Médecin : vos rendez-vous à venir sont annulés (patients prévenus) et votre '
+        'fiche publique est retirée.',
+    'يُحذف حسابك وبياناتك الشخصية (الملف الشخصي والرسائل وقوائم الانتظار) نهائيًا، وتُلغى مواعيدك '
+        'القادمة. يُحتفظ بالوصفات الطبية وسجل الأمان للمدة التي يفرضها القانون. تبقى مواعيدك '
+        'السابقة، دون أي صلة بك، في أجندة الطبيب، ويُحتفظ بتقييم (النجوم) آرائك دون التعليق. '
+        'الطبيب: تُلغى مواعيدك القادمة (ويُبلَّغ المرضى) وتُسحب بطاقتك العامة.');

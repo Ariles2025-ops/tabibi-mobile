@@ -208,13 +208,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(t('Supprimer mon compte ?', 'حذف حسابي؟')),
-        content: Text(t(
-            'Votre compte et vos données personnelles (profil, rendez-vous, messages, listes '
-                "d'attente) sont effacés définitivement. Seules les ordonnances et le journal "
-                'de sécurité sont conservés le temps exigé par la loi. Cette action est définitive.',
-            'يُحذف حسابك وبياناتك الشخصية (الملف الشخصي والمواعيد والرسائل وقوائم الانتظار) '
-                'نهائيًا. لا يُحتفظ إلا بالوصفات الطبية وسجل الأمان للمدة التي يفرضها القانون. '
-                'هذا الإجراء نهائي.')),
+        content: SingleChildScrollView(child: Text(texteConfirmationSuppressionCompte())),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
