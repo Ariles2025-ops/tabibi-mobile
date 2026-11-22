@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/espace_pro.dart';
 import '../utils/avis.dart';
+import '../utils/dates.dart';
 import '../utils/identifiants.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -58,7 +59,9 @@ class _MesAvisPageState extends State<MesAvisPage> {
       _erreur = null;
     });
     try {
-      final avis = (await widget.api.mesAvis(token)).map(Avis.fromJson).toList();
+      // Les plus recents d'abord, comme sur le site.
+      final avis = trierParDateRecente(
+          (await widget.api.mesAvis(token)).map(Avis.fromJson), (a) => a.deposeLe);
       await _chargerNomsMedecins(avis);
       if (!mounted) return;
       setState(() => _avis = avis);

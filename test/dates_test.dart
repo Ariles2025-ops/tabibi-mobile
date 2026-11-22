@@ -37,4 +37,20 @@ void main() {
     addTearDown(() => Langue.courante.value = Langue.francais);
     expect(formaterDuree(20), '20 دقيقة');
   });
+
+  test('trierParDateRecente : du plus recent au plus ancien, dates absentes en fin', () {
+    final tries = trierParDateRecente<({String id, DateTime? date})>([
+      (id: 'sans1', date: null),
+      (id: 'ancien', date: DateTime(2026, 1, 1)),
+      (id: 'recent', date: DateTime(2026, 11, 20)),
+      (id: 'milieu', date: DateTime(2026, 6, 1)),
+    ], (e) => e.date);
+    expect(tries.map((e) => e.id), ['recent', 'milieu', 'ancien', 'sans1']);
+  });
+
+  test('trierParDateRecente ne modifie pas la liste d\'origine', () {
+    final origine = [DateTime(2026, 1, 1), DateTime(2026, 2, 1)];
+    trierParDateRecente<DateTime>(origine, (d) => d);
+    expect(origine.first, DateTime(2026, 1, 1));
+  });
 }
