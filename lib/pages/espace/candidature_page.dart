@@ -6,6 +6,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/dates.dart';
+import '../../utils/espace_pro.dart';
 import '../../utils/libelles.dart';
 import '../../widgets/champ_wilaya.dart';
 import 'outils_espace.dart';
@@ -189,7 +190,7 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
           'تم إيداع الترشح: سيفحصه مسؤول.'));
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
-      if (mounted) setState(() => _erreurFormulaire = e.message);
+      if (mounted) setState(() => _erreurFormulaire = messageDepotCandidature(e));
       // Deja en attente ou validee : on affiche l'etat reel.
       if (e.conflit) await recharger();
     } on Exception catch (e) {
