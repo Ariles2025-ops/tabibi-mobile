@@ -896,7 +896,12 @@ void main() {
     expect(find.text('Dawini (pharmacies)'), findsOneWidget);
     expect(find.text('Mon espace'), findsNothing);
 
-    await afficher(tester, ComptePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
+    await afficher(
+        tester,
+        ComptePage(
+            key: const ValueKey('compte-pro'),
+            api: FakeEspaceApi(roles: ['MEDECIN']),
+            auth: SessionTest()));
     expect(find.text('Mon espace'), findsOneWidget);
     expect(find.text('Invitations de cabinet'), findsNothing);
     expect(find.text('Mes avis'), findsNothing);
