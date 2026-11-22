@@ -1932,6 +1932,37 @@ void main() {
     expect(api.reserves.length, 1);
   });
 
+  testWidgets('reservation confirmee : « Voir mes rendez-vous » ouvre la liste, comme le site',
+      (tester) async {
+    surfaceHaute(tester);
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+          medecinId: FakeApiService.medecinDemo,
+          api: FakeApiServiceReservations(),
+          auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Réserver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rendez-vous confirmé'), findsOneWidget);
+    expect(find.text('Voir mes rendez-vous'), findsOneWidget);
+
+    await tester.tap(find.text('Voir mes rendez-vous'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MesRendezVousPage), findsOneWidget);
+  });
+
+  test('messageRendezVousConfirme ajoute la date quand l\'API la renvoie, jamais « null »', () {
+    expect(messageRendezVousConfirme(null), 'Rendez-vous confirmé');
+    expect(messageRendezVousConfirme(''), 'Rendez-vous confirmé');
+    final avecDate = messageRendezVousConfirme('2026-12-01T09:30:00');
+    expect(avecDate, startsWith('Rendez-vous confirmé : '));
+    expect(avecDate, isNot(contains('null')));
+  });
+
   testWidgets("mes listes d'attente sans jeton propose de se connecter", (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MesListesAttentePage(api: const FakeApiService(), auth: AuthService()),
