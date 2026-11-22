@@ -12,6 +12,7 @@ import '../widgets/composants.dart';
 import '../widgets/liens_legaux.dart';
 import '../widgets/selecteur_langue.dart';
 import 'dawini_page.dart';
+import 'espace/cabinet_pages.dart';
 import 'espace/mon_espace_page.dart';
 import 'mes_avis_page.dart';
 import 'mes_conversations_page.dart';
@@ -98,6 +99,8 @@ class _ComptePageState extends State<ComptePage> {
     final connecte = _auth.estConnecte;
     final roles = _moi == null ? <String>{} : rolesDe(_moi!);
     final api = widget.api;
+    final pro = comptePro(roles);
+    final espacePro = aUnEspacePro(roles);
     return Scaffold(
       appBar: AppBar(title: Text(t('Mon compte', 'حسابي'))),
       body: RefreshIndicator(
@@ -134,19 +137,31 @@ class _ComptePageState extends State<ComptePage> {
                     : null,
                 badge: visioActive ? null : t('Bientôt', 'قريبًا'),
               ),
-              _Entree(Icons.star_outline, t('Mes avis', 'آرائي'),
-                  () => _ouvrir(MesAvisPage(api: api, auth: _auth))),
-              _Entree(
-                  Icons.hourglass_top_outlined,
-                  t("Mes listes d'attente", 'قوائم الانتظار'),
-                  () => _ouvrir(MesListesAttentePage(api: api, auth: _auth))),
+              // Comme le site : « Mes avis » et « Mes listes d'attente » sont des pages de patient,
+              // pas proposées à un compte professionnel (elles lui répondraient « réservée aux patients »).
+              if (!pro) ...[
+                _Entree(Icons.star_outline, t('Mes avis', 'آرائي'),
+                    () => _ouvrir(MesAvisPage(api: api, auth: _auth))),
+                _Entree(
+                    Icons.hourglass_top_outlined,
+                    t("Mes listes d'attente", 'قوائم الانتظار'),
+                    () => _ouvrir(MesListesAttentePage(api: api, auth: _auth))),
+              ],
+              // Comme le site : un patient peut recevoir une invitation de cabinet (secrétaire) ;
+              // un compte professionnel la trouve dans « Mon espace ».
+              if (!espacePro)
+                _Entree(
+                    Icons.mail_outline,
+                    t('Invitations de cabinet', 'دعوات العيادات'),
+                    () => _ouvrir(InvitationsCabinetPage(api: api, auth: _auth))),
             ]),
             const SizedBox(height: 20),
             _Groupe(titre: t('Services', 'الخدمات'), entrees: [
-              _Entree(
-                  Icons.local_pharmacy_outlined,
-                  t('Dawini (pharmacies)', 'داويني (الصيدليات)'),
-                  () => _ouvrir(DawiniPage(api: api, auth: _auth))),
+              if (!pro)
+                _Entree(
+                    Icons.local_pharmacy_outlined,
+                    t('Dawini (pharmacies)', 'داويني (الصيدليات)'),
+                    () => _ouvrir(DawiniPage(api: api, auth: _auth))),
               _Entree(
                   Icons.verified_outlined,
                   t('Vérifier une ordonnance', 'التحقق من وصفة طبية'),
