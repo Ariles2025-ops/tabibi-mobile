@@ -80,7 +80,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     final saisi = rdv['nomPatient'];
     if (saisi is String && saisi.trim().isNotEmpty) return saisi.trim();
     final id = identifiant(rdv['patientId']);
-    return _patients[id] ?? t('Patient ${abreger(id)}', 'مريض ${abreger(id)}');
+    return _patients[id] ?? libellePatientParDefaut(id);
   }
 
   /// Déplacer : choix d'un autre créneau libre du cabinet, confirmation, puis POST .../deplacer.

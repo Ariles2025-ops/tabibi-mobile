@@ -26,4 +26,10 @@ void main() {
     expect(libelleMedecin('7'), 'Médecin 7');
     expect(libelleMedecin(''), 'Médecin inconnu');
   });
+
+  test('libellePatientParDefaut : identifiant abrégé, ou « Patient » seul sans identifiant', () {
+    expect(libellePatientParDefaut(uuid), 'Patient 00000000');
+    expect(libellePatientParDefaut('7'), 'Patient 7');
+    expect(libellePatientParDefaut(''), 'Patient');
+  });
 }
