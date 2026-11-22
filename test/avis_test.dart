@@ -123,4 +123,11 @@ void main() {
     expect(estHonore('CONFIRME'), isFalse);
     expect(estHonore(null), isFalse);
   });
+
+  test('messageRefusSignalementAvis : mêmes phrases que le site (403, 409, 404)', () {
+    expect(messageRefusSignalementAvis(403), 'Cet avis ne vous concerne pas.');
+    expect(messageRefusSignalementAvis(409), 'Cet avis a déjà été signalé.');
+    expect(messageRefusSignalementAvis(404), "Cet avis n'existe plus.");
+    expect(messageRefusSignalementAvis(500), isNull);
+  });
 }
