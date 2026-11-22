@@ -182,4 +182,36 @@ void main() {
     expect(messageReponseBesoin(ApiException(403, 'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة')),
         'وحده حساب الصيدلية يمكنه الرد على طلب.');
   });
+
+  test('invitation de secrétaire et candidature : refus 409/400/403 comme le site (FR et AR)', () {
+    Langue.courante.value = Langue.francais;
+    expect(messageInvitationSecretaire(ApiException(409, 'Action impossible : la situation a changé entre-temps')),
+        'Cette secrétaire est déjà rattachée à votre cabinet.');
+    expect(messageInvitationSecretaire(ApiException(400, 'Une erreur est survenue (code 400). Réessayez dans un instant.')),
+        "Aucun compte Ndawik n'utilise cette adresse e-mail.");
+    expect(messageInvitationSecretaire(ApiException(403, 'Accès refusé : ce compte n\'a pas les droits nécessaires')),
+        'Seul un compte médecin peut inviter une secrétaire.');
+    expect(messageInvitationSecretaire(ApiException(409, 'Déjà invitée')), 'Déjà invitée');
+    expect(messageDepotCandidature(ApiException(409, 'Action impossible : la situation a changé entre-temps')),
+        'Une candidature est déjà en attente ou validée.');
+    expect(messageDepotCandidature(ApiException(403, 'Accès refusé : ce compte n\'a pas les droits nécessaires')),
+        "Accès refusé. Votre demande n'a pas pu être envoyée.");
+    expect(messageDepotCandidature(ApiException(400, 'Une erreur est survenue (code 400). Réessayez dans un instant.')),
+        'La candidature est incomplète.');
+    Langue.courante.value = Langue.arabe;
+    expect(messageInvitationSecretaire(ApiException(409, 'تعذّر الإجراء: تغيّر الوضع في الأثناء')),
+        'هذه السكرتيرة مرتبطة بعيادتك بالفعل.');
+    expect(messageInvitationSecretaire(ApiException(400, 'تعذّر تنفيذ الطلب: تحقق من المعلومات المدخلة ثم أعد المحاولة.')),
+        'لا يوجد حساب على نداويك بهذا البريد الإلكتروني.');
+    expect(messageInvitationSecretaire(ApiException(403, 'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة')),
+        'يمكن لحساب طبيب فقط دعوة سكرتيرة.');
+    expect(messageDepotCandidature(ApiException(409, 'تعذّر الإجراء: تغيّر الوضع في الأثناء')),
+        'يوجد ترشح قيد الانتظار أو معتمد بالفعل.');
+    expect(messageDepotCandidature(ApiException(403, 'x')), 'تم رفض الوصول. تعذّر إرسال طلبك.');
+    expect(messageDepotCandidature(ApiException(400, 'تعذّر تنفيذ الطلب: تحقق من المعلومات المدخلة ثم أعد المحاولة.')),
+        'الترشح غير مكتمل.');
+    // Le 400 de la pharmacie, traduit en arabe par l'appli, reste reconnu comme générique.
+    expect(messageReponseBesoin(ApiException(400, 'تعذّر تنفيذ الطلب: تحقق من المعلومات المدخلة ثم أعد المحاولة.')),
+        'الرد غير مكتمل.');
+  });
 }

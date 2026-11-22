@@ -289,18 +289,63 @@ String messageChargement(ApiException e, PublicPage public) {
 /// plus de réponse. », 400 « La réponse est incomplète. ». Un texte precis envoye par le
 /// serveur est conserve ; seuls les libelles generiques de l'appli sont remplaces.
 String messageReponseBesoin(ApiException e) {
-  final generique = e.message.startsWith('Une erreur est survenue') ||
-      e.message.startsWith('حدث خطأ') ||
-      e.message.startsWith('Action impossible') ||
-      e.message.startsWith('تعذّر الإجراء') ||
-      e.message.startsWith('Accès refusé') ||
-      e.message.startsWith('تم رفض الوصول');
-  if (!generique) return e.message;
+  if (!estMessageGenerique(e.message)) return e.message;
   return switch (e.statusCode) {
     403 => t('Seul un compte pharmacie peut répondre à une demande.',
         'وحده حساب الصيدلية يمكنه الرد على طلب.'),
     409 => t("Cette demande n'accepte plus de réponse.", 'لم يعد هذا الطلب يقبل ردودًا.'),
     400 => t('La réponse est incomplète.', 'الرد غير مكتمل.'),
+    _ => e.message,
+  };
+}
+
+/// Vrai pour un libelle par defaut de l'appli (ou sa traduction arabe d'un refus du serveur) :
+/// un tel texte ne dit rien de precis, l'ecran le remplace par la phrase du site.
+bool estMessageGenerique(String message) => const [
+      'Une erreur est survenue',
+      'حدث خطأ',
+      'Action impossible',
+      'تعذّر الإجراء',
+      'تعذّر تنفيذ الطلب',
+      'Accès refusé',
+      'تم رفض الوصول',
+      'Ressource introuvable',
+      'العنصر غير موجود',
+      'العنصر المطلوب غير موجود',
+    ].any(message.startsWith);
+
+/// Refus de l'invitation d'une secretaire, comme le site : 409 « Cette secrétaire est déjà
+/// rattachée à votre cabinet. », 400 « Aucun compte Ndawik n'utilise cette adresse e-mail. »,
+/// 403 « Seul un compte médecin peut inviter une secrétaire. » (le site garde toujours la phrase
+/// du 403). Un texte precis du serveur est conserve pour 409 et 400.
+String messageInvitationSecretaire(ApiException e) {
+  if (e.statusCode == 403) {
+    return t('Seul un compte médecin peut inviter une secrétaire.',
+        'يمكن لحساب طبيب فقط دعوة سكرتيرة.');
+  }
+  if (!estMessageGenerique(e.message)) return e.message;
+  return switch (e.statusCode) {
+    409 => t('Cette secrétaire est déjà rattachée à votre cabinet.',
+        'هذه السكرتيرة مرتبطة بعيادتك بالفعل.'),
+    400 => t("Aucun compte Ndawik n'utilise cette adresse e-mail.",
+        'لا يوجد حساب على نداويك بهذا البريد الإلكتروني.'),
+    _ => e.message,
+  };
+}
+
+/// Refus du depot d'une candidature de medecin, comme le site : 403 « Accès refusé. Votre
+/// demande n'a pas pu être envoyée. », 409 « Une candidature est déjà en attente ou validée. »,
+/// 400 « La candidature est incomplète. ». Un texte precis du serveur (409, 400) est conserve.
+String messageDepotCandidature(ApiException e) {
+  if (e.statusCode == 403) {
+    return t("Accès refusé. Votre demande n'a pas pu être envoyée.",
+        'تم رفض الوصول. تعذّر إرسال طلبك.');
+  }
+  if (!estMessageGenerique(e.message)) return e.message;
+  return switch (e.statusCode) {
+    409 => t('Une candidature est déjà en attente ou validée.',
+        'يوجد ترشح قيد الانتظار أو معتمد بالفعل.'),
+    400 => t('La candidature est incomplète.', 'الترشح غير مكتمل.'),
     _ => e.message,
   };
 }

@@ -70,7 +70,7 @@ class _SecretairesPageState extends State<SecretairesPage> with AppelsEspace {
       await recharger();
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
-      if (mounted) setState(() => _erreurFormulaire = e.message);
+      if (mounted) setState(() => _erreurFormulaire = messageInvitationSecretaire(e));
       if (e.statusCode == 409) await recharger();
     } on Exception catch (e) {
       if (mounted) setState(() => _erreurFormulaire = messageErreur(e));
