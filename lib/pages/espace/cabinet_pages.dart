@@ -258,7 +258,7 @@ class _InvitationsCabinetPageState extends State<InvitationsCabinetPage> with Ap
     message(accepter
         ? t('Invitation acceptée : reconnectez-vous pour ouvrir l\'espace secrétaire.',
             'تم قبول الدعوة: أعد تسجيل الدخول لفتح فضاء السكرتارية.')
-        : t('Invitation refusée', 'تم رفض الدعوة'));
+        : t('Invitation refusée : le médecin est prévenu.', 'تم رفض الدعوة وتم إعلام الطبيب.'));
     await recharger();
   }
 

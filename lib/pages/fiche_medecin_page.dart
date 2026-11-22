@@ -19,6 +19,7 @@ import '../widgets/vue_erreur.dart';
 import 'conversation_page.dart';
 import 'espace/candidature_page.dart';
 import 'mes_listes_attente_page.dart';
+import 'mes_rendez_vous_page.dart';
 
 /// Message affiche quand le patient n'a aucun rendez-vous avec le praticien (403).
 String get messageConversationRefusee => t(
@@ -55,6 +56,17 @@ String titreListeAttente({required bool aucunCreneau}) => aucunCreneau
 /// Lien affiche une fois inscrit, vers « Mes listes d'attente » (comme le site).
 String get texteVoirMesListesAttente =>
     t("Voir mes listes d'attente", 'عرض قوائم انتظاري');
+
+/// Lien proposé après une réservation, vers « Mes rendez-vous » (comme le site).
+String get texteVoirMesRendezVous => t('Voir mes rendez-vous', 'عرض مواعيدي');
+
+/// Confirmation d'une réservation : le texte du site « Rendez-vous confirmé » avec la date du
+/// rendez-vous quand l'API la renvoie.
+String messageRendezVousConfirme(Object? debut) {
+  final base = t('Rendez-vous confirmé', 'تم تأكيد الموعد');
+  final date = debut is String && debut.isNotEmpty ? formaterDateIso(debut) : '';
+  return date.isEmpty ? base : '$base : $date';
+}
 
 /// Etat affiche a la place du bouton une fois le patient inscrit.
 String get texteInscrit => t(
@@ -262,10 +274,17 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     if (token == null) return;
     setState(() => _enCours = creneauId);
     try {
-      await widget.api.reserverCreneau(creneauId, token);
+      final reservation = await widget.api.reserverCreneau(creneauId, token);
       if (!mounted) return;
       setState(() => _retirerCreneau(creneauId));
-      _message(t('Rendez-vous confirmé', 'تم تأكيد الموعد'));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(messageRendezVousConfirme(reservation['debut'])),
+        action: SnackBarAction(
+          label: texteVoirMesRendezVous,
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => MesRendezVousPage(api: widget.api, auth: _auth))),
+        ),
+      ));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.conflit) {
