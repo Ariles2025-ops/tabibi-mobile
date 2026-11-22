@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
 import '../utils/espace_pro.dart';
+import '../utils/dates.dart';
 import '../utils/teleconsultations.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
@@ -79,7 +80,9 @@ class _MesTeleconsultationsPageState extends State<MesTeleconsultationsPage> {
     });
     try {
       final teleconsultations = await widget.api.mesTeleconsultations(token);
-      final liste = teleconsultations.map(Teleconsultation.fromJson).toList();
+      // Les plus recentes d'abord, comme sur le site.
+      final liste = trierParDateRecente(
+          teleconsultations.map(Teleconsultation.fromJson), (tc) => tc.creeLe);
       final enrichies = await _enrichir(liste, token);
       if (!mounted) return;
       setState(() => _teleconsultations = enrichies);

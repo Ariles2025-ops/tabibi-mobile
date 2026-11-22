@@ -3,6 +3,20 @@
 
 import '../i18n/langue.dart';
 
+/// Copie triee de la plus recente a la plus ancienne selon [date] (comme le site) ; les dates
+/// absentes vont en fin de liste.
+List<T> trierParDateRecente<T>(Iterable<T> elements, DateTime? Function(T) date) {
+  final copie = List<T>.of(elements);
+  copie.sort((a, b) {
+    final da = date(a);
+    final db = date(b);
+    if (da == null) return db == null ? 0 : 1;
+    if (db == null) return -1;
+    return db.compareTo(da);
+  });
+  return copie;
+}
+
 const List<String> _jours = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
 
 const List<String> _mois = [

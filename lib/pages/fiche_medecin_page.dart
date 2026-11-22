@@ -795,7 +795,8 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       return [Text(t('Aucun avis pour le moment.', 'لا توجد آراء حاليًا.'))];
     }
     return [
-      for (final a in avis.avis.take(nombreAvisAffiches)) _carteAvis(context, a)
+      for (final a in trierParDateRecente(avis.avis, (a) => a.deposeLe).take(nombreAvisAffiches))
+        _carteAvis(context, a)
     ];
   }
 

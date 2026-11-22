@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/avis.dart';
+import '../../utils/dates.dart';
 import 'outils_espace.dart';
 
 /// Avis des patients recus par le medecin connecte, comme « Avis des patients » du site :
@@ -91,13 +92,7 @@ class _AvisMedecinPageState extends State<AvisMedecinPage> with AppelsEspace {
           return VueVide(t("Aucun avis publié sur votre fiche pour l'instant.",
               'لا توجد آراء منشورة على صفحتك حاليًا.'));
         }
-        final avis = [..._synthese.avis]..sort((a, b) {
-            final da = a.deposeLe;
-            final db = b.deposeLe;
-            if (da == null) return db == null ? 0 : 1;
-            if (db == null) return -1;
-            return db.compareTo(da);
-          });
+        final avis = trierParDateRecente(_synthese.avis, (a) => a.deposeLe);
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
