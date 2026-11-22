@@ -68,3 +68,13 @@ String? messageRefusDepotAvis(int statut) => switch (statut) {
       404 => t('Rendez-vous introuvable.', 'الموعد غير موجود.'),
       _ => null,
     };
+
+/// Refus du signalement d'un avis par le médecin, mêmes phrases que le site : 403 (avis d'un autre
+/// médecin), 409 (déjà signalé) et 404 (l'avis n'existe plus : la liste est alors rechargée) ;
+/// null pour les autres statuts.
+String? messageRefusSignalementAvis(int statut) => switch (statut) {
+      403 => t('Cet avis ne vous concerne pas.', 'هذا الرأي لا يخصّك.'),
+      409 => t('Cet avis a déjà été signalé.', 'تم الإبلاغ عن هذا الرأي من قبل.'),
+      404 => t("Cet avis n'existe plus.", 'هذا الرأي لم يعد موجودًا.'),
+      _ => null,
+    };

@@ -67,13 +67,18 @@ class _AvisMedecinPageState extends State<AvisMedecinPage> with AppelsEspace {
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
       if (e.statusCode == 403) {
-        message(t('Cet avis ne vous concerne pas.', 'هذا الرأي لا يخصّك.'));
+        message(messageRefusSignalementAvis(403)!);
+      } else if (e.statusCode == 404) {
+        // Comme le site : l'avis a disparu, on le dit et on recharge la liste.
+        message(messageRefusSignalementAvis(404)!);
+        await recharger();
+        return;
       } else if (e.statusCode != 409) {
         message(e.message);
         if (mounted) setState(() {});
         return;
       } else {
-        message(t('Cet avis a déjà été signalé.', 'تم الإبلاغ عن هذا الرأي من قبل.'));
+        message(messageRefusSignalementAvis(409)!);
       }
     } on Exception catch (e) {
       message(messageErreur(e));
