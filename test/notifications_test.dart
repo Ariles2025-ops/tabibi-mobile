@@ -118,6 +118,7 @@ void main() {
     expect(cibleDuLien('/medecin/agenda'), const CibleNotification(TypeCible.agenda));
     expect(cibleDuLien('/medecin/avis'), const CibleNotification(TypeCible.avisMedecin));
     expect(cibleDuLien('/medecin/secretaires'), const CibleNotification(TypeCible.secretaires));
+    expect(cibleDuLien('/medecin/candidature'), const CibleNotification(TypeCible.candidature));
     expect(cibleDuLien('/secretaire'), const CibleNotification(TypeCible.cabinets));
     expect(cibleDuLien('/invitations'), const CibleNotification(TypeCible.invitations));
     expect(cibleDuLien('/teleconsultations'), const CibleNotification(TypeCible.teleconsultations));

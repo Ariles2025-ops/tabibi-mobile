@@ -17,6 +17,7 @@ import 'detail_ordonnance_page.dart';
 import 'espace/agenda_page.dart';
 import 'espace/avis_medecin_page.dart';
 import 'espace/cabinet_pages.dart';
+import 'espace/candidature_page.dart';
 import 'espace/secretaires_page.dart';
 import 'fiche_medecin_page.dart';
 import 'mes_avis_page.dart';
@@ -162,6 +163,8 @@ class _MesNotificationsPageState extends State<MesNotificationsPage> {
         return AvisMedecinPage(api: widget.api, auth: _auth);
       case TypeCible.secretaires:
         return SecretairesPage(api: widget.api, auth: _auth);
+      case TypeCible.candidature:
+        return CandidaturePage(api: widget.api, auth: _auth);
       case TypeCible.cabinets:
         return CabinetsPage(api: widget.api, auth: _auth);
       case TypeCible.invitations:
