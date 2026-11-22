@@ -243,7 +243,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (confirme != true) return;
     try {
       await widget.api.deplacer(identifiant(rdv['id']), identifiant(choisi['id']), token);
-      _message(t('Rendez-vous déplacé', 'تم نقل الموعد'));
+      _message(messageRendezVousDeplace(choisi['debut']));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.conflit

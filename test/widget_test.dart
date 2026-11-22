@@ -1543,7 +1543,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.deplacements, ['${FakeApiService.rdvConfirme}>${FakeApiService.creneauLibre}']);
-    expect(find.text('Rendez-vous déplacé'), findsOneWidget);
+    expect(find.textContaining('Rendez-vous déplacé au '), findsOneWidget);
+    expect(find.textContaining('null'), findsNothing);
   });
 
   testWidgets('mes rendez-vous : Déplacer sur un créneau pris explique que rien n\'a changé',

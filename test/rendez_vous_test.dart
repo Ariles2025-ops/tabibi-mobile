@@ -46,4 +46,13 @@ void main() {
     expect(c.aVenir.map((r) => r['debut']), [futur, '2026-07-01T09:00:00']);
     expect(c.passes.map((r) => r['debut']), [futur, passe, '2025-12-04T09:00:00']);
   });
+
+  test('messageRendezVousDeplace donne la date du nouveau créneau, jamais « null »', () {
+    final avecDate = messageRendezVousDeplace('2099-12-03T09:00:00');
+    expect(avecDate, startsWith('Rendez-vous déplacé au '));
+    expect(avecDate, endsWith('.'));
+    expect(avecDate, isNot(contains('null')));
+    expect(messageRendezVousDeplace(null), 'Rendez-vous déplacé.');
+    expect(messageRendezVousDeplace(''), 'Rendez-vous déplacé.');
+  });
 }

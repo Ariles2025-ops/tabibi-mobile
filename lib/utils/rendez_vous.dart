@@ -2,6 +2,7 @@
 // un rendez-vous passe n'est plus annulable et s'affiche « Terminé » s'il etait confirme.
 
 import '../i18n/langue.dart';
+import 'dates.dart';
 import 'libelles.dart';
 
 String _brut(Object? statut) => (statut?.toString() ?? '').trim().toUpperCase();
@@ -67,4 +68,12 @@ RendezVousClasses classerRendezVous(List<Map<String, dynamic>> rdvs, {DateTime? 
   aVenir.sort((a, b) => debut(a).compareTo(debut(b)));
   passes.sort((a, b) => debut(b).compareTo(debut(a)));
   return RendezVousClasses(aVenir, passes);
+}
+
+/// Confirmation d'un déplacement, comme le site : « Rendez-vous déplacé au {date}. » (la date du
+/// nouveau créneau) ; sans date lisible, le texte seul, jamais « null ».
+String messageRendezVousDeplace(Object? debut) {
+  final date = debut is String && debut.isNotEmpty ? formaterDateIso(debut) : '';
+  if (date.isEmpty) return t('Rendez-vous déplacé.', 'تم نقل الموعد.');
+  return t('Rendez-vous déplacé au $date.', 'تم نقل الموعد إلى $date.');
 }
