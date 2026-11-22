@@ -22,3 +22,10 @@ String abreger(String id) => id.length <= longueurAbregee ? id : id.substring(0,
 /// (identifiant abrege) ; « Médecin inconnu » sans identifiant.
 String libelleMedecin(String id) =>
     id.isEmpty ? t('Médecin inconnu', 'طبيب غير معروف') : '${t('Médecin', 'طبيب')} ${abreger(id)}';
+
+/// Libellé d'un patient sans fiche : « Patient 00000000 » (identifiant abrégé), comme le site ;
+/// « Patient » seul sans identifiant (jamais « Patient » suivi d'une espace).
+String libellePatientParDefaut(String patientId) {
+  final base = t('Patient', 'مريض');
+  return patientId.isEmpty ? base : '$base ${abreger(patientId)}';
+}

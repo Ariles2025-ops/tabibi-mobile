@@ -86,17 +86,18 @@ class _ListeAttenteMedecinPageState extends State<ListeAttenteMedecinPage> with 
             final ins = tries[i];
             final id = identifiant(ins['patientId']);
             final p = _patients[id];
-            final nom =
-                (p?['nomComplet'] as String?) ?? t('Patient ${abreger(id)}', 'مريض ${abreger(id)}');
-            final tel = p?['telephone'] as String?;
+            final saisi = (p?['nomComplet'] as String?)?.trim() ?? '';
+            final nom = saisi.isNotEmpty ? saisi : libellePatientParDefaut(id);
+            final tel = (p?['telephone'] as String?)?.trim();
             final date = DateTime.tryParse('${ins['inscritLe']}');
             return ListTile(
               leading: CircleAvatar(child: Text('${i + 1}')),
               title: Text(nom),
               subtitle: Text([
                 if (tel != null && tel.isNotEmpty) tel,
-                if (date != null)
-                  t('Inscrit le ${formaterDateHeure(date)}', 'سُجّل في ${formaterDateHeure(date)}'),
+                date != null
+                    ? t('Inscrit le ${formaterDateHeure(date)}', 'سُجّل في ${formaterDateHeure(date)}')
+                    : t("Date d'inscription inconnue", 'تاريخ التسجيل غير معروف'),
               ].join(' · ')),
             );
           },

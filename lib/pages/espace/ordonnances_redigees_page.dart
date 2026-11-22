@@ -60,7 +60,7 @@ class _OrdonnancesRedigeesPageState extends State<OrdonnancesRedigeesPage> with 
 
   String _patient(Map<String, dynamic> o) {
     final id = identifiant(o['patientId']);
-    return _patients[id] ?? t('Patient ${abreger(id)}', 'مريض ${abreger(id)}');
+    return _patients[id] ?? libellePatientParDefaut(id);
   }
 
   /// Comme le site : « Motif : ... » d'une ordonnance annulee, « le ... » d'une delivree.

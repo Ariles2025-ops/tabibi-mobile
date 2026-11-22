@@ -12,10 +12,6 @@ import '../widgets/vue_erreur.dart';
 import '../utils/identifiants.dart';
 import 'conversation_page.dart';
 
-/// Libellé du patient sans fiche : « Patient » et l'identifiant abrégé (comme le site).
-String libellePatientParDefaut(String patientId) =>
-    t('Patient ${abreger(patientId)}', 'مريض ${abreger(patientId)}');
-
 /// Noms des patients du médecin connecté (`GET /api/medecin/patients`), par identifiant ;
 /// vide en cas d'échec (le libellé par défaut prend alors le relais).
 Future<Map<String, String>> nomsPatientsMedecin(ApiService api, String token) async {

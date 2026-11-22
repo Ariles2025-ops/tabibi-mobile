@@ -902,6 +902,13 @@ void main() {
     expect(find.textContaining('du plus ancien au plus récent'), findsOneWidget);
   });
 
+  testWidgets("liste d'attente sans date ni nom : « Date d'inscription inconnue », comme le site",
+      (tester) async {
+    await afficher(tester, ListeAttenteMedecinPage(api: _ListeAttenteSansDate(), auth: SessionTest()));
+    expect(find.text('Patient'), findsOneWidget);
+    expect(find.text("Date d'inscription inconnue"), findsOneWidget);
+  });
+
   testWidgets('la secretaire voit ses cabinets avec le nom du medecin', (tester) async {
     await afficher(tester, CabinetsPage(api: FakeEspaceApi(), auth: SessionTest()));
     expect(find.text('Dr Amina Benali'), findsOneWidget);
@@ -1269,5 +1276,13 @@ class _AgendaSourceApi extends FakeEspaceApi {
           'patientId': patientId,
           'source': source,
         },
+      ];
+}
+
+/// Liste d'attente dont l'inscription n'a ni identifiant patient ni date.
+class _ListeAttenteSansDate extends FakeEspaceApi {
+  @override
+  Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) async => [
+        {'id': 'l1'}
       ];
 }
