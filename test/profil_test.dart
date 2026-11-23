@@ -163,6 +163,6 @@ void main() {
     Langue.courante.value = Langue.arabe;
     final ar = texteConfirmationSuppressionCompte();
     expect(ar, contains('تُلغى مواعيدك القادمة'));
-    expect(ar, contains('بطاقتك العامة'));
+    expect(ar, contains('صفحتك العامة'));
   });
 }
