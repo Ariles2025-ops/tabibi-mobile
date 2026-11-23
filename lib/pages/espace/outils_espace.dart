@@ -25,6 +25,10 @@ mixin AppelsEspace<W extends StatefulWidget> on State<W> {
   /// Texte affiche pour une erreur de l'API ; un ecran peut le preciser (ex. 403 -> « page reservee »).
   String libelleErreur(ApiException e) => e.message;
 
+  /// Texte d'un echec de CHARGEMENT de l'ecran (par defaut celui de [libelleErreur]) ; un ecran
+  /// reserve a un role le precise sans toucher aux messages de ses actions.
+  String libelleChargement(ApiException e) => libelleErreur(e);
+
   /// Action avec le jeton : resultat, ou null en cas d'echec (message affiche).
   Future<R?> appeler<R>(Future<R> Function(String jeton) appel) async {
     final jeton = auth.accessToken;
@@ -53,7 +57,7 @@ mixin AppelsEspace<W extends StatefulWidget> on State<W> {
       return await appel(jeton);
     } on ApiException catch (e) {
       if (e.nonAutorise) auth.seDeconnecter();
-      if (mounted) setState(() => erreur = libelleErreur(e));
+      if (mounted) setState(() => erreur = libelleChargement(e));
     } on Exception catch (e) {
       if (mounted) setState(() => erreur = messageErreur(e));
     } finally {

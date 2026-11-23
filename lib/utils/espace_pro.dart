@@ -268,7 +268,7 @@ List<Map<String, dynamic>> trierRattachements(List<Map<String, dynamic>> liste) 
 }
 
 /// Public d'une page reservee a un role, pour le message « Cette page est reservee aux ... ».
-enum PublicPage { patients, patientsEtMedecins, pharmacies }
+enum PublicPage { patients, patientsEtMedecins, pharmacies, medecins }
 
 /// Message d'une page de chargement en echec : un refus 403 (role insuffisant) dit a qui
 /// la page est reservee, comme le site (« Cette page est réservée aux patients. ») au lieu du
@@ -279,6 +279,8 @@ String messageChargement(ApiException e, PublicPage public) {
     PublicPage.patients => t('Cette page est réservée aux patients.', 'هذه الصفحة مخصّصة للمرضى.'),
     PublicPage.patientsEtMedecins => t('Cette page est réservée aux patients et aux médecins.',
         'هذه الصفحة مخصّصة للمرضى والأطباء.'),
+    PublicPage.medecins =>
+      t('Cette page est réservée aux médecins.', 'هذه الصفحة مخصّصة للأطباء.'),
     PublicPage.pharmacies =>
       t('Cette page est réservée aux pharmacies.', 'هذه الصفحة مخصّصة للصيدليات.'),
   };

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../i18n/langue.dart';
 import '../../services/api_service.dart';
+import '../../utils/espace_pro.dart';
 import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/dates.dart';
@@ -29,6 +30,9 @@ class _OrdonnancesRedigeesPageState extends State<OrdonnancesRedigeesPage> with 
   late final AuthService auth = widget.auth ?? session;
   List<Map<String, dynamic>> _ordonnances = [];
   final Map<String, String> _patients = {};
+
+  @override
+  String libelleChargement(ApiException e) => messageChargement(e, PublicPage.medecins);
 
   @override
   void initState() {

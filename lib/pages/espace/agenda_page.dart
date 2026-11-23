@@ -49,6 +49,10 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
   final Map<String, String> _patients = {};
 
   @override
+  String libelleChargement(ApiException e) =>
+      widget.cabinet.parSecretaire ? e.message : messageChargement(e, PublicPage.medecins);
+
+  @override
   void initState() {
     super.initState();
     if (auth.estConnecte) recharger();
