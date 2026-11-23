@@ -1128,7 +1128,7 @@ void main() {
 
     await tester.tap(find.text('Supprimer mon compte'));
     await tester.pumpAndSettle();
-    expect(find.textContaining("profil, rendez-vous, messages, listes d'attente"), findsOneWidget);
+    expect(find.textContaining("vos rendez-vous à venir sont annulés. Les ordonnances"), findsOneWidget);
     await tester.tap(find.text('Oui, supprimer définitivement'));
     await tester.pumpAndSettle();
     expect(api.appels, ['supprimer']);

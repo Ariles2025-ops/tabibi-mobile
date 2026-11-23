@@ -152,4 +152,17 @@ void main() {
     addTearDown(() => Langue.courante.value = Langue.francais);
     expect(messageEchecSuppressionCompte(Exception('x')), contains('contact@ndawik.com'));
   });
+
+  test('texteConfirmationSuppressionCompte : mêmes promesses que le site, FR et AR', () {
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    final fr = texteConfirmationSuppressionCompte();
+    expect(fr, contains('rendez-vous à venir sont annulés'));
+    expect(fr, contains("dans l'agenda du médecin"));
+    expect(fr, contains('fiche publique est retirée'));
+    expect(fr, isNot(contains('rendez-vous, messages')));
+    Langue.courante.value = Langue.arabe;
+    final ar = texteConfirmationSuppressionCompte();
+    expect(ar, contains('تُلغى مواعيدك القادمة'));
+    expect(ar, contains('صفحتك العامة'));
+  });
 }
