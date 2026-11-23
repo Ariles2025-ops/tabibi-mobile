@@ -164,7 +164,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
     if (token == null) return;
     try {
       await widget.api.annuler(identifiant(rdv['id']), token);
-      _message(t('Rendez-vous annulé', 'تم إلغاء الموعد'));
+      _message(t('Rendez-vous annulé.', 'تم إلغاء الموعد.'));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       _message(e.message);

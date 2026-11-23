@@ -92,3 +92,16 @@ String messageRendezVousDeplaceCabinet(Object? debut, {required bool patientPrev
       ? t('Rendez-vous déplacé au $date : le patient est prévenu.', 'تم نقل الموعد إلى $date: تم إعلام المريض.')
       : t('Rendez-vous déplacé au $date.', 'تم نقل الموعد إلى $date.');
 }
+
+/// Confirmation d'une annulation côté médecin/secrétaire, comme le site : « Rendez-vous du {date}
+/// annulé : le créneau est de nouveau proposé et le patient est prévenu. » ; pour un rendez-vous pris
+/// par téléphone, sans « le patient est prévenu » (il n'a pas de compte, personne ne le prévient).
+String messageRendezVousAnnuleCabinet(Object? debut, {required bool patientPrevenu}) {
+  final date = debut is String && debut.isNotEmpty ? formaterDateIso(debut) : '';
+  final fr = date.isEmpty ? 'Rendez-vous annulé' : 'Rendez-vous du $date annulé';
+  final ar = date.isEmpty ? 'تم إلغاء الموعد' : 'تم إلغاء الموعد في $date';
+  return t(
+    '$fr : le créneau est de nouveau proposé${patientPrevenu ? ' et le patient est prévenu' : ''}.',
+    '$ar: الموعد متاح من جديد${patientPrevenu ? ' وتم إعلام المريض' : ''}.',
+  );
+}

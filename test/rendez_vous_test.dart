@@ -66,4 +66,18 @@ void main() {
     expect(messageRendezVousDeplaceCabinet(null, patientPrevenu: true), isNot(contains('null')));
     expect(messageRendezVousDeplaceCabinet('', patientPrevenu: false), 'Rendez-vous déplacé.');
   });
+
+  test('messageRendezVousAnnuleCabinet : comme le site, sans promesse pour un rendez-vous par téléphone', () {
+    final prevenu = messageRendezVousAnnuleCabinet('2099-12-03T09:00:00', patientPrevenu: true);
+    expect(prevenu, startsWith('Rendez-vous du '));
+    expect(prevenu, endsWith(' annulé : le créneau est de nouveau proposé et le patient est prévenu.'));
+    final tel = messageRendezVousAnnuleCabinet('2099-12-03T09:00:00', patientPrevenu: false);
+    expect(tel, endsWith(' annulé : le créneau est de nouveau proposé.'));
+    expect(messageRendezVousAnnuleCabinet(null, patientPrevenu: true), isNot(contains('null')));
+    expect(messageRendezVousAnnuleCabinet('', patientPrevenu: false),
+        'Rendez-vous annulé : le créneau est de nouveau proposé.');
+    Langue.courante.value = Langue.arabe;
+    expect(messageRendezVousAnnuleCabinet('', patientPrevenu: true),
+        'تم إلغاء الموعد: الموعد متاح من جديد وتم إعلام المريض.');
+  });
 }
