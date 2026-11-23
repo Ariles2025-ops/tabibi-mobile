@@ -183,6 +183,22 @@ void main() {
         'وحده حساب الصيدلية يمكنه الرد على طلب.');
   });
 
+  test('Dawini : refus de publication 403/400 comme le site (FR et AR)', () {
+    Langue.courante.value = Langue.francais;
+    expect(messagePublicationBesoin(ApiException(403, 'Accès refusé : ce compte n\'a pas les droits nécessaires')),
+        'Seul un compte patient peut publier une demande.');
+    expect(messagePublicationBesoin(ApiException(400, 'Une erreur est survenue (code 400). Réessayez dans un instant.')),
+        'La demande est incomplète.');
+    // Texte précis du serveur conservé ; autre statut inchangé.
+    expect(messagePublicationBesoin(ApiException(400, 'Médicament obligatoire')), 'Médicament obligatoire');
+    expect(messagePublicationBesoin(ApiException(500, 'Panne')), 'Panne');
+    Langue.courante.value = Langue.arabe;
+    expect(messagePublicationBesoin(ApiException(403, 'تم رفض الوصول: هذا الحساب لا يملك الصلاحيات اللازمة')),
+        'يمكن لحساب المريض فقط نشر طلب.');
+    expect(messagePublicationBesoin(ApiException(400, 'حدث خطأ (الرمز 400). أعد المحاولة بعد قليل.')),
+        'الطلب غير مكتمل.');
+  });
+
   test('invitation de secrétaire et candidature : refus 409/400/403 comme le site (FR et AR)', () {
     Langue.courante.value = Langue.francais;
     expect(messageInvitationSecretaire(ApiException(409, 'Action impossible : la situation a changé entre-temps')),
