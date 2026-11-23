@@ -225,4 +225,25 @@ void testRechercheMedecinsPagination() {
     expect(vues.single.url.queryParameters['specialite'], 'generaliste');
     expect(total, 312);
   });
+
+  test('rechercherMedecins envoie la commune et communes() lit la liste de l API', () async {
+    final vues = <http.Request>[];
+    final communes = await http.runWithClient(
+      () async {
+        const api = ApiService(base: 'https://api.test');
+        await api.rechercherMedecins(wilaya: '16', commune: 'Bab Ezzouar');
+        return api.communes(specialite: 'generaliste', wilaya: '16');
+      },
+      () => MockClient((r) async {
+        vues.add(r);
+        final corps = r.url.path.endsWith('/communes') ? '[{"slug":"alger-centre","nom":"Alger-Centre","nombre":5},'
+            '{"slug":"bab-ezzouar","nom":"Bab Ezzouar","nombre":8}]' : '[]';
+        return http.Response(corps, 200, headers: {'content-type': 'application/json'});
+      }),
+    );
+    expect(vues[0].url.queryParameters['commune'], 'Bab Ezzouar');
+    expect(vues[1].url.path, '/api/medecins/communes');
+    expect(vues[1].url.queryParameters, {'specialite': 'generaliste', 'wilaya': '16'});
+    expect(communes, ['Alger-Centre', 'Bab Ezzouar']);
+  });
 }

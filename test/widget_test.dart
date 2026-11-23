@@ -95,6 +95,7 @@ class FakeApiService extends ApiService {
   Future<List<Map<String, dynamic>>> rechercherMedecins({
     String? specialite,
     String? wilaya,
+    String? commune,
     String? q,
     int page = 0,
     void Function(int total)? surTotal,
