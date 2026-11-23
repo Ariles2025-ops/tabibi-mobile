@@ -26,6 +26,7 @@ import 'services/session.dart';
 import 'utils/espace_pro.dart';
 import 'utils/identifiants.dart';
 import 'utils/notifications.dart';
+import 'utils/liens_appli.dart';
 import 'utils/praticien.dart';
 import 'widgets/composants.dart';
 import 'widgets/selecteur_langue.dart';
@@ -99,6 +100,15 @@ class _TabibiAppState extends State<TabibiApp> {
       supportedLocales: const [Locale('fr'), Locale('ar')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: CoqueApp(api: widget.api, auth: widget.auth),
+      // Lien profond https://ndawik.com/medecins/{id} : ouvre la fiche au-dessus de l'accueil.
+      onGenerateRoute: (reglages) {
+        final id = medecinIdDepuisRoute(reglages.name);
+        if (id == null) return null;
+        return MaterialPageRoute<void>(
+          settings: reglages,
+          builder: (_) => FicheMedecinPage(medecinId: id, api: widget.api, auth: widget.auth),
+        );
+      },
     );
   }
 }
