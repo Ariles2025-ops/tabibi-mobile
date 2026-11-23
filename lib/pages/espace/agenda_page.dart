@@ -8,7 +8,7 @@ import '../../utils/dates.dart';
 import '../../utils/espace_pro.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
-import '../../utils/rendez_vous.dart' show estAnnule, messageRendezVousDeplaceCabinet;
+import '../../utils/rendez_vous.dart' show estAnnule, messageRendezVousAnnuleCabinet, messageRendezVousDeplaceCabinet;
 import 'cabinet.dart';
 import 'creneaux_page.dart';
 import 'nouvelle_ordonnance_page.dart';
@@ -207,7 +207,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     message(switch (action) {
       ActionRdv.honorer => t('Rendez-vous du $date marqué honoré.', 'تم تسجيل حضور المريض للموعد في $date.'),
       ActionRdv.absent => t('Patient signalé absent au rendez-vous du $date.', 'تم تسجيل غياب المريض عن الموعد في $date.'),
-      ActionRdv.annuler => t('Rendez-vous annulé', 'تم إلغاء الموعد'),
+      ActionRdv.annuler => messageRendezVousAnnuleCabinet(rdv['debut'],
+          patientPrevenu: '${rdv['source']}'.trim().toUpperCase() != 'TELEPHONE'),
       ActionRdv.deplacer || ActionRdv.ordonnance => '',
     });
     await recharger();
