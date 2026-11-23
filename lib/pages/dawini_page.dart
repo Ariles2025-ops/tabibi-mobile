@@ -143,7 +143,7 @@ class _DawiniPageState extends State<DawiniPage> {
       publie = true;
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.message);
+      _message(messagePublicationBesoin(e));
     } on Exception catch (e) {
       _message(messageErreur(e));
     } finally {

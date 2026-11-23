@@ -299,6 +299,20 @@ String messageReponseBesoin(ApiException e) {
   };
 }
 
+/// Message d'un refus a la publication d'une demande de medicament (Dawini), comme le site :
+/// 403 « Seul un compte patient peut publier une demande. », 400 « La demande est incomplète. ».
+/// Un texte precis envoye par le serveur est conserve ; seuls les libelles generiques de l'appli
+/// sont remplaces.
+String messagePublicationBesoin(ApiException e) {
+  if (!estMessageGenerique(e.message)) return e.message;
+  return switch (e.statusCode) {
+    403 => t('Seul un compte patient peut publier une demande.',
+        'يمكن لحساب المريض فقط نشر طلب.'),
+    400 => t('La demande est incomplète.', 'الطلب غير مكتمل.'),
+    _ => e.message,
+  };
+}
+
 /// Vrai pour un libelle par defaut de l'appli (ou sa traduction arabe d'un refus du serveur) :
 /// un tel texte ne dit rien de precis, l'ecran le remplace par la phrase du site.
 bool estMessageGenerique(String message) => const [
