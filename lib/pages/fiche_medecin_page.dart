@@ -26,6 +26,24 @@ String get messageConversationRefusee => t(
     'Vous devez avoir un rendez-vous avec ce médecin pour lui écrire.',
     'يجب أن يكون لديك موعد مع هذا الطبيب لمراسلته.');
 
+/// Message d'un echec de reservation, comme le site : 403 = compte non patient, 404 = creneau
+/// supprime entre-temps ; tout autre statut garde le message de l'API (deja traduit).
+String messageEchecReservation(ApiException e) => switch (e.statusCode) {
+      403 => t('Seul un compte patient peut réserver un créneau.',
+          'يمكن لحساب المريض فقط حجز موعد.'),
+      404 => t("Ce créneau n'est plus disponible.", 'هذا الموعد لم يعد متاحًا.'),
+      _ => e.message,
+    };
+
+/// Message d'un echec d'inscription a la liste d'attente, comme le site : 403 = compte non
+/// patient, 404 = praticien introuvable ; tout autre statut garde le message de l'API.
+String messageEchecInscription(ApiException e) => switch (e.statusCode) {
+      403 => t("Seul un compte patient peut s'inscrire sur une liste d'attente.",
+          'يمكن لحساب المريض فقط التسجيل في قائمة انتظار.'),
+      404 => t('Praticien introuvable.', 'الممارس غير موجود.'),
+      _ => e.message,
+    };
+
 /// Nombre de derniers avis affiches sur la fiche.
 const int nombreAvisAffiches = 5;
 
@@ -293,12 +311,16 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         // on recharge les creneaux, seul un creneau reellement pris disparait de la liste.
         _message(e.message);
         await _rechargerCreneaux();
+      } else if (e.introuvable) {
+        // Creneau supprime par le cabinet entre-temps : on recharge la liste, comme le site.
+        _message(messageEchecReservation(e));
+        await _rechargerCreneaux();
       } else if (e.nonAutorise) {
         _auth.seDeconnecter();
         _message(t('Session expirée : reconnectez-vous puis réessayez',
             'انتهت الجلسة: سجّل الدخول من جديد ثم أعد المحاولة'));
       } else {
-        _message(e.message);
+        _message(messageEchecReservation(e));
       }
     } on Exception catch (e) {
       _message(messageErreur(e));
@@ -408,7 +430,7 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         _message(t('Session expirée : reconnectez-vous puis réessayez',
             'انتهت الجلسة: سجّل الدخول من جديد ثم أعد المحاولة'));
       } else {
-        _message(e.message);
+        _message(messageEchecInscription(e));
       }
     } on Exception catch (e) {
       _message(messageErreur(e));
