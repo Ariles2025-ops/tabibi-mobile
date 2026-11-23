@@ -31,6 +31,9 @@ class _SecretairesPageState extends State<SecretairesPage> with AppelsEspace {
   bool _envoiEnCours = false;
 
   @override
+  String libelleChargement(ApiException e) => messageChargement(e, PublicPage.medecins);
+
+  @override
   void initState() {
     super.initState();
     if (auth.estConnecte) recharger();

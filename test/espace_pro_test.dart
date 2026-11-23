@@ -157,9 +157,11 @@ void main() {
     expect(messageChargement(interdit, PublicPage.patients), 'Cette page est réservée aux patients.');
     expect(messageChargement(interdit, PublicPage.patientsEtMedecins),
         'Cette page est réservée aux patients et aux médecins.');
+    expect(messageChargement(interdit, PublicPage.medecins), 'Cette page est réservée aux médecins.');
     expect(messageChargement(ApiException(500, 'Panne'), PublicPage.patients), 'Panne');
     Langue.courante.value = Langue.arabe;
     expect(messageChargement(interdit, PublicPage.patients), 'هذه الصفحة مخصّصة للمرضى.');
+    expect(messageChargement(interdit, PublicPage.medecins), 'هذه الصفحة مخصّصة للأطباء.');
     expect(messageChargement(interdit, PublicPage.patientsEtMedecins), 'هذه الصفحة مخصّصة للمرضى والأطباء.');
   });
 
