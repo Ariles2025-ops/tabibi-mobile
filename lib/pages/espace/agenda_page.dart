@@ -8,7 +8,7 @@ import '../../utils/dates.dart';
 import '../../utils/espace_pro.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
-import '../../utils/rendez_vous.dart' show estAnnule;
+import '../../utils/rendez_vous.dart' show estAnnule, messageRendezVousDeplaceCabinet;
 import 'cabinet.dart';
 import 'creneaux_page.dart';
 import 'nouvelle_ordonnance_page.dart';
@@ -135,7 +135,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       }
     });
     if (fait == true) {
-      message(t('Rendez-vous déplacé au $nouvelleDate', 'تم نقل الموعد إلى $nouvelleDate'));
+      message(messageRendezVousDeplaceCabinet(choisi['debut'], patientPrevenu: !telephone));
     }
     if (fait != null) await recharger();
   }

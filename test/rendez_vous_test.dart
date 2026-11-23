@@ -55,4 +55,15 @@ void main() {
     expect(messageRendezVousDeplace(null), 'Rendez-vous déplacé.');
     expect(messageRendezVousDeplace(''), 'Rendez-vous déplacé.');
   });
+
+  test('messageRendezVousDeplaceCabinet ne promet une alerte que pour un rendez-vous de la plateforme', () {
+    final prevenu = messageRendezVousDeplaceCabinet('2099-12-03T09:00:00', patientPrevenu: true);
+    expect(prevenu, startsWith('Rendez-vous déplacé au '));
+    expect(prevenu, endsWith(' : le patient est prévenu.'));
+    final tel = messageRendezVousDeplaceCabinet('2099-12-03T09:00:00', patientPrevenu: false);
+    expect(tel, endsWith('.'));
+    expect(tel, isNot(contains('prévenu')));
+    expect(messageRendezVousDeplaceCabinet(null, patientPrevenu: true), isNot(contains('null')));
+    expect(messageRendezVousDeplaceCabinet('', patientPrevenu: false), 'Rendez-vous déplacé.');
+  });
 }

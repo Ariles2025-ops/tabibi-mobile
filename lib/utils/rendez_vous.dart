@@ -77,3 +77,18 @@ String messageRendezVousDeplace(Object? debut) {
   if (date.isEmpty) return t('Rendez-vous déplacé.', 'تم نقل الموعد.');
   return t('Rendez-vous déplacé au $date.', 'تم نقل الموعد إلى $date.');
 }
+
+/// Confirmation d'un déplacement côté médecin/secrétaire, comme le site : « Rendez-vous déplacé au
+/// {date} : le patient est prévenu. » ; pour un rendez-vous pris par téléphone (le patient n'a pas de
+/// compte, personne ne le prévient) : « Rendez-vous déplacé au {date}. » sans promesse trompeuse.
+String messageRendezVousDeplaceCabinet(Object? debut, {required bool patientPrevenu}) {
+  final date = debut is String && debut.isNotEmpty ? formaterDateIso(debut) : '';
+  if (date.isEmpty) {
+    return patientPrevenu
+        ? t('Rendez-vous déplacé : le patient est prévenu.', 'تم نقل الموعد: تم إعلام المريض.')
+        : t('Rendez-vous déplacé.', 'تم نقل الموعد.');
+  }
+  return patientPrevenu
+      ? t('Rendez-vous déplacé au $date : le patient est prévenu.', 'تم نقل الموعد إلى $date: تم إعلام المريض.')
+      : t('Rendez-vous déplacé au $date.', 'تم نقل الموعد إلى $date.');
+}
