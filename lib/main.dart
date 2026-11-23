@@ -125,6 +125,11 @@ class _RecherchePageState extends State<RecherchePage> {
   final _nom = TextEditingController();
   String? _specialite;
   String? _wilaya;
+  String? _commune;
+
+  /// Communes proposees pour la wilaya choisie (GET /api/medecins/communes) ; vide sinon.
+  List<String> _communes = [];
+  int _seqCommunes = 0;
   List<Map<String, dynamic>> _resultats = [];
   bool _charge = false;
 
@@ -149,6 +154,23 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Numero de la derniere demande : une reponse plus ancienne est ignoree.
   int _seq = 0;
 
+  /// Remet la commune a zero et recharge la liste des communes (wilaya ou specialite change).
+  Future<void> _chargerCommunes() async {
+    final id = ++_seqCommunes;
+    setState(() {
+      _commune = null;
+      _communes = [];
+    });
+    final wilaya = _wilaya;
+    if (wilaya == null) return;
+    try {
+      final liste = await widget.api.communes(specialite: _specialite, wilaya: wilaya);
+      if (mounted && id == _seqCommunes) setState(() => _communes = liste);
+    } on Exception {
+      // Liste indisponible : pas de menu, la recherche par wilaya reste possible.
+    }
+  }
+
   /// Lance la recherche ; avec [suite], ajoute la page suivante aux resultats affiches.
   Future<void> _rechercher({bool suite = false}) async {
     final page = suite ? _page + 1 : 0;
@@ -162,6 +184,7 @@ class _RecherchePageState extends State<RecherchePage> {
       final r = await widget.api.rechercherMedecins(
           specialite: _specialite,
           wilaya: _wilaya,
+          commune: _commune,
           q: _nom.text,
           page: page,
           surTotal: (n) => total = n);
@@ -386,6 +409,7 @@ class _RecherchePageState extends State<RecherchePage> {
 
   void _choisirSpecialite(String slug) {
     setState(() => _specialite = _specialite == slug ? null : slug);
+    _chargerCommunes();
     _rechercher();
   }
 
@@ -585,6 +609,7 @@ class _RecherchePageState extends State<RecherchePage> {
                                 ],
                                 onChanged: (v) {
                                   setState(() => _specialite = v);
+                                  _chargerCommunes();
                                   _rechercher();
                                 },
                               ),
@@ -609,11 +634,36 @@ class _RecherchePageState extends State<RecherchePage> {
                                 ],
                                 onChanged: (v) {
                                   setState(() => _wilaya = v);
+                                  _chargerCommunes();
                                   _rechercher();
                                 },
                               ),
                             ),
                           ]),
+                          if (_wilaya != null && _communes.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              key: ValueKey('commune-$_wilaya-$_commune'),
+                              initialValue: _commune,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                  labelText: t('Commune', 'البلدية')),
+                              items: [
+                                DropdownMenuItem<String>(
+                                    value: null,
+                                    child: Text(t('Toutes', 'الكل'))),
+                                for (final c in _communes)
+                                  DropdownMenuItem(
+                                      value: c,
+                                      child: Text(c,
+                                          overflow: TextOverflow.ellipsis)),
+                              ],
+                              onChanged: (v) {
+                                setState(() => _commune = v);
+                                _rechercher();
+                              },
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,

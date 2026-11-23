@@ -149,6 +149,7 @@ class ApiService {
   Future<List<Map<String, dynamic>>> rechercherMedecins({
     String? specialite,
     String? wilaya,
+    String? commune,
     String? q,
     int page = 0,
     void Function(int total)? surTotal,
@@ -156,6 +157,7 @@ class ApiService {
     final params = <String, String>{};
     if (specialite != null && specialite.isNotEmpty) params['specialite'] = specialite;
     if (wilaya != null && wilaya.isNotEmpty) params['wilaya'] = wilaya;
+    if (commune != null && commune.isNotEmpty) params['commune'] = commune;
     if (q != null && q.isNotEmpty) params['q'] = q;
     if (page > 0) params['page'] = '$page';
     final uri = Uri.parse('$base/api/medecins').replace(queryParameters: params);
@@ -164,6 +166,18 @@ class ApiService {
     final total = int.tryParse(res.headers['x-total-count'] ?? '');
     if (total != null) surTotal?.call(total);
     return liste;
+  }
+
+  /// Communes ou exercent des praticiens (GET /api/medecins/communes), selon [specialite] et
+  /// [wilaya] ; sert au menu « Commune » une fois la wilaya choisie.
+  Future<List<String>> communes({String? specialite, String? wilaya}) async {
+    final params = <String, String>{};
+    if (specialite != null && specialite.isNotEmpty) params['specialite'] = specialite;
+    if (wilaya != null && wilaya.isNotEmpty) params['wilaya'] = wilaya;
+    final uri = Uri.parse('$base/api/medecins/communes').replace(queryParameters: params);
+    final res = await _Http.get(uri);
+    _verifier(res, '/api/medecins/communes');
+    return (_json(res) as List).whereType<String>().where((c) => c.isNotEmpty).toList();
   }
 
   /// Fiche publique d'un praticien ([id] : UUID en texte) :

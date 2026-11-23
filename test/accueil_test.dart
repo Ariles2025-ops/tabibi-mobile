@@ -16,6 +16,7 @@ class _ApiAccueil extends ApiService {
   Future<List<Map<String, dynamic>>> rechercherMedecins({
     String? specialite,
     String? wilaya,
+    String? commune,
     String? q,
     int page = 0,
     void Function(int total)? surTotal,
@@ -42,6 +43,7 @@ class _ApiLente extends ApiService {
   Future<List<Map<String, dynamic>>> rechercherMedecins({
     String? specialite,
     String? wilaya,
+    String? commune,
     String? q,
     int page = 0,
     void Function(int total)? surTotal,
