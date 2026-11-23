@@ -177,7 +177,13 @@ class ApiService {
     final uri = Uri.parse('$base/api/medecins/communes').replace(queryParameters: params);
     final res = await _Http.get(uri);
     _verifier(res, '/api/medecins/communes');
-    return (_json(res) as List).whereType<String>().where((c) => c.isNotEmpty).toList();
+    // L'API renvoie des objets {slug, nom, nombre} ; on garde les noms non vides.
+    return (_json(res) as List)
+        .whereType<Map>()
+        .map((c) => c['nom'])
+        .whereType<String>()
+        .where((nom) => nom.isNotEmpty)
+        .toList();
   }
 
   /// Fiche publique d'un praticien ([id] : UUID en texte) :

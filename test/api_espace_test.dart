@@ -236,7 +236,8 @@ void testRechercheMedecinsPagination() {
       },
       () => MockClient((r) async {
         vues.add(r);
-        final corps = r.url.path.endsWith('/communes') ? '["Alger-Centre","Bab Ezzouar"]' : '[]';
+        final corps = r.url.path.endsWith('/communes') ? '[{"slug":"alger-centre","nom":"Alger-Centre","nombre":5},'
+            '{"slug":"bab-ezzouar","nom":"Bab Ezzouar","nombre":8}]' : '[]';
         return http.Response(corps, 200, headers: {'content-type': 'application/json'});
       }),
     );
