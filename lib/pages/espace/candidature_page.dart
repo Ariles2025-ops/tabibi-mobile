@@ -254,12 +254,13 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
   }
 
   Widget _champ(TextEditingController c, String libelle,
-          {TextInputType? type, bool obligatoire = false}) =>
+          {TextInputType? type, bool obligatoire = false, int? max}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: TextField(
           controller: c,
           keyboardType: type,
+          maxLength: max,
           decoration: InputDecoration(labelText: obligatoire ? '$libelle *' : libelle),
         ),
       );
@@ -292,9 +293,10 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
                   child: Text(t('Nouvelle candidature', 'ترشح جديد'),
                       style: Theme.of(context).textTheme.titleMedium),
                 ),
-              _champ(_nom, t('Nom complet', 'الاسم الكامل'), obligatoire: true),
+              _champ(_nom, t('Nom complet', 'الاسم الكامل'),
+                  obligatoire: true, max: maxNomCandidature),
               _champ(_ordre, t("Numéro d'inscription à l'ordre", 'رقم التسجيل في الهيئة'),
-                  obligatoire: true),
+                  obligatoire: true, max: maxOrdreCandidature),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
@@ -314,7 +316,7 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
                 child: ChampWilaya(
                     valeur: _wilaya, obligatoire: true, onChanged: (v) => setState(() => _wilaya = v)),
               ),
-              _champ(_ville, t('Ville', 'المدينة')),
+              _champ(_ville, t('Ville', 'المدينة'), max: maxVilleCandidature),
               _champ(_telephone, t('Téléphone', 'الهاتف'), type: TextInputType.phone),
               if (_erreurFormulaire != null)
                 Padding(

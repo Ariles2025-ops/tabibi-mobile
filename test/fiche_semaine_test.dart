@@ -5,6 +5,11 @@ import 'package:tabibi_mobile/utils/fiche_semaine.dart';
 import 'api_espace_test.dart' show requetes;
 
 void main() {
+  test('longueurs maximales du RDV téléphone : nom 120, motif 200, comme le site', () {
+    expect(maxNomPatient, 120);
+    expect(maxMotif, 200);
+  });
+
   test('corps de la semaine type : jours dans l\'ordre, heures et date', () {
     final c = corpsSemaineType(
       jours: {'MERCREDI', 'LUNDI'},

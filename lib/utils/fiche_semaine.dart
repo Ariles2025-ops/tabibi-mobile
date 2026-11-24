@@ -121,6 +121,9 @@ Set<String> languesDe(Object? brut) {
 
 const int maxMotif = 200;
 
+/// Nom du patient : 120 caracteres au plus, comme le formulaire du site (rdv-telephone.component.ts).
+const int maxNomPatient = 120;
+
 /// Mêmes phrases que le formulaire « RDV pris au téléphone » du site.
 String get messageNomPatientRequis => t('Indiquez le nom du patient.', 'أدخل اسم المريض.');
 String get messageTelephonePatientInvalide => t('Indiquez un numéro algérien valide (ex. 0550 12 34 56).',
