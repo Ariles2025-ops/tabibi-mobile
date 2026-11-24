@@ -124,8 +124,10 @@ class _ComptePageState extends State<ComptePage> {
                   Icons.notifications_outlined,
                   libelleNotifications(_nonLues),
                   () => _ouvrir(MesNotificationsPage(api: api, auth: _auth))),
-              _Entree(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'),
-                  () => _ouvrir(MesConversationsPage(api: api, auth: _auth))),
+              // Comme le site : la messagerie est reservee aux patients et aux medecins.
+              if (peutUtiliserMessagerie(roles))
+                _Entree(Icons.chat_bubble_outline, t('Messagerie', 'الرسائل'),
+                    () => _ouvrir(MesConversationsPage(api: api, auth: _auth))),
               _Entree(
                 Icons.videocam_outlined,
                 visioActive

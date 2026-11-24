@@ -54,6 +54,14 @@ List<Espace> espacesPour(Set<String> roles) => [
 /// « Mes ordonnances » (reserves au patient) lui renverraient « Accès refusé ».
 bool comptePro(Set<String> roles) => aUnEspacePro(roles) && !roles.contains('PATIENT');
 
+/// Vrai si « Messagerie » est proposee, comme le site : l'API (GET /api/conversations) la reserve
+/// aux roles PATIENT et MEDECIN ; un compte secretaire ou pharmacie sans l'un d'eux n'a pas
+/// d'entree menant a un refus 403. Roles inconnus (hors connexion) : l'entree reste affichee.
+bool peutUtiliserMessagerie(Set<String> roles) =>
+    roles.contains('PATIENT') ||
+    roles.contains('MEDECIN') ||
+    !(roles.contains('SECRETAIRE') || roles.contains('PHARMACIE'));
+
 /// Message affiche a la place de ces pages pour un compte professionnel.
 String messagePageReservee() => t(
     'Cette page est réservée aux patients. Utilisez « Mon espace ».',

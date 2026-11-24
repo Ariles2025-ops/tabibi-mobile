@@ -911,6 +911,29 @@ void main() {
     expect(find.text('Vérifier une ordonnance'), findsOneWidget);
   });
 
+  testWidgets(
+      'mon compte : « Messagerie » est cachée à une secrétaire ou une pharmacie (réservée aux patients et médecins), comme le site',
+      (tester) async {
+    await afficher(tester, ComptePage(api: FakeEspaceApi(roles: ['PATIENT']), auth: SessionTest()));
+    expect(find.text('Messagerie'), findsOneWidget);
+
+    await afficher(
+        tester,
+        ComptePage(
+            key: const ValueKey('compte-secretaire'),
+            api: FakeEspaceApi(roles: ['SECRETAIRE']),
+            auth: SessionTest()));
+    expect(find.text('Messagerie'), findsNothing);
+
+    await afficher(
+        tester,
+        ComptePage(
+            key: const ValueKey('compte-medecin'),
+            api: FakeEspaceApi(roles: ['MEDECIN']),
+            auth: SessionTest()));
+    expect(find.text('Messagerie'), findsOneWidget);
+  });
+
   testWidgets('mon espace medecin propose les ordonnances rédigées', (tester) async {
     await afficher(tester, MonEspacePage(api: FakeEspaceApi(roles: ['MEDECIN']), auth: SessionTest()));
     expect(find.text('Mes ordonnances rédigées'), findsOneWidget);
