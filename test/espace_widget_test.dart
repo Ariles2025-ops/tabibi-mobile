@@ -1228,6 +1228,19 @@ void main() {
     expect(find.text('Déposer ma candidature'), findsOneWidget);
   });
 
+  testWidgets('ma candidature : mêmes longueurs maximales que le site (nom 160, ordre 40, ville 80)',
+      (tester) async {
+    final api = FakeEspaceApi();
+    await afficher(tester, CandidaturePage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Déposer ma candidature'));
+    await tester.pumpAndSettle();
+    int? max(String libelle) =>
+        tester.widget<TextField>(find.widgetWithText(TextField, libelle)).maxLength;
+    expect(max('Nom complet *'), 160);
+    expect(max("Numéro d'inscription à l'ordre *"), 40);
+    expect(max('Ville'), 80);
+  });
+
   testWidgets('réclamer une fiche : champs préremplis, titre et bouton dédiés, fiche envoyée avec la demande',
       (tester) async {
     final api = FakeEspaceApi();

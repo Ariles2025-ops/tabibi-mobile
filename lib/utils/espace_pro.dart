@@ -383,3 +383,9 @@ String messageDepotCandidature(ApiException e) {
     _ => e.message,
   };
 }
+
+/// Longueurs maximales des champs de la candidature, les memes que le formulaire du site
+/// (praticien.component.ts) : au-dela, l'API refuse avec « textes pas trop longs ».
+const int maxNomCandidature = 160;
+const int maxVilleCandidature = 80;
+const int maxOrdreCandidature = 40;

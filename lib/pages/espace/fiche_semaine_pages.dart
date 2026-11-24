@@ -481,6 +481,7 @@ class _RdvTelephonePageState extends State<RdvTelephonePage> {
           const SizedBox(height: 8),
           TextField(
             controller: _nom,
+            maxLength: maxNomPatient,
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(
                 labelText: t('Nom du patient', 'اسم المريض'),
