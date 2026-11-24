@@ -62,6 +62,16 @@ bool peutUtiliserMessagerie(Set<String> roles) =>
     roles.contains('MEDECIN') ||
     !(roles.contains('SECRETAIRE') || roles.contains('PHARMACIE'));
 
+/// Vrai si la fiche d'un praticien ne propose pas « Ouvrir une conversation », comme le site
+/// (`messagerieReservee`) : un compte medecin, secretaire, pharmacie ou administrateur n'est pas
+/// un patient. Roles inconnus (hors connexion) : le bouton reste affiche.
+bool messagerieReserveeAuxPatients(Set<String> roles) =>
+    roles.any(const {'MEDECIN', 'SECRETAIRE', 'PHARMACIE', 'ADMIN'}.contains);
+
+/// Message affiche a la place du bouton de messagerie sur la fiche d'un praticien (comme le site).
+String messageMessagerieReservee() =>
+    t('La messagerie est réservée aux patients.', 'المراسلة مخصّصة للمرضى.');
+
 /// Message affiche a la place de ces pages pour un compte professionnel.
 String messagePageReservee() => t(
     'Cette page est réservée aux patients. Utilisez « Mon espace ».',

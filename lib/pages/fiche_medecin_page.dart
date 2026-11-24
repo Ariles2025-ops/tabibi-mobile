@@ -13,6 +13,7 @@ import '../services/session.dart';
 import '../utils/avis.dart';
 import '../utils/dates.dart';
 import '../utils/fiche_semaine.dart';
+import '../utils/espace_pro.dart';
 import '../utils/identifiants.dart';
 import '../widgets/composants.dart';
 import '../widgets/vue_erreur.dart';
@@ -163,6 +164,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
   /// Vrai pendant l'inscription sur la liste d'attente (bouton desactive).
   bool _inscriptionEnCours = false;
 
+  /// Vrai pour un compte medecin, secretaire, pharmacie ou admin : pas de messagerie (comme le site).
+  bool _messagerieReservee = false;
+
   @override
   void initState() {
     super.initState();
@@ -180,8 +184,10 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
       final avis = await _chargerAvis();
       final reclamable = await widget.api.reclamable(widget.medecinId);
       final dejaInscrit = await _dejaInscrit();
+      final reservee = await _compteSansMessagerie();
       if (!mounted) return;
       setState(() {
+        _messagerieReservee = reservee;
         _reclamable = reclamable;
         if (dejaInscrit) _inscrit = true;
         _medecin = medecin;
@@ -219,6 +225,18 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
       return false;
+    } on Exception {
+      return false;
+    }
+  }
+
+  /// Vrai si le compte connecte n'est pas un patient (GET /api/moi) ; faux sans session ou en cas
+  /// d'echec : le bouton reste affiche et l'API refuse (403) si besoin.
+  Future<bool> _compteSansMessagerie() async {
+    final token = _auth.accessToken;
+    if (!_auth.estConnecte || token == null) return false;
+    try {
+      return messagerieReserveeAuxPatients(rolesDe(await widget.api.moi(token)));
     } on Exception {
       return false;
     }
@@ -505,9 +523,9 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
         ),
         const SizedBox(height: 12),
         Row(children: [
-          if (!_reclamable) Expanded(child: _boutonConversation()),
+          if (!_reclamable && !_messagerieReservee) Expanded(child: _boutonConversation()),
           if (telephone != null) ...[
-            if (!_reclamable) const SizedBox(width: 8),
+            if (!_reclamable && !_messagerieReservee) const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => launchUrl(Uri(
@@ -519,6 +537,10 @@ class _FicheMedecinPageState extends State<FicheMedecinPage> {
             ),
           ],
         ]),
+        if (!_reclamable && _messagerieReservee) ...[
+          const SizedBox(height: 8),
+          Text(messageMessagerieReservee(), textAlign: TextAlign.center),
+        ],
         const SizedBox(height: 24),
         if (_reclamable)
           CarteTabibi(

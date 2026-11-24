@@ -180,7 +180,9 @@ class _SecretairesPageState extends State<SecretairesPage> with AppelsEspace {
                   ].where((x) => x.isNotEmpty).join('\n')),
                   trailing: TextButton(
                     onPressed: () => _retirer(r),
-                    child: Text(t('Retirer', 'إزالة')),
+                    child: Text(invitationEnAttente(r)
+                        ? t("Annuler l'invitation", 'إلغاء الدعوة')
+                        : t('Retirer', 'إزالة')),
                   ),
                 ),
               ),

@@ -854,6 +854,8 @@ void main() {
     expect(find.textContaining('pas encore acceptée'), findsOneWidget);
     expect(find.text('nouvelle@exemple.dz'), findsWidgets);
 
+    // Invitation en attente : le bouton dit « Annuler l'invitation », comme le site.
+    expect(find.text("Annuler l'invitation"), findsOneWidget);
     await tester.tap(find.text('Retirer').first);
     await tester.pumpAndSettle();
     expect(find.text('Retirer cette secrétaire ?'), findsOneWidget);
