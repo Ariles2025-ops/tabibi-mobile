@@ -4,6 +4,14 @@ import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/espace_pro.dart';
 
 void main() {
+  group('telephonePatientRdv', () {
+    test('préfère le numéro saisi sur le rendez-vous, sinon celui de la fiche patient', () {
+      expect(telephonePatientRdv(' 0661000000 ', '0550123456'), '0661000000');
+      expect(telephonePatientRdv(null, ' 0550123456 '), '0550123456');
+      expect(telephonePatientRdv('  ', null), '');
+    });
+  });
+
   tearDown(() => Langue.courante.value = Langue.francais);
 
   test('libelleRoles : roles metier comme le site, roles techniques masques', () {

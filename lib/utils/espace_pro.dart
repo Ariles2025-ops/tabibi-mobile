@@ -389,3 +389,13 @@ String messageDepotCandidature(ApiException e) {
 const int maxNomCandidature = 160;
 const int maxVilleCandidature = 80;
 const int maxOrdreCandidature = 40;
+
+/// Numero du patient d'un rendez-vous de l'agenda, comme le site : celui saisi sur le rendez-vous
+/// (prise par telephone) sinon celui de sa fiche patient ; chaine vide si aucun n'est connu.
+String telephonePatientRdv(Object? saisi, Object? repertoire) {
+  for (final v in [saisi, repertoire]) {
+    final n = v is String ? v.trim() : '';
+    if (n.isNotEmpty) return n;
+  }
+  return '';
+}
