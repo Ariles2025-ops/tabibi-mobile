@@ -232,4 +232,16 @@ void main() {
     expect(messageReponseBesoin(ApiException(400, 'تعذّر تنفيذ الطلب: تحقق من المعلومات المدخلة ثم أعد المحاولة.')),
         'الرد غير مكتمل.');
   });
+
+  test('messagerieReserveeAuxPatients : comme le site, seul un compte patient ecrit au medecin', () {
+    expect(messagerieReserveeAuxPatients({'PATIENT'}), isFalse);
+    expect(messagerieReserveeAuxPatients(<String>{}), isFalse);
+    expect(messagerieReserveeAuxPatients({'MEDECIN'}), isTrue);
+    expect(messagerieReserveeAuxPatients({'SECRETAIRE'}), isTrue);
+    expect(messagerieReserveeAuxPatients({'PHARMACIE'}), isTrue);
+    expect(messagerieReserveeAuxPatients({'PATIENT', 'ADMIN'}), isTrue);
+    expect(messageMessagerieReservee(), 'La messagerie est réservée aux patients.');
+    Langue.courante.value = Langue.arabe;
+    expect(messageMessagerieReservee(), 'المراسلة مخصّصة للمرضى.');
+  });
 }

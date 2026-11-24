@@ -536,6 +536,15 @@ class FakeApiServiceSansRendezVous extends FakeApiService {
       throw const ApiException(403, 'Aucun rendez-vous avec ce medecin');
 }
 
+/// Variante dont le compte connecte est un medecin (GET /api/moi -> roles MEDECIN).
+class FakeApiServiceCompteMedecin extends FakeApiService {
+  const FakeApiServiceCompteMedecin();
+
+  @override
+  Future<Map<String, dynamic>> moi(String token) async =>
+      {'sujet': 'm1', 'nom': 'dr', 'roles': ['MEDECIN']};
+}
+
 /// Variante dont l'annuaire ne repond plus (404 sur la fiche publique) : les ecrans montrent
 /// « Médecin » suivi de l'identifiant abrege a la place du nom.
 class FakeApiServiceSansFiche extends FakeApiService {
@@ -1431,6 +1440,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Bonjour docteur, mieux merci.'), findsOneWidget);
     expect(find.text('Envoyer'), findsOneWidget);
+  });
+
+  testWidgets('la fiche medecin cache la messagerie a un compte medecin, comme le site',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: FicheMedecinPage(
+        medecinId: FakeApiService.medecinDemo,
+        api: const FakeApiServiceCompteMedecin(),
+        auth: sessionConnectee(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Ouvrir une conversation'), findsNothing);
+    expect(find.text('La messagerie est réservée aux patients.'), findsOneWidget);
   });
 
   testWidgets('la fiche medecin explique le refus (403) sans rendez-vous avec le praticien',
