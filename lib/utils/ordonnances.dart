@@ -120,3 +120,10 @@ String? nomPraticien(Map<String, dynamic> fiche) {
   final Object? nom = fiche['nomComplet'];
   return nom is String && nom.trim().isNotEmpty ? nom.trim() : null;
 }
+
+/// Praticien d'une ordonnance, comme le site : son nom, sinon « Votre médecin » (jamais
+/// l'identifiant, même abrégé).
+String nomMedecinOrdonnance(String? nom) {
+  final propre = nom?.trim() ?? '';
+  return propre.isEmpty ? t('Votre médecin', 'طبيبك') : propre;
+}

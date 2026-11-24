@@ -87,17 +87,17 @@ class _DetailOrdonnancePageState extends State<DetailOrdonnancePage> {
   }
 
   /// Nom du praticien (endpoint public, identifiant UUID en texte) ; un echec n'empeche pas
-  /// l'affichage : « Médecin » et l'identifiant abrege sont montres a la place.
+  /// l'affichage : « Votre médecin » est montre a la place, comme le site (jamais l'identifiant).
   Future<String> _resoudreNomMedecin(Map<String, dynamic> ordonnance) async {
     final id = identifiant(ordonnance['medecinId']);
-    if (id.isEmpty) return libelleMedecin(id);
+    if (id.isEmpty) return nomMedecinOrdonnance(null);
     try {
       final Object? nom = (await widget.api.medecin(id))['nomComplet'];
-      if (nom is String && nom.isNotEmpty) return nom;
+      if (nom is String && nom.trim().isNotEmpty) return nomMedecinOrdonnance(nom);
     } on Exception {
       // Fiche indisponible : libelle de repli ci-dessous.
     }
-    return libelleMedecin(id);
+    return nomMedecinOrdonnance(null);
   }
 
   Future<void> _copier(String code) async {

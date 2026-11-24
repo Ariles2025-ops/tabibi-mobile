@@ -125,4 +125,11 @@ void main() {
     expect(nomPraticien({'nomComplet': null}), isNull);
     expect(nomPraticien({}), isNull);
   });
+
+  test("nomMedecinOrdonnance : le nom, sinon « Votre médecin » (jamais l'identifiant), comme le site", () {
+    expect(nomMedecinOrdonnance('Dr Amina Belkacem'), 'Dr Amina Belkacem');
+    expect(nomMedecinOrdonnance('  Dr Amina  '), 'Dr Amina');
+    expect(nomMedecinOrdonnance(null), 'Votre médecin');
+    expect(nomMedecinOrdonnance('   '), 'Votre médecin');
+  });
 }
