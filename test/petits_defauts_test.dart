@@ -10,6 +10,15 @@ import 'package:tabibi_mobile/utils/profil.dart';
 void main() {
   tearDown(() => Langue.courante.value = Langue.francais);
 
+  test('messagerie : réservée aux patients et médecins, comme le site', () {
+    expect(peutUtiliserMessagerie({'PATIENT'}), isTrue);
+    expect(peutUtiliserMessagerie({'MEDECIN'}), isTrue);
+    expect(peutUtiliserMessagerie({'SECRETAIRE', 'PATIENT'}), isTrue);
+    expect(peutUtiliserMessagerie({'SECRETAIRE'}), isFalse);
+    expect(peutUtiliserMessagerie({'PHARMACIE'}), isFalse);
+    expect(peutUtiliserMessagerie({}), isTrue); // hors connexion
+  });
+
   test('409 de reservation : texte arabe en arabe, texte du serveur en français', () {
     const serveur = "Ce créneau n'est plus disponible.";
     expect(traduireErreurServeur(409, serveur), serveur);
