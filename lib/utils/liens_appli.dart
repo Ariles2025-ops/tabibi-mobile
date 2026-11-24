@@ -11,6 +11,18 @@ String? medecinIdDepuisRoute(String? route) {
   final chemin = route.split(RegExp(r'[?#]')).first;
   final id = _lienMedecin.firstMatch(chemin)?.group(1);
   if (id == null) return null;
-  final decode = Uri.decodeComponent(id).trim();
-  return decode.isEmpty ? null : decode;
+  final decode = decoderSegment(id)?.trim();
+  return decode == null || decode.isEmpty ? null : decode;
+}
+
+/// Decode un segment de lien (« %20 » -> espace) ; null si l'encodage est invalide (« %E0%A4% »),
+/// pour qu'un lien mal forme n'ouvre rien au lieu de faire planter l'ecran.
+String? decoderSegment(String segment) {
+  try {
+    return Uri.decodeComponent(segment);
+  } on ArgumentError {
+    return null;
+  } on FormatException {
+    return null;
+  }
 }

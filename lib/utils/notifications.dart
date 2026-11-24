@@ -4,6 +4,7 @@
 import '../i18n/langue.dart';
 import '../models/notification.dart';
 import 'dates.dart';
+import 'liens_appli.dart';
 
 /// Date de creation formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
 String dateNotification(NotificationUtilisateur notification) {
@@ -64,7 +65,9 @@ CibleNotification? cibleDuLien(String lien) {
   final chemin = brut.split(RegExp('[?#]')).first;
   final segments = chemin.split('/').where((s) => s.isNotEmpty).toList();
   if (segments.isEmpty || segments.length > 2) return null;
-  final id = segments.length == 2 ? Uri.decodeComponent(segments[1]) : null;
+  final id = segments.length == 2 ? decoderSegment(segments[1]) : null;
+  // Identifiant mal encode : lien inutilisable, pas de « Voir » (au lieu d'un plantage).
+  if (segments.length == 2 && id == null) return null;
   switch (segments[0]) {
     case 'mes-rendez-vous':
       return id == null ? const CibleNotification(TypeCible.rendezVous) : null;
