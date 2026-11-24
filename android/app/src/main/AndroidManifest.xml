@@ -25,12 +25,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- App Links : https://ndawik.com/medecins/{id} ouvre l'appli (fiche du médecin). -->
+            <!-- App Links : https://ndawik.com/medecins/{id} et les pages publiques /praticiens/{id}[/slug]
+                 (et /ar/praticiens/...) ouvrent l'appli sur la fiche du médecin, comme sur le site. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="ndawik.com" android:pathPrefix="/medecins/"/>
+                <data android:scheme="https" android:host="ndawik.com" android:pathPrefix="/praticiens/"/>
+                <data android:scheme="https" android:host="ndawik.com" android:pathPrefix="/ar/praticiens/"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
