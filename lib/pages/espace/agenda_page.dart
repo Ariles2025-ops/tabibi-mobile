@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../i18n/langue.dart';
 import '../../services/api_service.dart';
@@ -47,6 +48,7 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
 
   List<Map<String, dynamic>> _rdvs = [];
   final Map<String, String> _patients = {};
+  final Map<String, String> _telephones = {};
 
   @override
   String libelleChargement(ApiException e) =>
@@ -74,6 +76,8 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
       for (final p in await widget.cabinet.patients(widget.api, jeton)) {
         final Object? nom = p['nomComplet'];
         if (nom is String && nom.isNotEmpty) _patients[identifiant(p['patientId'])] = nom;
+        final tel = telephonePatientRdv(null, p['telephone']);
+        if (tel.isNotEmpty) _telephones[identifiant(p['patientId'])] = tel;
       }
     } on Exception {
       // Noms indisponibles.
@@ -86,6 +90,10 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
     final id = identifiant(rdv['patientId']);
     return _patients[id] ?? libellePatientParDefaut(id);
   }
+
+  /// Numéro à appeler (comme le site) : celui du rendez-vous, sinon celui de la fiche patient.
+  String _telephone(Map<String, dynamic> rdv) =>
+      telephonePatientRdv(rdv['telephonePatient'], _telephones[identifiant(rdv['patientId'])]);
 
   /// Déplacer : choix d'un autre créneau libre du cabinet, confirmation, puis POST .../deplacer.
   /// Si le créneau vient d'être pris (409), rien ne change et on le dit.
@@ -279,11 +287,23 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
 
   Widget _ligne(Map<String, dynamic> rdv) {
     final grise = estAnnule(rdv['statut']) ? Theme.of(context).disabledColor : null;
+    final tel = _telephone(rdv);
     return ListTile(
       leading: Icon(Icons.event, color: grise),
       title: Text(formaterDateIso('${rdv['debut']}'), style: TextStyle(color: grise)),
-      subtitle: Text('${_patient(rdv)} · ${libelleStatut(statutAgenda(rdv['statut']))}',
-          style: TextStyle(color: grise)),
+      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('${_patient(rdv)} · ${libelleStatut(statutAgenda(rdv['statut']))}',
+            style: TextStyle(color: grise)),
+        if (tel.isNotEmpty)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.phone, size: 14, color: grise),
+            const SizedBox(width: 4),
+            Text(tel, textDirection: TextDirection.ltr, style: TextStyle(color: grise)),
+          ]),
+      ]),
+      onTap: tel.isEmpty
+          ? null
+          : () => launchUrl(Uri(scheme: 'tel', path: tel.replaceAll(RegExp(r'[\s.\-()]'), ''))),
       trailing: actionsCabinetPossibles(rdv['statut']) || _ordonnancePossible(rdv)
           ? PopupMenuButton<ActionRdv>(
               tooltip: t('Actions', 'إجراءات'),

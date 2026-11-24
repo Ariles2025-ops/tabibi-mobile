@@ -436,6 +436,8 @@ void main() {
     await afficher(tester, AgendaPage(api: api, auth: SessionTest(), maintenant: () => DateTime.utc(2026, 12, 3, 9)));
     expect(find.text('Karim Haddad · Confirmé'), findsOneWidget);
     expect(find.text('Karim Haddad · Honoré'), findsOneWidget);
+    // Comme le site : le numéro du patient est affiché pour pouvoir l'appeler.
+    expect(find.text('0550123456'), findsNWidgets(2));
     // Menu sur le rendez-vous confirme (actions) et sur l'honoré (« Rédiger une ordonnance »).
     expect(find.byTooltip('Actions'), findsNWidgets(2));
 
