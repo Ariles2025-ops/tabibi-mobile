@@ -1658,7 +1658,9 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Médecin 00000000'), findsOneWidget);
+    // Détail d'ordonnance : « Votre médecin », jamais l'identifiant (comme le site).
+    expect(find.text('Votre médecin'), findsOneWidget);
+    expect(find.textContaining('00000000'), findsNothing);
     expect(find.text('ABC123'), findsOneWidget);
   });
 
