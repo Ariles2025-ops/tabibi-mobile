@@ -237,7 +237,12 @@ class _CandidaturePageState extends State<CandidaturePage> with AppelsEspace {
             const SizedBox(height: 8),
             if (statut == 'EN_ATTENTE')
               Text(t("Votre candidature est en cours d'examen.", 'ترشحك قيد الفحص.')),
-            if (statut == 'VALIDEE')
+            if (statut == 'VALIDEE' && c['suspendu'] == true)
+              Text(
+                  t("Votre compte médecin est suspendu : votre fiche n'est plus publiée. Écrivez à contact@ndawik.com pour en savoir plus.",
+                      'حسابك كطبيب موقوف: لم يعد ملفك منشورًا. راسلنا على contact@ndawik.com لمعرفة المزيد.'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error))
+            else if (statut == 'VALIDEE')
               Text(t(
                   'Votre candidature a été validée : vous figurez sur Ndawik. Ouvrez « Mon espace » (reconnectez-vous si besoin) pour gérer votre agenda.',
                   'تم قبول ترشحك: أنت تظهر على نداويك. افتح «فضائي» (وأعد تسجيل الدخول عند الحاجة) لإدارة مواعيدك.')),
