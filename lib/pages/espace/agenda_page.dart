@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import '../../services/session.dart';
 import '../../utils/dates.dart';
 import '../../utils/espace_pro.dart';
+import '../../utils/fiche_semaine.dart';
 import '../../utils/identifiants.dart';
 import '../../utils/libelles.dart';
 import '../../utils/rendez_vous.dart' show estAnnule, messageRendezVousAnnuleCabinet, messageRendezVousDeplaceCabinet;
@@ -50,9 +51,15 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
   final Map<String, String> _patients = {};
   final Map<String, String> _telephones = {};
 
+  /// Secrétaire : un 403 veut dire que le cabinet ne lui est pas rattaché (comme le site), au
+  /// chargement comme sur une action ; médecin : « Cette page est réservée aux médecins. ».
+  @override
+  String libelleErreur(ApiException e) =>
+      widget.cabinet.parSecretaire && e.interdit ? messageCabinetNonRattache : e.message;
+
   @override
   String libelleChargement(ApiException e) =>
-      widget.cabinet.parSecretaire ? e.message : messageChargement(e, PublicPage.medecins);
+      widget.cabinet.parSecretaire ? libelleErreur(e) : messageChargement(e, PublicPage.medecins);
 
   @override
   void initState() {
