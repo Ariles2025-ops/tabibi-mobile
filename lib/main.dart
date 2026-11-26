@@ -149,6 +149,10 @@ class _RecherchePageState extends State<RecherchePage> {
   /// Message affiche a la place de la liste quand la recherche echoue (reseau, delai...).
   String? _erreur;
 
+  /// Vrai quand l'erreur vient du chargement de la page suivante : « Réessayer » recharge alors
+  /// la suite (les résultats déjà affichés sont conservés), pas la recherche entière.
+  bool _erreurSuite = false;
+
   /// Nombre de notifications non lues ; null tant qu'il est inconnu (hors connexion, echec).
   int? _nonLues;
 
@@ -189,6 +193,7 @@ class _RecherchePageState extends State<RecherchePage> {
     setState(() {
       _charge = true;
       _erreur = null;
+      _erreurSuite = false;
     });
     try {
       final r = await widget.api.rechercherMedecins(
@@ -209,7 +214,8 @@ class _RecherchePageState extends State<RecherchePage> {
     } on Exception catch (e) {
       if (mounted && id == _seq) {
         setState(() {
-          _erreur = messageErreur(e);
+          _erreurSuite = suite;
+          _erreur = suite ? messageEchecSuiteMedecins() : messageErreur(e);
           if (!suite) {
             _resultats = [];
             _total = null;
@@ -465,7 +471,9 @@ class _RecherchePageState extends State<RecherchePage> {
                     const SizedBox(height: 12),
                     if (_charge) const LinearProgressIndicator(),
                     if (_erreur != null)
-                      VueErreur(message: _erreur!, onReessayer: _rechercher),
+                      VueErreur(
+                          message: _erreur!,
+                          onReessayer: () => _rechercher(suite: _erreurSuite)),
                     if (_recherchee &&
                         !_charge &&
                         _erreur == null &&

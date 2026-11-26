@@ -89,6 +89,11 @@ String messageNombreMedecins(int affiches, int total) => t(
 /// Bouton qui charge la page suivante de résultats.
 String messageAfficherPlus() => t('Afficher plus', 'عرض المزيد');
 
+/// Échec du chargement de la page suivante de résultats (comme le site) : les médecins déjà
+/// affichés restent à l'écran et « Réessayer » recharge seulement la suite.
+String messageEchecSuiteMedecins() =>
+    t('Impossible de charger la suite. Réessayez.', 'تعذّر تحميل المزيد. أعد المحاولة.');
+
 /// Vrai si l'entree « Mon espace » doit apparaitre sur l'accueil.
 bool aUnEspacePro(Set<String> roles) => espacesPour(roles).isNotEmpty;
 
