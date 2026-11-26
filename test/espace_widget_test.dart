@@ -1230,6 +1230,25 @@ void main() {
     expect(find.text('Déposer ma candidature'), findsOneWidget);
   });
 
+  testWidgets('ma candidature : validée mais suspendue, message de suspension au lieu de la validation',
+      (tester) async {
+    final api = FakeEspaceApi()
+      ..candidature = {
+        'nomComplet': 'Dr Amina Belkacem',
+        'specialiteSlug': 'cardiologue',
+        'wilayaCode': '16',
+        'numeroOrdre': '12345',
+        'statut': 'VALIDEE',
+        'suspendu': true,
+        'deposeeLe': '2026-11-10T09:00:00Z',
+      };
+    await afficher(tester, CandidaturePage(api: api, auth: SessionTest()));
+    expect(find.textContaining('Votre compte médecin est suspendu'), findsOneWidget);
+    expect(find.textContaining('contact@ndawik.com'), findsOneWidget);
+    expect(find.textContaining('vous figurez sur Ndawik'), findsNothing);
+    expect(find.text('Déposer ma candidature'), findsNothing);
+  });
+
   testWidgets('ma candidature : mêmes longueurs maximales que le site (nom 160, ordre 40, ville 80)',
       (tester) async {
     final api = FakeEspaceApi();
