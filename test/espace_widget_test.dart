@@ -653,7 +653,7 @@ void main() {
 
     await tester.tap(find.text('Ajouter un créneau'));
     await tester.pumpAndSettle();
-    expect(find.text('1 créneau(x) seront créés.'), findsOneWidget);
+    expect(find.text('1 créneau sera créé.'), findsOneWidget);
     await tester.tap(find.text('Créer'));
     await tester.pumpAndSettle();
     expect(api.appels.last, 'ouvrir 9:0 30'); // demain 9 h, 30 min par defaut
@@ -672,7 +672,7 @@ void main() {
           // Samedi : la semaine suivante compte dimanche a jeudi (5 jours), 9 h-12 h, 30 min.
           maintenant: () => DateTime(2026, 12, 5, 8),
         ));
-    expect(find.text('30 créneau(x) seront créés.'), findsOneWidget);
+    expect(find.text('30 créneaux seront créés.'), findsOneWidget);
     await tester.tap(find.text('Créer'));
     await tester.pumpAndSettle();
     expect(api.appels.where((a) => a.startsWith('ouvrir')), hasLength(30));
