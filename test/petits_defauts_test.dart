@@ -60,6 +60,12 @@ void main() {
     expect(messageAucunMedecin(), 'لم نعثر على أي طبيب. جرّب اسمًا آخر أو ولاية أخرى.');
   });
 
+  test('échec de la page suivante de résultats : même phrase que le site (FR et AR)', () {
+    expect(messageEchecSuiteMedecins(), 'Impossible de charger la suite. Réessayez.');
+    Langue.courante.value = Langue.arabe;
+    expect(messageEchecSuiteMedecins(), 'تعذّر تحميل المزيد. أعد المحاولة.');
+  });
+
   test('fiche sans nomComplet ni debut : pas de plantage', () {
     final Map<String, dynamic> m = {'nomComplet': null};
     expect(identifiant(m['nomComplet']), '');
