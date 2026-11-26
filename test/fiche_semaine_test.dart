@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabibi_mobile/i18n/langue.dart';
 import 'package:tabibi_mobile/services/api_service.dart';
 import 'package:tabibi_mobile/utils/fiche_semaine.dart';
 
@@ -84,11 +85,22 @@ void main() {
         throwsA(isA<ApiException>().having((x) => x.introuvable, 'introuvable', isTrue)));
   });
 
+  test('aperçu des créneaux en arabe : 0, 1 et plusieurs', () {
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(apercuCreneauxACreer(0), 'لن يتم إنشاء أي موعد.');
+    expect(apercuCreneauxACreer(1), 'سيتم إنشاء موعد واحد.');
+    expect(apercuCreneauxACreer(3), 'سيتم إنشاء 3 مواعيد.');
+  });
+
   test('messages de creneaux accordes au singulier et au pluriel, sans « (x) »', () {
     expect(resumeCreneauxCrees(1, 0), '1 créneau créé, 0 ignoré');
     expect(resumeCreneauxCrees(3, 2), '3 créneaux créés, 2 ignorés');
     expect(creneauxAjoutes(1), '1 créneau ajouté');
     expect(creneauxAjoutes(4), '4 créneaux ajoutés');
+    expect(apercuCreneauxACreer(0), 'Aucun créneau ne sera créé.');
+    expect(apercuCreneauxACreer(1), '1 créneau sera créé.');
+    expect(apercuCreneauxACreer(3), '3 créneaux seront créés.');
     expect(creneauxCreesSurTotal(1, 5, 'Erreur'), '1 créneau créé sur 5 : Erreur');
     expect(creneauxCreesSurTotal(2, 5, 'Erreur'), '2 créneaux créés sur 5 : Erreur');
   });
