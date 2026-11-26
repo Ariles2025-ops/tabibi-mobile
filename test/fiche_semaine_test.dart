@@ -89,6 +89,9 @@ void main() {
     expect(resumeCreneauxCrees(3, 2), '3 créneaux créés, 2 ignorés');
     expect(creneauxAjoutes(1), '1 créneau ajouté');
     expect(creneauxAjoutes(4), '4 créneaux ajoutés');
+    expect(apercuCreneauxACreer(0), '0 créneau sera créé.');
+    expect(apercuCreneauxACreer(1), '1 créneau sera créé.');
+    expect(apercuCreneauxACreer(3), '3 créneaux seront créés.');
     expect(creneauxCreesSurTotal(1, 5, 'Erreur'), '1 créneau créé sur 5 : Erreur');
     expect(creneauxCreesSurTotal(2, 5, 'Erreur'), '2 créneaux créés sur 5 : Erreur');
   });

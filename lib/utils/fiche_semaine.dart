@@ -158,6 +158,11 @@ String resumeCreneauxCrees(int crees, int ignores) => t(
 String creneauxAjoutes(int n) => t('$n ${n > 1 ? 'créneaux ajoutés' : 'créneau ajouté'}',
     'تمت إضافة $n ${n > 1 ? 'مواعيد' : 'موعدًا'}');
 
+/// Apercu avant creation de [n] creneaux : « 1 créneau sera créé » / « 3 créneaux seront créés ».
+String apercuCreneauxACreer(int n) => t(
+    n > 1 ? '$n créneaux seront créés.' : '$n créneau sera créé.',
+    n > 1 ? 'سيتم إنشاء $n مواعيد.' : 'سيتم إنشاء موعد واحد.');
+
 /// Message d'une serie interrompue : « 2 créneaux créés sur 5 : erreur ».
 String creneauxCreesSurTotal(int crees, int total, String erreur) => t(
     '$crees ${crees > 1 ? 'créneaux créés' : 'créneau créé'} sur $total : $erreur',

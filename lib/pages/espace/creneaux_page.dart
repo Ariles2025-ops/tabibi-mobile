@@ -393,7 +393,7 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
           ],
           const SizedBox(height: 16),
           Text(
-            t('$nombre créneau(x) seront créés.', 'سيتم إنشاء $nombre موعد(مواعيد).'),
+            apercuCreneauxACreer(nombre),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
