@@ -129,6 +129,11 @@ class CabinetsPage extends StatefulWidget {
 class _CabinetsPageState extends State<CabinetsPage> with AppelsEspace {
   @override
   late final AuthService auth = widget.auth ?? session;
+
+  /// 403 au chargement : « Cette page est réservée aux secrétaires. », comme le site.
+  @override
+  String libelleChargement(ApiException e) => messageChargement(e, PublicPage.secretaires);
+
   List<Map<String, dynamic>> _cabinets = [];
   Map<String, String> _noms = {};
 

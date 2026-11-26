@@ -969,6 +969,29 @@ void main() {
     expect(find.text('Créneaux'), findsOneWidget);
   });
 
+  testWidgets('secretaire : un 403 dit la meme chose que le site (page reservee, cabinet non rattache)',
+      (tester) async {
+    await afficher(tester, CabinetsPage(api: _SecretaireRefusee(), auth: SessionTest()));
+    expect(find.text('Cette page est réservée aux secrétaires.'), findsOneWidget);
+
+    await afficher(
+        tester,
+        AgendaPage(
+            cabinet: const Cabinet.pourSecretaire(medecinId),
+            api: _SecretaireRefusee(),
+            auth: SessionTest()));
+    expect(find.text('Ce cabinet ne vous est pas rattaché.'), findsOneWidget);
+    expect(find.text('Accès refusé'), findsNothing);
+
+    await afficher(
+        tester,
+        CreneauxPage(
+            cabinet: const Cabinet.pourSecretaire(medecinId),
+            api: _SecretaireRefusee(),
+            auth: SessionTest()));
+    expect(find.text('Ce cabinet ne vous est pas rattaché.'), findsOneWidget);
+  });
+
   testWidgets('sans cabinet ni patient, les textes vides sont ceux du site', (tester) async {
     await afficher(tester, CabinetsPage(api: FakeEspaceVide(), auth: SessionTest()));
     expect(find.text('Agenda du cabinet'), findsOneWidget);
@@ -1370,4 +1393,19 @@ class _ListeAttenteSansDate extends FakeEspaceApi {
   Future<List<Map<String, dynamic>>> listeAttenteMedecin(String token) async => [
         {'id': 'l1'}
       ];
+}
+
+/// Compte sans le role SECRETAIRE ou cabinet non rattache : le serveur repond 403.
+class _SecretaireRefusee extends FakeEspaceApi {
+  @override
+  Future<List<Map<String, dynamic>>> cabinetsSecretaire(String token) async =>
+      throw const ApiException(403, 'Accès refusé');
+
+  @override
+  Future<List<Map<String, dynamic>>> agendaSecretaire(String medecinId, String token) async =>
+      throw const ApiException(403, 'Accès refusé');
+
+  @override
+  Future<List<Map<String, dynamic>>> creneauxSecretaire(String medecinId, String token) async =>
+      throw const ApiException(403, 'Accès refusé');
 }

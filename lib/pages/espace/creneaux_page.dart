@@ -40,6 +40,11 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
   final bool _semaineTypeDispo = true;
   final bool _rdvTelephoneDispo = true;
 
+  /// Secrétaire : un 403 veut dire que le cabinet ne lui est pas rattaché (comme le site).
+  @override
+  String libelleErreur(ApiException e) =>
+      widget.cabinet.parSecretaire && e.interdit ? messageCabinetNonRattache : e.message;
+
   @override
   void initState() {
     super.initState();
