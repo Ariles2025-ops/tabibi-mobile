@@ -13,6 +13,14 @@ void main() {
     expect(formaterDateIso('n/a'), 'n/a');
   });
 
+  test('une date absente (vide ou « null ») affiche « date inconnue », jamais « null »', () {
+    expect(formaterDateIso('null'), 'date inconnue');
+    expect(formaterDateIso(''), 'date inconnue');
+    Langue.courante.value = Langue.arabe;
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(formaterDateIso('null'), 'تاريخ غير معروف');
+  });
+
   test("affiche l'annee a la demande", () {
     expect(formaterDateHeure(DateTime(2025, 12, 4, 9, 0), avecAnnee: true), 'jeu. 4 déc. 2025 09:00');
     expect(formaterDateIso('2025-12-04T09:00:00', avecAnnee: true), 'jeu. 4 déc. 2025 09:00');
