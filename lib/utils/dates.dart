@@ -79,8 +79,11 @@ String formaterDateHeure(DateTime date, {bool avecAnnee = false}) {
   return '${_jour(d.weekday)} ${d.day} ${_nomMois(d.month)}$annee $hh:$mm';
 }
 
-/// Idem a partir d'une chaine ISO 8601 ; la chaine brute est renvoyee si elle est invalide.
+/// Idem a partir d'une chaine ISO 8601 ; la chaine brute est renvoyee si elle est invalide,
+/// sauf une date absente (vide ou « null », issue d'un champ JSON manquant) : « date inconnue ».
 String formaterDateIso(String iso, {bool avecAnnee = false}) {
+  final brut = iso.trim();
+  if (brut.isEmpty || brut == 'null') return t('date inconnue', 'تاريخ غير معروف');
   final d = DateTime.tryParse(iso);
   return d == null ? iso : formaterDateHeure(d, avecAnnee: avecAnnee);
 }
