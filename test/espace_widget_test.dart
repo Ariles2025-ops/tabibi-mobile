@@ -797,6 +797,16 @@ void main() {
     expect(find.text('Annuler'), findsNothing);
   });
 
+  testWidgets('ordonnances rédigées : le motif d\'annulation est limité à 300 caractères, comme l\'API',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['MEDECIN']);
+    await afficher(tester, OrdonnancesRedigeesPage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).maxLength, 300);
+    expect(find.text('0/300'), findsOneWidget);
+  });
+
   testWidgets('nouvelle ordonnance : patient, medicament obligatoire, emission', (tester) async {
     final api = FakeEspaceApi(roles: ['MEDECIN']);
     await afficher(tester, NouvelleOrdonnancePage(api: api, auth: SessionTest()));
