@@ -253,6 +253,15 @@ bool rdvCommence(Object? debut, DateTime maintenant) {
   return !d.isAfter(maintenant);
 }
 
+/// Note affichee sous un rendez-vous confirme deja commence (comme le site, agenda medecin et
+/// secretaire) : sans action du cabinet, il passe automatiquement a « honore » 24 h apres son debut.
+/// Chaine vide si le rendez-vous n'est pas concerne.
+String noteHonoreAuto(Object? statut, Object? debut, DateTime maintenant) {
+  if (!actionsCabinetPossibles(statut) || !rdvCommence(debut, maintenant)) return '';
+  return t('Sans action de votre part, ce rendez-vous sera marqué honoré 24 h après son début.',
+      'إذا لم تتخذوا أي إجراء، سيُسجَّل هذا الموعد تلقائيًا كموعد تم الحضور إليه بعد 24 ساعة من موعد بدايته.');
+}
+
 /// Forme minimale d'une adresse e-mail, comme sur le site (le serveur verifie qu'un compte l'utilise).
 bool emailValide(String texte) => RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(texte.trim());
 

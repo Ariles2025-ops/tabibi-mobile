@@ -295,12 +295,14 @@ class _AgendaPageState extends State<AgendaPage> with AppelsEspace {
   Widget _ligne(Map<String, dynamic> rdv) {
     final grise = estAnnule(rdv['statut']) ? Theme.of(context).disabledColor : null;
     final tel = _telephone(rdv);
+    final noteAuto = noteHonoreAuto(rdv['statut'], rdv['debut'], (widget.maintenant ?? DateTime.now)());
     return ListTile(
       leading: Icon(Icons.event, color: grise),
       title: Text(formaterDateIso('${rdv['debut']}'), style: TextStyle(color: grise)),
       subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('${_patient(rdv)} · ${libelleStatut(statutAgenda(rdv['statut']))}',
             style: TextStyle(color: grise)),
+        if (noteAuto.isNotEmpty) Text(noteAuto, style: Theme.of(context).textTheme.bodySmall),
         if (tel.isNotEmpty)
           Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.phone, size: 14, color: grise),
