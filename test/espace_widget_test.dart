@@ -50,6 +50,7 @@ class FakeEspaceApi extends ApiService {
   Map<String, dynamic>? resultatVerification;
   bool codeInconnu404 = false;
   bool besoinDejaRepondu = false;
+  bool besoinSansNom = false;
 
   @override
   Future<Map<String, dynamic>> ficheMedecin(String token) async {
@@ -329,7 +330,7 @@ class FakeEspaceApi extends ApiService {
     return [
       {
         'id': 'b1',
-        'medicament': 'Ventoline',
+        'medicament': besoinSansNom ? null : 'Ventoline',
         'wilayaCode': wilayaCode,
         'commune': 'Bab Ezzouar',
         'publieLe': '2026-11-20T09:00:00',
@@ -1054,6 +1055,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.appels, contains('repondre b1 true 850'));
     expect(api.nomsPharmacie, ['Karim Haddad']); // nom du profil, comme le site
+  });
+
+  testWidgets('un besoin sans nom de medicament n\'affiche jamais « null »', (tester) async {
+    final api = FakeEspaceApi(roles: ['PHARMACIE'])..besoinSansNom = true;
+    await afficher(tester, BesoinsPharmaciePage(api: api, auth: SessionTest()));
+    expect(find.text('null'), findsNothing);
+    expect(find.text('Médicament'), findsOneWidget);
   });
 
   testWidgets('un besoin deja repondu affiche « Déjà répondu » comme le site', (tester) async {
