@@ -67,6 +67,12 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     if (b != null && mounted) setState(() => _besoins = trierBesoinsBrutsParPublication(b));
   }
 
+  /// Nom du médicament demandé ; « Médicament » si l'API ne le renvoie pas (jamais « null »).
+  String _nomMedicament(Map<String, dynamic> besoin) {
+    final nom = BesoinMedicament.fromJson(besoin).medicament.trim();
+    return nom.isEmpty ? t('Médicament', 'دواء') : nom;
+  }
+
   Future<void> _repondre(Map<String, dynamic> besoin) async {
     // Comme le site : la reponse porte le nom de la pharmacie, pris dans son profil.
     if (_nomPharmacie.isEmpty) {
@@ -76,7 +82,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     }
     final reponse = await showDialog<_Reponse>(
       context: context,
-      builder: (_) => _DialogueReponse(medicament: '${besoin['medicament']}'),
+      builder: (_) => _DialogueReponse(medicament: _nomMedicament(besoin)),
     );
     if (reponse == null) return;
     _repondant = true;
@@ -87,8 +93,9 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
     });
     _repondant = false;
     if (fait != true) return;
-    message(t('Réponse envoyée pour « ${besoin['medicament']} » : le patient est prévenu.',
-        'تم إرسال الرد بخصوص «${besoin['medicament']}»: المريض مُبلَّغ.'));
+    final nom = _nomMedicament(besoin);
+    message(t('Réponse envoyée pour « $nom » : le patient est prévenu.',
+        'تم إرسال الرد بخصوص «$nom»: المريض مُبلَّغ.'));
     await recharger();
   }
 
@@ -138,7 +145,7 @@ class _BesoinsPharmaciePageState extends State<BesoinsPharmaciePage> with Appels
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: const Icon(Icons.medication_outlined),
-        title: Text('${b['medicament']}'),
+        title: Text(_nomMedicament(b)),
         subtitle: Text(details),
         trailing: repondu
             ? Text(t('Déjà répondu', 'تم الرد مسبقًا'))
