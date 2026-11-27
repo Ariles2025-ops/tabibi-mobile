@@ -246,10 +246,7 @@ class _MesRendezVousPageState extends State<MesRendezVousPage> {
       _message(messageRendezVousDeplace(choisi['debut']));
     } on ApiException catch (e) {
       if (e.nonAutorise) _auth.seDeconnecter();
-      _message(e.conflit
-          ? t("Ce créneau vient d'être pris. Votre rendez-vous n'a pas changé : choisissez un autre créneau.",
-              'هذا الموعد حُجز للتوّ. لم يتغيّر موعدك: اختر موعدًا آخر.')
-          : e.message);
+      _message(e.conflit ? messageDeplacementRefuse(e.message) : e.message);
     } on Exception catch (e) {
       _message(messageErreur(e));
     }

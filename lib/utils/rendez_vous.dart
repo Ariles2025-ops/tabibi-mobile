@@ -78,6 +78,18 @@ String messageRendezVousDeplace(Object? debut) {
   return t('Rendez-vous déplacé au $date.', 'تم نقل الموعد إلى $date.');
 }
 
+/// Message d'un déplacement refusé (409) : le texte « créneau pris » seul quand l'API dit que le
+/// créneau n'est plus disponible ; sinon (chevauchement avec un autre rendez-vous...) le vrai
+/// motif de l'API, déjà traduit par traduireErreurServeur.
+String messageDeplacementRefuse(String messageApi) {
+  final m = messageApi.toLowerCase();
+  if (m.contains('plus disponible') || m.contains('pris') || m.contains('لم يعد متاحًا') || m.contains('حُجز')) {
+    return t("Ce créneau vient d'être pris. Votre rendez-vous n'a pas changé : choisissez un autre créneau.",
+        'هذا الموعد حُجز للتوّ. لم يتغيّر موعدك: اختر موعدًا آخر.');
+  }
+  return messageApi;
+}
+
 /// Confirmation d'un déplacement côté médecin/secrétaire, comme le site : « Rendez-vous déplacé au
 /// {date} : le patient est prévenu. » ; pour un rendez-vous pris par téléphone (le patient n'a pas de
 /// compte, personne ne le prévient) : « Rendez-vous déplacé au {date}. » sans promesse trompeuse.

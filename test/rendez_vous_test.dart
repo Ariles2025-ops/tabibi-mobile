@@ -80,4 +80,14 @@ void main() {
     expect(messageRendezVousAnnuleCabinet('', patientPrevenu: true),
         'تم إلغاء الموعد: الموعد متاح من جديد وتم إعلام المريض.');
   });
+
+  test('déplacement refusé : créneau pris ou chevauchement, le vrai motif est montré', () {
+    const chevauche = 'Ce créneau chevauche un autre de vos rendez-vous : annulez-le ou choisissez un autre horaire';
+    expect(messageDeplacementRefuse("Ce créneau n'est plus disponible."), contains("vient d'être pris"));
+    expect(messageDeplacementRefuse(chevauche), chevauche);
+    Langue.courante.value = Langue.arabe;
+    expect(messageDeplacementRefuse('هذا الموعد لم يعد متاحًا.'), contains('حُجز للتوّ'));
+    expect(messageDeplacementRefuse('هذا الموعد يتداخل مع موعد آخر لديك.'),
+        'هذا الموعد يتداخل مع موعد آخر لديك.');
+  });
 }
