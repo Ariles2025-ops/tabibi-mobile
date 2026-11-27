@@ -57,7 +57,9 @@ void main() {
   });
 
   test('créneau pris, réponse Dawini, prix et avis vides : mêmes phrases que le site (FR et AR)', () {
-    for (final fichier in ['lib/pages/mes_rendez_vous_page.dart', 'lib/pages/espace/agenda_page.dart']) {
+    // La phrase du déplacement patient vit dans utils/rendez_vous.dart (messageDeplacementRefuse).
+    expect(_lire('lib/pages/mes_rendez_vous_page.dart'), contains('messageDeplacementRefuse('));
+    for (final fichier in ['lib/utils/rendez_vous.dart', 'lib/pages/espace/agenda_page.dart']) {
       final src = _lire(fichier);
       expect(src, contains('هذا الموعد حُجز للتوّ.'));
       expect(src.contains('تم حجز هذا الموعد للتو'), isFalse);
