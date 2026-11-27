@@ -142,6 +142,19 @@ void main() {
     expect(rdvCommence('illisible', maintenant), isTrue);
   });
 
+  test('noteHonoreAuto : seulement pour un rendez-vous confirme deja commence, FR et AR', () {
+    final maintenant = DateTime.utc(2026, 12, 3, 8);
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(noteHonoreAuto('CONFIRME', '2026-12-03T07:00:00Z', maintenant),
+        'Sans action de votre part, ce rendez-vous sera marqué honoré 24 h après son début.');
+    expect(noteHonoreAuto('RESERVE', '2026-12-03T07:00:00Z', maintenant), isNotEmpty);
+    expect(noteHonoreAuto('CONFIRME', '2026-12-03T09:00:00Z', maintenant), isEmpty);
+    expect(noteHonoreAuto('ANNULE', '2026-12-03T07:00:00Z', maintenant), isEmpty);
+    expect(noteHonoreAuto('HONORE', '2026-12-03T07:00:00Z', maintenant), isEmpty);
+    Langue.courante.value = Langue.arabe;
+    expect(noteHonoreAuto('CONFIRME', '2026-12-03T07:00:00Z', maintenant), contains('24 ساعة'));
+  });
+
   test('secretaires : e-mail valide, nom affiche, invitation en attente, tri', () {
     expect(emailValide(' s@exemple.dz '), isTrue);
     expect(emailValide('sans-arobase'), isFalse);
