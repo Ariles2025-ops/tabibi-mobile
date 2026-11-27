@@ -95,7 +95,7 @@ class _OrdonnancesRedigeesPageState extends State<OrdonnancesRedigeesPage> with 
             const SizedBox(height: 12),
             TextField(
               controller: champ,
-              maxLength: 500,
+              maxLength: longueurMaxMotifAnnulation,
               maxLines: 2,
               decoration: InputDecoration(labelText: t('Motif (facultatif)', 'السبب (اختياري)')),
             ),

@@ -5,6 +5,9 @@
 import '../i18n/langue.dart';
 import 'dates.dart';
 
+/// Longueur maximale du motif d'annulation (comme l'API : Ordonnance.LONGUEUR_MAX_MOTIF).
+const int longueurMaxMotifAnnulation = 300;
+
 /// Date d'emission formatee (« jeu. 4 dec. 09:00 ») ; « date inconnue » si absente.
 String dateEmission(Map<String, dynamic> ordonnance) {
   final Object? iso = ordonnance['emiseLe'];
