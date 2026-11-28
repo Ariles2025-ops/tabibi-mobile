@@ -1099,6 +1099,21 @@ void main() {
     expect(api.appels, contains('repondre b1 true null'));
   });
 
+  testWidgets('un medicament indisponible n\'a pas de prix : champ masque et prix ecarte, comme le site',
+      (tester) async {
+    final api = FakeEspaceApi(roles: ['PHARMACIE']);
+    await afficher(tester, BesoinsPharmaciePage(api: api, auth: SessionTest()));
+    await tester.tap(find.text('Répondre'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Prix (DA)'), '850');
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'Prix (DA)'), findsNothing);
+    await tester.tap(find.text('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(api.appels, contains('repondre b1 false null'));
+  });
+
   testWidgets('la pharmacie verifie un code puis marque l\'ordonnance delivree', (tester) async {
     final api = FakeEspaceApi(roles: ['PHARMACIE']);
     await afficher(tester, DelivrerOrdonnancePage(api: api, auth: SessionTest()));
