@@ -41,6 +41,15 @@ void main() {
     expect(e({'LUNDI'}, 540, 720, 20, 8), isNull);
   });
 
+  test('numéro de cabinet invalide : même phrase que le site, FR et AR', () {
+    addTearDown(() => Langue.courante.value = Langue.francais);
+    expect(messageTelephoneCabinetInvalide,
+        'Numéro invalide (ex. 021 12 34 56, 0550 12 34 56 ou +213 550 12 34 56).');
+    Langue.courante.value = Langue.arabe;
+    expect(messageTelephoneCabinetInvalide,
+        'رقم غير صحيح (مثال: 021 12 34 56 أو 0550 12 34 56 أو ‎+213 550 12 34 56).');
+  });
+
   test('telephone algerien', () {
     expect(telephoneAlgerienValide(''), isTrue);
     expect(telephoneAlgerienValide('023 45 67 89'), isTrue);
