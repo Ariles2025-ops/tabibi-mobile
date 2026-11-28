@@ -10,6 +10,7 @@ import '../utils/libelles.dart';
 import '../utils/messagerie.dart';
 import '../widgets/vue_connexion.dart';
 import '../widgets/vue_erreur.dart';
+import 'fiche_medecin_page.dart';
 
 /// Longueur maximale d'un message acceptee par l'API.
 const int longueurMaxMessage = 2000;
@@ -147,6 +148,14 @@ class _ConversationPageState extends State<ConversationPage> {
     }
   }
 
+  /// Ouvre la fiche du médecin de la conversation pour reprendre rendez-vous.
+  void _ouvrirFiche() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) =>
+          FicheMedecinPage(medecinId: _conversation.medecinId, api: widget.api, auth: _auth),
+    ));
+  }
+
   /// Ferme la conversation apres confirmation (POST .../fermer) ; le champ de saisie disparait ensuite.
   Future<void> _fermer() async {
     final token = _auth.accessToken;
@@ -272,7 +281,13 @@ class _ConversationPageState extends State<ConversationPage> {
           children: [
             Text(m.contenu),
             const SizedBox(height: 4),
-            Text(dateMessage(m), style: texte.bodySmall),
+            // « · lu » sur mes messages lus par le destinataire, comme sur le site.
+            Text(
+              deMoi && m.estLu
+                  ? '${dateMessage(m)} · ${t('lu', 'مقروءة')}'
+                  : dateMessage(m),
+              style: texte.bodySmall,
+            ),
           ],
         ),
       ),
@@ -303,11 +318,23 @@ class _ConversationPageState extends State<ConversationPage> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Text(
-            t('Vous ne pouvez plus écrire à ce médecin : prenez un nouveau rendez-vous.',
-                'لا يمكنك الكتابة إلى هذا الطبيب بعد الآن: احجز موعدًا جديدًا.'),
-            key: const Key('envoi-interdit'),
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                t('Vous ne pouvez plus écrire à ce médecin : prenez un nouveau rendez-vous.',
+                    'لا يمكنك الكتابة إلى هذا الطبيب بعد الآن: احجز موعدًا جديدًا.'),
+                key: const Key('envoi-interdit'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              // « Prendre rendez-vous » mène à la fiche du médecin, comme sur le site.
+              TextButton(
+                key: const Key('prendre-rendez-vous'),
+                onPressed: _ouvrirFiche,
+                child: Text(t('Prendre rendez-vous', 'حجز موعد')),
+              ),
+            ],
           ),
         ),
       );

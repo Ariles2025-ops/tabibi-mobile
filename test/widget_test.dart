@@ -511,6 +511,16 @@ class FakeApiServiceMessagerie extends FakeApiService {
   }
 }
 
+/// Variante dont tous les messages ont une date de lecture : « · lu » ne s'affiche que sur les miens.
+class FakeApiServiceLu extends FakeApiService {
+  FakeApiServiceLu();
+
+  @override
+  Future<List<Map<String, dynamic>>> messages(String conversationId, String token) async => [
+        for (final m in await super.messages(conversationId, token)) {...m, 'luLe': '2026-12-01T10:00:00'},
+      ];
+}
+
 /// Variante dont l'envoi echoue avec le statut [statut] (403 : rendez-vous trop ancien, 409 : fermee)
 /// et qui compte les fermetures demandees par le medecin.
 class FakeApiServiceEnvoiRefuse extends FakeApiService {
@@ -1405,6 +1415,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('prenez un nouveau rendez-vous'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
+    // Le lien « Prendre rendez-vous » ouvre la fiche du médecin (comme le site).
+    await tester.tap(find.byKey(const Key('prendre-rendez-vous')));
+    await tester.pumpAndSettle();
+    expect(find.byType(FicheMedecinPage), findsOneWidget);
+  });
+
+  testWidgets('mes messages lus par le destinataire portent « · lu », pas ceux du médecin',
+      (tester) async {
+    await ouvrirFil(tester, FakeApiServiceLu());
+    expect(find.text('mar. 1 déc. 09:05 · lu'), findsOneWidget);
+    expect(find.text('mar. 1 déc. 09:00'), findsOneWidget);
   });
 
   testWidgets('le medecin ferme la conversation apres confirmation', (tester) async {
