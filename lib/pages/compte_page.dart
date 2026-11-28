@@ -25,9 +25,12 @@ import 'verifier_ordonnance_page.dart';
 /// Onglet « Compte » : connexion, puis toutes les entrees personnelles regroupees
 /// (activite, services, reglages), comme dans les grandes applis de sante.
 class ComptePage extends StatefulWidget {
-  const ComptePage({super.key, this.api = const ApiService(), this.auth});
+  const ComptePage({super.key, this.api = const ApiService(), this.auth, this.onTrouverPraticien});
 
   final ApiService api;
+
+  /// Ramene a la recherche (onglet Accueil) ; propose « Trouver un praticien » dans les pages vides.
+  final VoidCallback? onTrouverPraticien;
   final AuthService? auth;
 
   @override
@@ -147,7 +150,16 @@ class _ComptePageState extends State<ComptePage> {
                 _Entree(
                     Icons.hourglass_top_outlined,
                     t("Mes listes d'attente", 'قوائم الانتظار'),
-                    () => _ouvrir(MesListesAttentePage(api: api, auth: _auth))),
+                    () => _ouvrir(MesListesAttentePage(
+                          api: api,
+                          auth: _auth,
+                          onTrouverPraticien: widget.onTrouverPraticien == null
+                              ? null
+                              : () {
+                                  Navigator.of(context).popUntil((r) => r.isFirst);
+                                  widget.onTrouverPraticien!();
+                                },
+                        ))),
               ],
               // Comme le site : un patient peut recevoir une invitation de cabinet (secrétaire) ;
               // un compte professionnel la trouve dans « Mon espace ».
