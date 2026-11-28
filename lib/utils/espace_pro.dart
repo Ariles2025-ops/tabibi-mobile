@@ -50,6 +50,20 @@ List<Espace> espacesPour(Set<String> roles) => [
       if (roles.contains('PHARMACIE')) Espace.pharmacie,
     ];
 
+/// Vrai si le compte porte le role PHARMACIE, comme le site (`RoleService.estPharmacie`) :
+/// « Mon profil » parle alors de la pharmacie (nom montre aux patients, pas de date de naissance).
+bool estComptePharmacie(Set<String> roles) => roles.contains('PHARMACIE');
+
+/// Presentation de « Mon profil » pour un patient ou un praticien, mots du site.
+String textePresentationProfil() => t(
+    'Ces informations servent aux praticiens et aux rappels de rendez-vous. Seul le nom complet est obligatoire.',
+    'تُستعمل هذه المعلومات من طرف الأطباء ولتذكيرات المواعيد. الاسم الكامل وحده إجباري.');
+
+/// Presentation de « Mon profil » pour une pharmacie, mots du site.
+String textePresentationProfilPharmacie() => t(
+    'Le nom de votre pharmacie est montré aux patients dans vos réponses ; la wilaya sert à afficher les demandes de votre zone. Seul le nom de la pharmacie est obligatoire.',
+    'يظهر اسم صيدليتك للمرضى في ردودك ؛ وتُستعمل الولاية لعرض الطلبات الواردة من منطقتك. اسم الصيدلية وحده إجباري.');
+
 /// Vrai pour un compte professionnel sans role PATIENT : « Mes rendez-vous » et
 /// « Mes ordonnances » (reserves au patient) lui renverraient « Accès refusé ».
 bool comptePro(Set<String> roles) => aUnEspacePro(roles) && !roles.contains('PATIENT');
