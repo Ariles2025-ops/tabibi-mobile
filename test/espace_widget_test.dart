@@ -1334,6 +1334,32 @@ void main() {
     expect(api.candidature?['ficheReclamee'], 'f-42');
   });
 
+  testWidgets('mon profil d\'une pharmacie : nom de la pharmacie, pas de date de naissance, comme le site',
+      (tester) async {
+    await afficher(
+        tester, MonProfilPage(api: FakeEspaceApi(roles: const ['PHARMACIE']), auth: SessionTest()));
+    expect(find.textContaining('Le nom de votre pharmacie est montré aux patients'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Nom de la pharmacie *'), findsOneWidget);
+    expect(find.text('Nom complet *'), findsNothing);
+    expect(find.text('Date de naissance'), findsNothing);
+    expect(find.textContaining('praticiens que vous consultez'), findsNothing);
+  });
+
+  testWidgets('mon profil d\'un patient : nom complet et date de naissance, inchangés', (tester) async {
+    await afficher(tester, MonProfilPage(api: FakeEspaceApi(), auth: SessionTest()));
+    expect(find.widgetWithText(TextField, 'Nom complet *'), findsOneWidget);
+    expect(find.text('Nom de la pharmacie *'), findsNothing);
+    expect(find.text('Date de naissance'), findsOneWidget);
+    expect(find.textContaining('praticiens que vous consultez'), findsOneWidget);
+  });
+
+  test('estComptePharmacie : role PHARMACIE seulement, comme le site', () {
+    expect(estComptePharmacie({'PHARMACIE'}), isTrue);
+    expect(estComptePharmacie({'PATIENT', 'PHARMACIE'}), isTrue);
+    expect(estComptePharmacie({'PATIENT'}), isFalse);
+    expect(estComptePharmacie(<String>{}), isFalse);
+  });
+
   testWidgets('mon profil propose « Ma candidature de médecin », comme le site', (tester) async {
     await afficher(tester, MonProfilPage(api: FakeEspaceApi(), auth: SessionTest()));
     await tester.ensureVisible(find.text('Ma candidature de médecin'));

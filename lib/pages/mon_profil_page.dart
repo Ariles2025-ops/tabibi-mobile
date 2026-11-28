@@ -5,6 +5,7 @@ import '../models/profil.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/session.dart';
+import '../utils/espace_pro.dart';
 import '../utils/profil.dart';
 import '../widgets/champ_wilaya.dart';
 import '../widgets/liens_legaux.dart';
@@ -61,6 +62,10 @@ class _MonProfilPageState extends State<MonProfilPage> {
 
   /// Profil connu du serveur ; null tant qu'il n'a jamais ete renseigne (404).
   Profil? _profil;
+
+  /// Compte portant le role PHARMACIE (GET /api/moi), comme le site : le nom est celui de la
+  /// pharmacie, sans date de naissance. Faux tant que les roles sont inconnus.
+  bool _pharmacie = false;
   bool _charge = false;
   bool _envoi = false;
   String? _erreur;
@@ -99,12 +104,21 @@ class _MonProfilPageState extends State<MonProfilPage> {
     });
     try {
       final profil = Profil.fromJson(await widget.api.monProfil(token));
+      final pharmacie = await _compteEstPharmacie(token);
       if (!mounted) return;
-      setState(() => _remplir(profil));
+      setState(() {
+        _pharmacie = pharmacie;
+        _remplir(profil);
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.introuvable) {
-        setState(() => _remplir(null));
+        final pharmacie = await _compteEstPharmacie(token);
+        if (!mounted) return;
+        setState(() {
+          _pharmacie = pharmacie;
+          _remplir(null);
+        });
         return;
       }
       // Jeton expire : retour au bouton « Se connecter ».
@@ -114,6 +128,16 @@ class _MonProfilPageState extends State<MonProfilPage> {
       if (mounted) setState(() => _erreur = messageErreur(e));
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  /// Vrai si le compte a le role PHARMACIE ; une identite illisible n'empeche pas d'afficher
+  /// le profil (formulaire « personne » par defaut).
+  Future<bool> _compteEstPharmacie(String token) async {
+    try {
+      return estComptePharmacie(rolesDe(await widget.api.moi(token)));
+    } on Object {
+      return false;
     }
   }
 
@@ -296,8 +320,7 @@ class _MonProfilPageState extends State<MonProfilPage> {
         const ChampLangue(),
         const SizedBox(height: 16),
         Text(
-          t('Ces informations servent aux praticiens et aux rappels de rendez-vous. Seul le nom complet est obligatoire.',
-              'تُستعمل هذه المعلومات من طرف الأطباء ولتذكيرات المواعيد. الاسم الكامل وحده إجباري.'),
+          _pharmacie ? textePresentationProfilPharmacie() : textePresentationProfil(),
           style: texte.bodySmall,
         ),
         if (profil != null) ...[
@@ -310,7 +333,10 @@ class _MonProfilPageState extends State<MonProfilPage> {
           textCapitalization: TextCapitalization.words,
           maxLength: longueurMaxNom,
           decoration: InputDecoration(
-            labelText: t('Nom complet *', 'الاسم الكامل *'),
+            labelText: _pharmacie
+                ? t('Nom de la pharmacie *', 'اسم الصيدلية *')
+                : t('Nom complet *', 'الاسم الكامل *'),
+            hintText: _pharmacie ? t('Ex. Pharmacie El Amel', 'مثال: صيدلية الأمل') : null,
             counterText: '',
             prefixIcon: const Icon(Icons.person_outline),
           ),
@@ -326,8 +352,10 @@ class _MonProfilPageState extends State<MonProfilPage> {
           ),
         ),
         const SizedBox(height: 8),
-        _champDateNaissance(),
-        const SizedBox(height: 8),
+        if (!_pharmacie) ...[
+          _champDateNaissance(),
+          const SizedBox(height: 8),
+        ],
         ChampWilaya(
           valeur: _wilaya,
           actif: !_envoi,
@@ -346,13 +374,15 @@ class _MonProfilPageState extends State<MonProfilPage> {
                 )
               : Text(t('Enregistrer', 'حفظ')),
         ),
-        const SizedBox(height: 8),
-        Text(
-          t('Ces informations ne sont visibles que de vous et des praticiens que vous consultez.',
-              'هذه المعلومات لا يراها إلا أنت والأطباء الذين تستشيرهم.'),
-          style: texte.bodySmall,
-          textAlign: TextAlign.center,
-        ),
+        if (!_pharmacie) ...[
+          const SizedBox(height: 8),
+          Text(
+            t('Ces informations ne sont visibles que de vous et des praticiens que vous consultez.',
+                'هذه المعلومات لا يراها إلا أنت والأطباء الذين تستشيرهم.'),
+            style: texte.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
         const SizedBox(height: 24),
         const Divider(),
         ListTile(
