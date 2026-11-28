@@ -65,7 +65,11 @@ class _CreneauxPageState extends State<CreneauxPage> with AppelsEspace {
     );
     if (!ok) return;
     final fait = await appeler((j) async {
-      await widget.cabinet.supprimerCreneau(widget.api, identifiant(creneau['id']), j);
+      try {
+        await widget.cabinet.supprimerCreneau(widget.api, identifiant(creneau['id']), j);
+      } on ApiException catch (e) {
+        throw ApiException(e.statusCode, messageSuppressionCreneau(e));
+      }
       return true;
     });
     if (fait != true) return;
@@ -298,6 +302,10 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
   Future<void> _enregistrer() async {
     final debuts = _debuts();
     final jeton = _auth.accessToken;
+    if (debuts.isEmpty && !widget.serie) {
+      _message(messageCreneauDansLePasse());
+      return;
+    }
     if (debuts.isEmpty) {
       _message(t('Aucun créneau à créer : vérifiez la date et les horaires.',
           'لا يوجد موعد لإنشائه: تحقّق من التاريخ والأوقات.'));
@@ -312,7 +320,7 @@ class _NouveauCreneauPageState extends State<NouveauCreneauPage> {
         await widget.cabinet.ouvrirCreneau(widget.api, d, _duree, jeton);
         crees++;
       } on Exception catch (e) {
-        erreur = messageErreur(e);
+        erreur = e is ApiException ? messageOuvertureCreneau(e) : messageErreur(e);
         if (e is ApiException && e.nonAutorise) {
           _auth.seDeconnecter();
           break;
