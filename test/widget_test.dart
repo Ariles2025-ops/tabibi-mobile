@@ -2038,7 +2038,49 @@ void main() {
     expect(find.text(messageRetrait), findsOneWidget);
     expect(find.text('Dr Amina Benali'), findsNothing);
     expect(find.text('Me retirer'), findsNothing);
-    expect(find.textContaining("Aucune inscription sur une liste d'attente."), findsOneWidget);
+    expect(find.textContaining("Vous n'êtes inscrit sur aucune liste d'attente."), findsOneWidget);
+  });
+
+  testWidgets(
+      "mes listes d'attente : rappel « Vous serez notifié... » au-dessus des inscriptions, comme le site",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesListesAttentePage(
+          api: FakeApiServiceListeAttente(), auth: sessionConnectee(), onTrouverPraticien: () {}),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text("Vous serez notifié dès qu'un créneau se libère chez l'un de ces praticiens."),
+        findsOneWidget);
+    // Une inscription existe : pas de « Trouver un praticien » (réservé à la liste vide).
+    expect(find.text('Trouver un praticien'), findsNothing);
+  });
+
+  testWidgets(
+      "mes listes d'attente vides : « Trouver un praticien » ramene a la recherche, comme le site",
+      (tester) async {
+    var clics = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: MesListesAttentePage(
+          api: FakeApiServiceListeAttente(dejaInscrit: false),
+          auth: sessionConnectee(),
+          onTrouverPraticien: () => clics++),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Vous n'êtes inscrit sur aucune liste d'attente."), findsOneWidget);
+    expect(find.text("Vous serez notifié dès qu'un créneau se libère chez l'un de ces praticiens."),
+        findsNothing);
+    await tester.tap(find.text('Trouver un praticien'));
+    expect(clics, 1);
+  });
+
+  testWidgets("mes listes d'attente vides sans accueil vers lequel revenir : pas de bouton",
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MesListesAttentePage(
+          api: FakeApiServiceListeAttente(dejaInscrit: false), auth: sessionConnectee()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Trouver un praticien'), findsNothing);
   });
 
   testWidgets(

@@ -361,7 +361,11 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> _ouvrirListesAttente() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => MesListesAttentePage(api: widget.api, auth: _auth),
+        builder: (ctx) => MesListesAttentePage(
+          api: widget.api,
+          auth: _auth,
+          onTrouverPraticien: () => Navigator.of(ctx).pop(),
+        ),
       ),
     );
     await _apresRetour();
@@ -1102,7 +1106,11 @@ class _CoqueAppState extends State<CoqueApp> {
           ? _reservePatient(t('Mes ordonnances', 'وصفاتي الطبية'))
           : MesOrdonnancesPage(
               key: ValueKey('ord-$_visite'), api: widget.api, auth: auth),
-      ComptePage(key: ValueKey('compte-$_visite'), api: widget.api, auth: auth),
+      ComptePage(
+          key: ValueKey('compte-$_visite'),
+          api: widget.api,
+          auth: auth,
+          onTrouverPraticien: () => setState(() => _onglet = 0)),
     ];
     return Scaffold(
       body: IndexedStack(index: _onglet, children: pages),

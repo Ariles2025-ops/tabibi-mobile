@@ -20,9 +20,13 @@ String get messageRetrait =>
 /// via `GET /api/medecins/{id}`, ou « Médecin » et l'identifiant abrege) et la date
 /// d'inscription ; bouton « Me retirer » avec confirmation.
 class MesListesAttentePage extends StatefulWidget {
-  const MesListesAttentePage({super.key, this.api = const ApiService(), this.auth});
+  const MesListesAttentePage(
+      {super.key, this.api = const ApiService(), this.auth, this.onTrouverPraticien});
 
   final ApiService api;
+
+  /// « Trouver un praticien » (comme sur le site) : ramene a la recherche. Sans lui, pas de bouton.
+  final VoidCallback? onTrouverPraticien;
 
   /// Session a utiliser ; par defaut la session partagee [session].
   final AuthService? auth;
@@ -198,21 +202,38 @@ class _MesListesAttentePageState extends State<MesListesAttentePage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            t(
-              "Aucune inscription sur une liste d'attente. Inscrivez-vous depuis la fiche d'un "
-                  "médecin : vous serez notifié dès qu'un créneau se libère.",
-              'لست مسجّلًا في أي قائمة انتظار. سجّل من صفحة الطبيب، '
-                  'وسيتم إشعارك فور توفر موعد.',
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(
+              t(
+                "Vous n'êtes inscrit sur aucune liste d'attente. Inscrivez-vous depuis la fiche d'un "
+                    "médecin : vous serez notifié dès qu'un créneau se libère.",
+                'لست مسجّلًا في أي قائمة انتظار. سجّل من صفحة الطبيب، '
+                    'وسيتم إشعارك فور توفر موعد.',
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
+            if (widget.onTrouverPraticien != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: widget.onTrouverPraticien,
+                child: Text(t('Trouver un praticien', 'ابحث عن ممارس')),
+              ),
+            ],
+          ]),
         ),
       );
     }
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [for (final i in _inscriptions) _carte(context, i)],
+      children: [
+        // Comme le site : rappel du but de la liste d'attente au-dessus des inscriptions.
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(t("Vous serez notifié dès qu'un créneau se libère chez l'un de ces praticiens.",
+              'سيتم إشعارك فور توفر موعد لدى أحد هؤلاء الأطباء.')),
+        ),
+        for (final i in _inscriptions) _carte(context, i),
+      ],
     );
   }
 
