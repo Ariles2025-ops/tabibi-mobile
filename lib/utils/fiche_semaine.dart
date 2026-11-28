@@ -91,6 +91,11 @@ bool telephoneAlgerienValide(String texte) {
   return RegExp(r'^(\+213|00213|0)[1-9]\d{7,8}$').hasMatch(chiffres);
 }
 
+/// Message d'un numero de cabinet invalide dans « Ma fiche », mot pour mot celui du site.
+String get messageTelephoneCabinetInvalide =>
+    t('Numéro invalide (ex. 021 12 34 56, 0550 12 34 56 ou +213 550 12 34 56).',
+        'رقم غير صحيح (مثال: 021 12 34 56 أو 0550 12 34 56 أو ‎+213 550 12 34 56).');
+
 /// Corps de PUT /api/medecin/fiche.
 Map<String, dynamic> corpsFiche({
   required String adresse,

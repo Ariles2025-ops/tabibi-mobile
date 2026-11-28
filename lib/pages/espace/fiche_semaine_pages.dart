@@ -347,8 +347,7 @@ class _MaFichePageState extends State<MaFichePage> with AppelsEspace {
             _champ(_telephone, t('Téléphone du cabinet', 'هاتف العيادة'), Icons.phone_outlined, 20,
                 clavier: TextInputType.phone,
                 erreurTexte: _telephoneInvalide
-                    ? t('Numéro algérien attendu (0XX XX XX XX ou +213…).',
-                        'رقم جزائري مطلوب (0XX XX XX XX أو ‎+213…).')
+                    ? messageTelephoneCabinetInvalide
                     : null),
             _champ(_horaires, t('Horaires', 'أوقات العمل'), Icons.access_time, maxHoraires),
             _champ(_presentation, t('Présentation', 'تقديم'), Icons.notes, maxPresentation,
