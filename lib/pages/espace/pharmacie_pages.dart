@@ -195,15 +195,18 @@ class _DialogueReponseState extends State<_DialogueReponse> {
             value: _disponible,
             onChanged: (v) => setState(() => _disponible = v),
           ),
-          TextField(
-            controller: _prix,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: t('Prix (DA)', 'السعر (دج)'),
-              errorText: _erreurPrix,
+          // Comme le site : un medicament indisponible n'a pas de prix, le champ disparait.
+          if (_disponible) ...[
+            TextField(
+              controller: _prix,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: t('Prix (DA)', 'السعر (دج)'),
+                errorText: _erreurPrix,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
+          ],
           TextField(
             controller: _commentaire,
             decoration: InputDecoration(labelText: t('Commentaire', 'تعليق')),
@@ -215,7 +218,8 @@ class _DialogueReponseState extends State<_DialogueReponse> {
         FilledButton(
           onPressed: () {
             final commentaire = _commentaire.text.trim();
-            final texte = _prix.text.trim();
+            // Un prix saisi avant de passer sur « Indisponible » est ecarte, comme sur le site.
+            final texte = _disponible ? _prix.text.trim() : '';
             // Un prix vide est ignore ; un prix non vide mais invalide bloque l'envoi.
             final prix = texte.isEmpty ? null : int.tryParse(texte);
             if (texte.isNotEmpty && (prix == null || prix < 0)) {
