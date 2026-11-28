@@ -1,11 +1,11 @@
 # tabibi_mobile
 
-Application mobile Tabibi — **Flutter** (iOS + Android), un seul code.
+Application mobile **Ndawik** (anciennement Tabibi) — **Flutter** (iOS + Android), un seul code.
 
 ## Ce que fait cette premiere version
 - Connexion **Keycloak** (OIDC natif via `flutter_appauth`, realm `tabibi`).
 - Appel `GET /api/moi` avec le JWT, affichage utilisateur + roles.
-- Theme aux couleurs Tabibi (vert #0F7560), Material 3.
+- Theme aux couleurs Ndawik (vert #0F7560), Material 3.
 
 ## Lancer
 ```bash
@@ -40,8 +40,8 @@ flutter run --dart-define=TABIBI_API_URL=http://192.168.1.10:8080 \
 
 # Production : API et Keycloak publics en HTTPS (memes options pour `flutter build`).
 flutter build apk --release \
-  --dart-define=TABIBI_API_URL=https://api.tabibi.dz \
-  --dart-define=TABIBI_ISSUER=https://auth.tabibi.dz/realms/tabibi \
+  --dart-define=TABIBI_API_URL=https://api.tabibi.doctor \
+  --dart-define=TABIBI_ISSUER=https://auth.tabibi.doctor/realms/tabibi \
   --dart-define=TABIBI_CLIENT_ID=tabibi-mobile \
   --dart-define=TABIBI_REDIRECT=dz.tabibi.app:/oauthredirect
 ```
@@ -132,8 +132,8 @@ redirection OAuth). Avant toute publication :
 5. Bundle signe (format exige par Google Play) :
    ```bash
    flutter build appbundle --release \
-     --dart-define=TABIBI_API_URL=https://api.tabibi.dz \
-     --dart-define=TABIBI_ISSUER=https://auth.tabibi.dz/realms/tabibi \
+     --dart-define=TABIBI_API_URL=https://api.tabibi.doctor \
+     --dart-define=TABIBI_ISSUER=https://auth.tabibi.doctor/realms/tabibi \
      --dart-define=TABIBI_CLIENT_ID=tabibi-mobile \
      --dart-define=TABIBI_REDIRECT=dz.tabibi.app:/oauthredirect
    # -> build/app/outputs/bundle/release/app-release.aab
@@ -166,8 +166,8 @@ redirection OAuth). Avant toute publication :
 4. Archive signee et IPA :
    ```bash
    flutter build ipa --release \
-     --dart-define=TABIBI_API_URL=https://api.tabibi.dz \
-     --dart-define=TABIBI_ISSUER=https://auth.tabibi.dz/realms/tabibi \
+     --dart-define=TABIBI_API_URL=https://api.tabibi.doctor \
+     --dart-define=TABIBI_ISSUER=https://auth.tabibi.doctor/realms/tabibi \
      --dart-define=TABIBI_CLIENT_ID=tabibi-mobile \
      --dart-define=TABIBI_REDIRECT=dz.tabibi.app:/oauthredirect
    # -> build/ios/ipa/tabibi_mobile.ipa (et l'archive build/ios/archive/Runner.xcarchive)
@@ -250,7 +250,7 @@ Simulateur iOS en developpement : `flutter run --dart-define=TABIBI_API_URL=http
   (Planifiee, En cours, Terminee, Annulee) ; bouton « Se connecter » sans jeton, erreurs via `VueErreur`.
 - Consentement explicite : tant que `consentementPatientLe` est nul (session planifiee ou en cours),
   une carte rappelle que la seance se deroule en video via un service tiers (Jitsi Meet) sans
-  enregistrement par Tabibi, avec le bouton « Je donne mon consentement »
+  enregistrement par Ndawik, avec le bouton « Je donne mon consentement »
   (`POST /api/teleconsultations/{id}/consentir`) ; la vue renvoyee, qui porte le lien de salle,
   remplace l'element.
 - « Rejoindre la teleconsultation » des que le lien est remis et que la session est planifiee ou en
