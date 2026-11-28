@@ -208,6 +208,30 @@ void main() {
         'وحده حساب الصيدلية يمكنه الرد على طلب.');
   });
 
+  test('Créneaux : refus de suppression 409 et d\'ouverture 409/400 comme le site (FR et AR)', () {
+    const generique409 = 'Action impossible : la situation a changé entre-temps';
+    Langue.courante.value = Langue.francais;
+    expect(messageSuppressionCreneau(ApiException(409, generique409)),
+        "Ce créneau est réservé : annulez d'abord le rendez-vous.");
+    expect(messageSuppressionCreneau(ApiException(409, 'Déjà réservé par Karim')), 'Déjà réservé par Karim');
+    expect(messageSuppressionCreneau(ApiException(404, 'Ressource introuvable')), 'Ressource introuvable');
+    expect(messageOuvertureCreneau(ApiException(409, generique409)),
+        'Un créneau existe déjà sur cet horaire.');
+    expect(messageOuvertureCreneau(ApiException(400, 'Une erreur est survenue (code 400). Réessayez dans un instant.')),
+        'Le créneau est invalide.');
+    expect(messageOuvertureCreneau(ApiException(400, 'Durée trop longue')), 'Durée trop longue');
+    expect(messageCreneauDansLePasse(), 'Le créneau doit commencer dans le futur.');
+    Langue.courante.value = Langue.arabe;
+    expect(messageSuppressionCreneau(ApiException(409, 'تعذّر الإجراء: تغيّر الوضع في الأثناء')),
+        'هذا الموعد محجوز: ألغِ الحجز أولًا.');
+    expect(messageOuvertureCreneau(ApiException(409, 'تعذّر الإجراء: تغيّر الوضع في الأثناء')),
+        'يوجد موعد في هذا الوقت بالفعل.');
+    expect(messageOuvertureCreneau(ApiException(400, 'حدث خطأ (الرمز 400). أعد المحاولة بعد قليل.')),
+        'الموعد غير صالح.');
+    expect(messageCreneauDansLePasse(), 'يجب أن يبدأ الموعد في المستقبل.');
+    Langue.courante.value = Langue.francais;
+  });
+
   test('Dawini : refus de publication 403/400 comme le site (FR et AR)', () {
     Langue.courante.value = Langue.francais;
     expect(messagePublicationBesoin(ApiException(403, 'Accès refusé : ce compte n\'a pas les droits nécessaires')),

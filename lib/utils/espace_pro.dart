@@ -364,6 +364,31 @@ bool estMessageGenerique(String message) => const [
       'العنصر المطلوب غير موجود',
     ].any(message.startsWith);
 
+/// Refus de la suppression d'un creneau, comme le site : 409 « Ce créneau est réservé : annulez
+/// d'abord le rendez-vous. ». Un texte precis du serveur est conserve.
+String messageSuppressionCreneau(ApiException e) {
+  if (e.statusCode == 409 && estMessageGenerique(e.message)) {
+    return t("Ce créneau est réservé : annulez d'abord le rendez-vous.",
+        'هذا الموعد محجوز: ألغِ الحجز أولًا.');
+  }
+  return e.message;
+}
+
+/// Refus de l'ouverture d'un creneau, comme le site : 409 « Un créneau existe déjà sur cet
+/// horaire. », 400 « Le créneau est invalide. ». Un texte precis du serveur est conserve.
+String messageOuvertureCreneau(ApiException e) {
+  if (!estMessageGenerique(e.message)) return e.message;
+  return switch (e.statusCode) {
+    409 => t('Un créneau existe déjà sur cet horaire.', 'يوجد موعد في هذا الوقت بالفعل.'),
+    400 => t('Le créneau est invalide.', 'الموعد غير صالح.'),
+    _ => e.message,
+  };
+}
+
+/// Un seul creneau dont le debut est deja passe, comme le site.
+String messageCreneauDansLePasse() =>
+    t('Le créneau doit commencer dans le futur.', 'يجب أن يبدأ الموعد في المستقبل.');
+
 /// Refus de l'invitation d'une secretaire, comme le site : 409 « Cette secrétaire est déjà
 /// rattachée à votre cabinet. », 400 « Aucun compte Ndawik n'utilise cette adresse e-mail. »,
 /// 403 « Seul un compte médecin peut inviter une secrétaire. » (le site garde toujours la phrase
